@@ -1,0 +1,2 @@
+import { Column, DataType, Model, Table } from 'sequelize-typescript';
+@Table({ tableName: 'permissions', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' }) export class Permission extends Model { @Column({ type: DataType.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true }) declare id: string; @Column({ type: DataType.STRING(80), unique: true, allowNull: false }) declare code: string; @Column({ type: DataType.STRING(255), allowNull: false }) declare description: string; }

@@ -1,0 +1,59 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# TypeScript and JavaScript builds
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# Next.js
+.next/
+out/
+
+# NestJS
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Flutter and Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+**/ios/Flutter/.last_build_id
+**/android/.gradle/
+**/android/local.properties
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+
+# Android
+*.apk
+*.aab
+*.keystore
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+
+# OS and temporary files
+.DS_Store
+Thumbs.db
+tmp/
+temp/
+*.tmp
+.dart-appdata/
+
+docs/
+
+./.pnpm-store/

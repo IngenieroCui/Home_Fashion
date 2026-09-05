@@ -1,0 +1,26 @@
+{
+  "name": "home-fashion",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@11.13.1",
+  "scripts": {
+    "dev:web": "pnpm --filter @home-fashion/web dev",
+    "dev:api": "pnpm --filter @home-fashion/api start:dev",
+    "dev": "pnpm --parallel --filter @home-fashion/api --filter @home-fashion/web dev",
+    "build": "pnpm -r --filter @home-fashion/shared --filter @home-fashion/api --filter @home-fashion/web build",
+    "lint": "pnpm -r --filter @home-fashion/api --filter @home-fashion/web lint",
+    "test": "pnpm -r --filter @home-fashion/api --filter @home-fashion/web test",
+    "db:migrate": "pnpm --filter @home-fashion/api db:migrate",
+    "db:migrate:status": "pnpm --filter @home-fashion/api db:migrate:status",
+    "db:migrate:undo": "pnpm --filter @home-fashion/api db:migrate:undo",
+    "db:migrate:undo:all": "pnpm --filter @home-fashion/api db:migrate:undo:all",
+    "db:seed": "pnpm --filter @home-fashion/api db:seed",
+    "db:seed:status": "pnpm --filter @home-fashion/api db:seed:status",
+    "db:seed:undo": "pnpm --filter @home-fashion/api db:seed:undo",
+    "db:seed:undo:all": "pnpm --filter @home-fashion/api db:seed:undo:all",
+    "format": "pnpm -r --filter @home-fashion/shared --filter @home-fashion/api --filter @home-fashion/web format"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2"
+  }
+}
