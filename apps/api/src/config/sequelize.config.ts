@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { isAbsolute, resolve } from 'node:path';
+import * as mysql2 from 'mysql2';
 import type { Options } from 'sequelize';
 import type { ValidatedEnvironment } from './environment.validation';
 
@@ -49,6 +50,7 @@ export function createSequelizeOptions(config: DatabaseConfig): Options {
   }
   return {
     dialect: 'mysql',
+    dialectModule: mysql2,
     host: config.host,
     port: config.port,
     database: config.database,
