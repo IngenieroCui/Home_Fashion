@@ -1,0 +1,25 @@
+# Local credentials and generated test data must never enter CLI deployments.
+.env
+.env.*
+**/.env
+**/.env.*
+certs/
+**/certs/
+*.pem
+*.key
+*.p12
+*.pfx
+tmp/
+temp/
+
+# Local outputs and material outside the web deployments.
+.dart-appdata/
+.tmp/
+apps/mobile/
+docs/
+**/dist/
+**/build/
+**/coverage/
+**/.dart_tool/
+**/.next/
+**/*.log
