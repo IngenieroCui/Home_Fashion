@@ -15,7 +15,7 @@ export class Category extends Model {
   @Column(DataType.TEXT)
   declare description: string | null;
 
-  @Column({ type: DataType.BOOLEAN, allowNull: false, defaultValue: true })
+  @Column({ type: DataType.BOOLEAN, allowNull: false, defaultValue: true, field: 'is_active' })
   declare isActive: boolean;
 
   @HasMany(() => Product)

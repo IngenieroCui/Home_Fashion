@@ -20,7 +20,7 @@ describe('create deliveries migration', () => {
     await up({ context } as never);
     expect(context.createTable).toHaveBeenCalledWith('deliveries', expect.objectContaining({
       order_id: expect.objectContaining({ unique: true, allowNull: false, references: { model: 'orders', key: 'id' }, onDelete: 'RESTRICT' }),
-      assigned_user_id: expect.objectContaining({ allowNull: true, references: { model: 'users', key: 'id' } }),
+      assigned_user_id: expect.objectContaining({ allowNull: true, references: { model: 'users', key: 'id' }, onUpdate: 'RESTRICT' }),
       created_by_user_id: expect.objectContaining({ allowNull: false, references: { model: 'users', key: 'id' } }),
       address_reference: expect.anything(),
       time_window: expect.anything(),

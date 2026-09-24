@@ -9,6 +9,7 @@ import { Category } from './entities/category.model';
 import { ProductImage } from './entities/product-image.model';
 import { Product } from './entities/product.model';
 import { ProductVariant } from './entities/product-variant.model';
+import { CloudinaryImageService } from './cloudinary-image.service';
 
-@Module({ imports: [AuthModule, SequelizeModule.forFeature([Category, Product, ProductVariant, ProductImage])], controllers: [CatalogController, CatalogAdminController], providers: [CatalogService, CatalogAdminService] })
+@Module({ imports: [AuthModule, SequelizeModule.forFeature([Category, Product, ProductVariant, ProductImage])], controllers: [CatalogController, CatalogAdminController], providers: [CatalogService, CatalogAdminService, CloudinaryImageService] })
 export class CatalogModule {}

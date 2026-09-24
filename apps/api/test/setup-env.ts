@@ -5,6 +5,7 @@ process.env.DB_NAME = 'home_fashion_test';
 process.env.DB_USER = 'home_fashion_test';
 process.env.DB_PASSWORD = 'test_password';
 process.env.DB_LOGGING = 'false';
+process.env.DB_SSL_MODE = 'DISABLED';
 process.env.JWT_ACCESS_SECRET = 'test_access_secret_with_at_least_32_characters';
 process.env.JWT_ACCESS_EXPIRES_IN = '15m';
 process.env.JWT_REFRESH_SECRET = 'test_refresh_secret_with_at_least_32_characters';

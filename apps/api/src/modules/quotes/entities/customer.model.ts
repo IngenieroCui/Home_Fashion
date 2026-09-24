@@ -4,7 +4,7 @@ import { User } from '../../auth/entities/user.model'; import { CustomerDocument
 export class Customer extends Model {
   @Column({ type: DataType.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true }) declare id: string;
   @Column({ type: DataType.STRING(180), allowNull: false, field: 'full_name' }) declare fullName: string;
-  @Column(DataType.ENUM(...Object.values(CustomerDocumentType))) declare documentType: CustomerDocumentType | null;
+  @Column({ type: DataType.ENUM(...Object.values(CustomerDocumentType)), field: 'document_type' }) declare documentType: CustomerDocumentType | null;
   @Column({ type: DataType.STRING(80), unique: true, field: 'document_number' }) declare documentNumber: string | null;
   @Column({ type: DataType.STRING(60), allowNull: false }) declare phone: string;
   @Column(DataType.STRING(254)) declare email: string | null; @Column(DataType.STRING(120)) declare city: string | null;

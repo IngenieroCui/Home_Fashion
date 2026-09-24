@@ -18,7 +18,7 @@ export function authenticatedApi(request: NextRequest, path: string, init: Reque
             ...init,
             headers,
             cache: 'no-store',
-            signal: AbortSignal.timeout(15000)
+            signal: AbortSignal.timeout(path.endsWith('/images/upload') ? 60000 : 15000)
           });
         } catch {
           return null;

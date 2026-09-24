@@ -7,7 +7,12 @@ onlyBuiltDependencies:
   - sharp
   - unrs-resolver
 allowBuilds:
-  bcrypt: set this to true or false
+  '@parcel/watcher': true
+  bcrypt: false
   esbuild: true
   sharp: true
   unrs-resolver: true
+
+overrides:
+  multer: ^2.4.0
+  postcss: ^8.5.28

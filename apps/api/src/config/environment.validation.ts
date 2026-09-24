@@ -9,6 +9,13 @@ export interface ValidatedEnvironment {
   DB_USER: string;
   DB_PASSWORD: string;
   DB_LOGGING: boolean;
+  DB_SSL_MODE: 'REQUIRED' | 'DISABLED';
+  DB_SSL_CA_PATH: string;
+  DB_SSL_CA_BASE64?: string;
+  CLOUDINARY_CLOUD_NAME?: string;
+  CLOUDINARY_API_KEY?: string;
+  CLOUDINARY_API_SECRET?: string;
+  CLOUDINARY_FOLDER: string;
   JWT_ACCESS_SECRET: string;
   JWT_ACCESS_EXPIRES_IN: string;
   JWT_REFRESH_SECRET: string;
@@ -26,6 +33,13 @@ export const environmentValidationSchema = Joi.object({
   DB_USER: Joi.string().required(),
   DB_PASSWORD: Joi.string().required(),
   DB_LOGGING: Joi.boolean().default(false),
+  DB_SSL_MODE: Joi.string().valid('REQUIRED', 'DISABLED').default('REQUIRED'),
+  DB_SSL_CA_PATH: Joi.string().default('./certs/aiven-ca.pem'),
+  DB_SSL_CA_BASE64: Joi.string().allow('').optional(),
+  CLOUDINARY_CLOUD_NAME: Joi.string().allow('').optional(),
+  CLOUDINARY_API_KEY: Joi.string().allow('').optional(),
+  CLOUDINARY_API_SECRET: Joi.string().allow('').optional(),
+  CLOUDINARY_FOLDER: Joi.string().default('home-fashion/products'),
   JWT_ACCESS_SECRET: Joi.string().min(32).required(),
   JWT_ACCESS_EXPIRES_IN: Joi.string().default('15m'),
   JWT_REFRESH_SECRET: Joi.string().min(32).required(),

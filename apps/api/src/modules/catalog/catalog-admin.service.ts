@@ -7,6 +7,7 @@ import { ProductImage } from './entities/product-image.model';
 import { Product } from './entities/product.model';
 import { ProductVariant } from './entities/product-variant.model';
 import { resolveSlug } from './utils/slug.util';
+import { CloudinaryImageService } from './cloudinary-image.service';
 
 const productAttributes = ['id', 'categoryId', 'name', 'slug', 'description', 'allowsCustomization', 'status'];
 const variantAttributes = ['id', 'productId', 'sku', 'name', 'dimensions', 'material', 'color', 'fabric', 'finish', 'salePrice', 'estimatedCost', 'quantityOnHand', 'quantityReserved', 'location', 'status'];
@@ -20,7 +21,8 @@ export class CatalogAdminService {
     @InjectModel(Category) private readonly categories: typeof Category,
     @InjectModel(Product) private readonly products: typeof Product,
     @InjectModel(ProductVariant) private readonly variants: typeof ProductVariant,
-    @InjectModel(ProductImage) private readonly images: typeof ProductImage
+    @InjectModel(ProductImage) private readonly images: typeof ProductImage,
+    private readonly cloudinary: CloudinaryImageService
   ) {}
 
   private async categoryOrFail(id: string) { const category = await this.categories.findByPk(id); if (!category) throw new NotFoundException('Category not found'); return category; }
@@ -95,7 +97,7 @@ export class CatalogAdminService {
   }
 
   async getProduct(id: string) {
-    const product = await this.products.findByPk(id, { attributes: productAttributes, include: [{ model: Category, attributes: ['id', 'name', 'slug', 'description', 'isActive'] }, { model: ProductImage, attributes: imageAttributes, required: false, where: { productVariantId: null } }, { model: ProductVariant, attributes: variantAttributes, required: false, include: [{ model: ProductImage, attributes: imageAttributes, required: false }] }], order: [[ProductImage, 'position', 'ASC'], [ProductVariant, 'sku', 'ASC'], [ProductVariant, ProductImage, 'position', 'ASC']] });
+    const product = await this.products.findByPk(id, { attributes: productAttributes, include: [{ model: Category, attributes: ['id', 'name', 'slug', 'description', 'isActive'] }, { model: ProductImage, attributes: imageAttributes, required: false, where: { productVariantId: null } }, { model: ProductVariant, attributes: variantAttributes, required: false, include: [{ model: ProductImage, attributes: imageAttributes, required: false }] }], order: [[{ model: ProductImage, as: 'images' }, 'position', 'ASC'], [{ model: ProductVariant, as: 'variants' }, 'sku', 'ASC'], [{ model: ProductVariant, as: 'variants' }, { model: ProductImage, as: 'images' }, 'position', 'ASC']] });
     if (!product) throw new NotFoundException('Product not found');
     return plain(product);
   }
@@ -119,9 +121,13 @@ export class CatalogAdminService {
     return plain(variant);
   }
 
-  async createImage(productId: string, dto: CreateImageDto) {
+  async validateImageTarget(productId: string, productVariantId?: string | null) {
     await this.productOrFail(productId);
-    if (dto.productVariantId) { const variant = await this.variantOrFail(dto.productVariantId); if (variant.productId !== productId) throw new BadRequestException('Product variant does not belong to product'); }
+    if (productVariantId) { const variant = await this.variantOrFail(productVariantId); if (variant.productId !== productId) throw new BadRequestException('Product variant does not belong to product'); }
+  }
+
+  async createImage(productId: string, dto: CreateImageDto) {
+    await this.validateImageTarget(productId, dto.productVariantId);
     const attributes = { ...dto, productId, productVariantId: dto.productVariantId ?? null, isPrimary: dto.isPrimary ?? false, position: dto.position ?? 0 };
     if (!attributes.isPrimary) return plain(await this.images.create(attributes));
     return this.images.sequelize!.transaction(async (transaction) => {
@@ -140,7 +146,11 @@ export class CatalogAdminService {
     });
   }
 
-  async deleteImage(id: string) { const image = await this.imageOrFail(id); await image.destroy(); }
+  async deleteImage(id: string) {
+    const image = await this.imageOrFail(id);
+    await image.destroy();
+    if (image.publicId) await this.cloudinary.destroy(image.publicId);
+  }
 
   private pagination(page: number, limit: number, total: number) { return { page, limit, total, totalPages: Math.ceil(total / limit) }; }
 }

@@ -60,7 +60,7 @@ export class CatalogService {
         { model: ProductImage, attributes: publicImageAttributes, required: false, where: { productVariantId: null } }
       ],
       distinct: true,
-      order: [['name', 'ASC'], [ProductImage, 'position', 'ASC']],
+      order: [['name', 'ASC'], [{ model: ProductImage, as: 'images' }, 'position', 'ASC']],
       limit: query.limit,
       offset: (query.page - 1) * query.limit
     };
@@ -77,7 +77,7 @@ export class CatalogService {
         { model: ProductImage, attributes: publicImageAttributes, required: false, where: { productVariantId: null } },
         { model: ProductVariant, attributes: publicVariantAttributes, required: false, where: { status: CatalogStatus.ACTIVE }, include: [{ model: ProductImage, attributes: publicImageAttributes, required: false }] }
       ],
-      order: [[ProductImage, 'position', 'ASC'], [ProductVariant, 'sku', 'ASC'], [ProductVariant, ProductImage, 'position', 'ASC']]
+      order: [[{ model: ProductImage, as: 'images' }, 'position', 'ASC'], [{ model: ProductVariant, as: 'variants' }, 'sku', 'ASC'], [{ model: ProductVariant, as: 'variants' }, { model: ProductImage, as: 'images' }, 'position', 'ASC']]
     });
     if (!product) throw new NotFoundException('Product not found');
     const plain = product.get({ plain: true }) as Record<string, unknown>;

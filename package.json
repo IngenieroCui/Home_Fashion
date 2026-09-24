@@ -21,6 +21,6 @@
     "format": "pnpm -r --filter @home-fashion/shared --filter @home-fashion/api --filter @home-fashion/web format"
   },
   "devDependencies": {
-    "prettier": "^3.6.2"
+    "prettier": "^3.9.8"
   }
 }

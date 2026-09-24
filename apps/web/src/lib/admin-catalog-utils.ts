@@ -1,5 +1,5 @@
 export function formNumber(value: FormDataEntryValue | null): number | null {
-  if (value === null || value === '') return null;
+  if (value === null || (typeof value === 'string' && value.trim() === '')) return null;
   const result = Number(value);
   return Number.isFinite(result) ? result : null;
 }
@@ -18,6 +18,7 @@ export function adminCatalogQuery(filters: {
     params.set('status', filters.status);
   if (filters.allowsCustomization === 'true' || filters.allowsCustomization === 'false')
     params.set('allowsCustomization', filters.allowsCustomization);
-  if (filters.page && Number(filters.page) > 1) params.set('page', filters.page);
+  const page = Number(filters.page);
+  if (Number.isSafeInteger(page) && page > 1) params.set('page', String(page));
   return params.toString();
 }

@@ -7,6 +7,7 @@ import { validateEnvironment } from '../config/environment.validation';
 
 function resolveEnvironmentFile(): string | undefined {
   const candidates = [
+    resolve(__dirname, '../../../../.env'),
     resolve(process.cwd(), 'apps/api/.env'),
     resolve(process.cwd(), '.env')
   ];

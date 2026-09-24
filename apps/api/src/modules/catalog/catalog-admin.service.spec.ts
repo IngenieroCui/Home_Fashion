@@ -10,7 +10,8 @@ describe('CatalogAdminService', () => {
   const products = { findByPk: jest.fn(), findOne: jest.fn(), create: jest.fn(), findAndCountAll: jest.fn() };
   const variants = { findByPk: jest.fn(), findOne: jest.fn(), create: jest.fn() };
   const images = { findByPk: jest.fn(), create: jest.fn(), update: jest.fn(), sequelize: { transaction: jest.fn(async (callback) => callback({})) } };
-  const service = new CatalogAdminService(categories as never, products as never, variants as never, images as never);
+  const cloudinary = { destroy: jest.fn() };
+  const service = new CatalogAdminService(categories as never, products as never, variants as never, images as never, cloudinary as never);
 
   beforeEach(() => jest.clearAllMocks());
 

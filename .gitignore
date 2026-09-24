@@ -11,6 +11,7 @@ coverage/
 # Next.js
 .next/
 out/
+.vercel/
 
 # NestJS
 *.log
@@ -57,3 +58,8 @@ temp/
 docs/
 
 ./.pnpm-store/
+certs/
+*.pem
+*.key
+*.p12
+*.pfx

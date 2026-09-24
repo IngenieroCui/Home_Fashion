@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { resolve } from 'node:path';
 import { environmentValidationSchema } from './config/environment.validation';
 import { DatabaseModule } from './database/database.module';
 import { HealthController } from './health.controller';
@@ -18,6 +19,7 @@ import { DeliveriesModule } from './modules/deliveries/deliveries.module';
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
+      envFilePath: [resolve(__dirname, '../../../.env'), resolve(process.cwd(), '.env')],
       validationSchema: environmentValidationSchema,
       validationOptions: {
         abortEarly: false

@@ -23,7 +23,7 @@ export const up: DatabaseMigration['up'] = async ({ context }) => {
       scheduled_date: { type: DataTypes.DATEONLY, allowNull: false },
       time_window: DataTypes.STRING(80),
       delivery_type: { type: DataTypes.ENUM('OWNER', 'EMPLOYEE', 'EXTERNAL_DRIVER'), allowNull: false },
-      assigned_user_id: foreignKey('users', true),
+      assigned_user_id: { ...foreignKey('users', true), onUpdate: 'RESTRICT' },
       external_driver_name: DataTypes.STRING(160),
       fee: DataTypes.DECIMAL(12, 2),
       notes: DataTypes.TEXT,

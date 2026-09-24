@@ -8,11 +8,24 @@ const { publicQuoteRequestMessage } = load('src/lib/public-quote-requests.ts');
 const { formatPrice, productPrice, hasAvailability } = load('src/lib/catalog.ts');
 const { createRefreshCoordinator } = load('src/lib/auth/refresh-coordinator.ts');
 const { clientFetch } = load('src/lib/client-fetch.ts');
+const { formNumber, adminCatalogQuery } = load('src/lib/admin-catalog-utils.ts');
 
 const renewed = { accessToken: 'new-access', refreshToken: 'new-refresh', user: { role: 'ADMIN' } };
 const noRefresh = async () => {
   throw new Error('Unexpected refresh');
 };
+
+test('Catalog form treats whitespace as missing and keeps real zero values', () => {
+  assert.equal(formNumber('   '), null);
+  assert.equal(formNumber('0'), 0);
+  assert.equal(formNumber('1250000.50'), 1250000.5);
+});
+
+test('Catalog pagination only forwards valid whole page numbers', () => {
+  assert.equal(adminCatalogQuery({ page: '2.5' }), '');
+  assert.equal(adminCatalogQuery({ page: 'Infinity' }), '');
+  assert.equal(adminCatalogQuery({ page: '03' }), 'page=3');
+});
 
 test('A valid session reads data without rotating credentials', async () => {
   const result = await sessionRequest('access', 'refresh', {
