@@ -68,8 +68,9 @@ export function CreateOrderForm({ sale }: { sale: Sale }) {
     <form className="admin-form admin-form-wide" onSubmit={submit}>
       <h1 className="font-serif text-3xl">Crear pedido de {sale.code}</h1>
       <p className="notice">
-        IN_STOCK reserva inventario terminado. MADE_TO_ORDER pasa a fabricación; la disponibilidad
-        definitiva se valida al crear.
+        Define cómo se entregará cada mueble. «Disponible en inventario» reserva unidades
+        terminadas; «Fabricación bajo pedido» inicia el recorrido de taller. El sistema comprueba la
+        disponibilidad al guardar y te avisará si cambió.
       </p>
       {error && (
         <p className="form-error" role="alert">

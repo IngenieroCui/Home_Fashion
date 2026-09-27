@@ -41,7 +41,12 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       </Link>
       <div className="mt-8 grid gap-10 lg:grid-cols-2">
         <div className="space-y-4">
-          <ProductImage alt={product.name} className="detail-image" image={product.images?.[0]} />
+          <div className="relative">
+            <ProductImage alt={product.name} className="detail-image" image={product.images?.[0]} />
+            {product.images?.[0]?.altText?.startsWith('Imagen ilustrativa') && (
+              <span className="reference-image-badge">Imagen de referencia</span>
+            )}
+          </div>
           {product.images && product.images.length > 1 && (
             <div className="grid grid-cols-3 gap-3">
               {product.images.slice(1).map((image) => (

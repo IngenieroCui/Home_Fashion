@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getAuthenticatedUser, sessionTokens } from '@/lib/auth/server';
+import { OperationalSummary } from '@/components/operational-summary';
 
 const modules = [
   {
@@ -74,6 +75,10 @@ export default async function PanelPage() {
           Ir al catálogo público
         </Link>
       </section>
+      <OperationalSummary
+        canQuotes={user.role === 'ADMIN' || user.permissions.includes('QUOTE_MANAGE')}
+        canOrders={user.role === 'ADMIN' || user.permissions.includes('ORDER_MANAGE')}
+      />
       <section className="mt-8">
         <h2 className="font-serif text-2xl text-[#3d291e]">Módulos operativos</h2>
         {!visibleModules.length && (

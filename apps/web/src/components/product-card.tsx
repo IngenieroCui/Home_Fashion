@@ -6,7 +6,12 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
   const availability = hasAvailability(product);
   return (
     <article className="product-card">
-      <ProductImage alt={product.name} image={product.images?.[0]} />
+      <div className="relative">
+        <ProductImage alt={product.name} image={product.images?.[0]} />
+        {product.images?.[0]?.altText?.startsWith('Imagen ilustrativa') && (
+          <span className="reference-image-badge">Imagen de referencia</span>
+        )}
+      </div>
       <div className="space-y-3 p-5">
         <p className="eyebrow">{product.category?.name ?? 'Colección Home Fashion'}</p>
         <h2 className="font-serif text-2xl text-[#3d291e]">

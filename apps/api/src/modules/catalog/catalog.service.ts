@@ -9,7 +9,20 @@ import { ProductVariant } from './entities/product-variant.model';
 import { CatalogStatus } from './catalog.types';
 
 const publicProductAttributes = ['id', 'name', 'slug', 'description', 'allowsCustomization'];
-const publicVariantAttributes = ['id', 'sku', 'name', 'dimensions', 'material', 'color', 'fabric', 'finish', 'salePrice', 'quantityOnHand', 'quantityReserved', 'location', 'status'];
+const publicVariantAttributes = [
+  'id',
+  'sku',
+  'name',
+  'dimensions',
+  'material',
+  'color',
+  'fabric',
+  'finish',
+  'salePrice',
+  'quantityOnHand',
+  'quantityReserved',
+  'status'
+];
 const publicImageAttributes = ['id', 'url', 'altText', 'position', 'isPrimary'];
 
 @Injectable()
@@ -23,7 +36,9 @@ export class CatalogService {
     return this.categoryModel.findAll({
       attributes: ['id', 'name', 'slug', 'description'],
       where: { isActive: true },
-      include: [{ model: Product, attributes: [], required: true, where: { status: CatalogStatus.ACTIVE } }],
+      include: [
+        { model: Product, attributes: [], required: true, where: { status: CatalogStatus.ACTIVE } }
+      ],
       order: [['name', 'ASC']],
       group: ['Category.id']
     });
@@ -37,17 +52,23 @@ export class CatalogService {
         { description: { [Op.like]: `%${query.q}%` } }
       ];
     }
-    if (query.allowsCustomization !== undefined) where.allowsCustomization = query.allowsCustomization;
+    if (query.allowsCustomization !== undefined)
+      where.allowsCustomization = query.allowsCustomization;
 
     const variantInclude = {
       model: ProductVariant,
       attributes: publicVariantAttributes,
       required: query.inStock === true,
-      where: { status: CatalogStatus.ACTIVE, ...(query.inStock ? { quantityOnHand: { [Op.gt]: 0 } } : {}) }
+      where: {
+        status: CatalogStatus.ACTIVE,
+        ...(query.inStock ? { quantityOnHand: { [Op.gt]: 0 } } : {})
+      }
     };
     if (query.inStock) {
       (variantInclude.where as Record<PropertyKey, unknown>)[Op.and] = [
-        this.productModel.sequelize!.literal('`variants`.`quantity_on_hand` > `variants`.`quantity_reserved`')
+        this.productModel.sequelize!.literal(
+          '`variants`.`quantity_on_hand` > `variants`.`quantity_reserved`'
+        )
       ];
     }
 
@@ -55,17 +76,47 @@ export class CatalogService {
       attributes: publicProductAttributes,
       where: where as WhereOptions,
       include: [
-        { model: Category, attributes: ['id', 'name', 'slug'], required: true, where: query.category ? { slug: query.category, isActive: true } : { isActive: true } },
+        {
+          model: Category,
+          attributes: ['id', 'name', 'slug'],
+          required: true,
+          where: query.category ? { slug: query.category, isActive: true } : { isActive: true }
+        },
         variantInclude,
-        { model: ProductImage, attributes: publicImageAttributes, required: false, where: { productVariantId: null } }
+        {
+          model: ProductImage,
+          attributes: publicImageAttributes,
+          required: false,
+          where: { productVariantId: null }
+        }
       ],
       distinct: true,
-      order: [['name', 'ASC'], [{ model: ProductImage, as: 'images' }, 'position', 'ASC']],
+      order: [
+        ['name', 'ASC'],
+        [{ model: ProductImage, as: 'images' }, 'position', 'ASC']
+      ],
       limit: query.limit,
       offset: (query.page - 1) * query.limit
     };
     const result = await this.productModel.findAndCountAll(options);
-    return { data: result.rows, pagination: { page: query.page, limit: query.limit, total: result.count, totalPages: Math.ceil(result.count / query.limit) } };
+    const data = result.rows.map((product) => {
+      const plain = product.get({ plain: true }) as Record<string, unknown>;
+      const variants = (plain.variants as Array<Record<string, unknown>> | undefined) ?? [];
+      plain.variants = variants.map(({ quantityOnHand, quantityReserved, ...variant }) => ({
+        ...variant,
+        availability: Number(quantityOnHand) - Number(quantityReserved)
+      }));
+      return plain;
+    });
+    return {
+      data,
+      pagination: {
+        page: query.page,
+        limit: query.limit,
+        total: result.count,
+        totalPages: Math.ceil(result.count / query.limit)
+      }
+    };
   }
 
   async getProductBySlug(slug: string) {
@@ -73,16 +124,44 @@ export class CatalogService {
       attributes: publicProductAttributes,
       where: { slug, status: CatalogStatus.ACTIVE },
       include: [
-        { model: Category, attributes: ['id', 'name', 'slug', 'description'], required: true, where: { isActive: true } },
-        { model: ProductImage, attributes: publicImageAttributes, required: false, where: { productVariantId: null } },
-        { model: ProductVariant, attributes: publicVariantAttributes, required: false, where: { status: CatalogStatus.ACTIVE }, include: [{ model: ProductImage, attributes: publicImageAttributes, required: false }] }
+        {
+          model: Category,
+          attributes: ['id', 'name', 'slug', 'description'],
+          required: true,
+          where: { isActive: true }
+        },
+        {
+          model: ProductImage,
+          attributes: publicImageAttributes,
+          required: false,
+          where: { productVariantId: null }
+        },
+        {
+          model: ProductVariant,
+          attributes: publicVariantAttributes,
+          required: false,
+          where: { status: CatalogStatus.ACTIVE },
+          include: [{ model: ProductImage, attributes: publicImageAttributes, required: false }]
+        }
       ],
-      order: [[{ model: ProductImage, as: 'images' }, 'position', 'ASC'], [{ model: ProductVariant, as: 'variants' }, 'sku', 'ASC'], [{ model: ProductVariant, as: 'variants' }, { model: ProductImage, as: 'images' }, 'position', 'ASC']]
+      order: [
+        [{ model: ProductImage, as: 'images' }, 'position', 'ASC'],
+        [{ model: ProductVariant, as: 'variants' }, 'sku', 'ASC'],
+        [
+          { model: ProductVariant, as: 'variants' },
+          { model: ProductImage, as: 'images' },
+          'position',
+          'ASC'
+        ]
+      ]
     });
     if (!product) throw new NotFoundException('Product not found');
     const plain = product.get({ plain: true }) as Record<string, unknown>;
     const variants = (plain.variants as Array<Record<string, unknown>> | undefined) ?? [];
-    plain.variants = variants.map(({ quantityOnHand, quantityReserved, ...variant }) => ({ ...variant, availability: Number(quantityOnHand) - Number(quantityReserved) }));
+    plain.variants = variants.map(({ quantityOnHand, quantityReserved, ...variant }) => ({
+      ...variant,
+      availability: Number(quantityOnHand) - Number(quantityReserved)
+    }));
     return plain;
   }
 }

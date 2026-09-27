@@ -111,6 +111,18 @@ select {
   background: #fffdf8;
   box-shadow: 0 6px 16px #4a32220d;
 }
+.reference-image-badge {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 0.75rem;
+  border-radius: 999px;
+  background: #fffdf8ed;
+  color: #3d291e;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.35rem 0.65rem;
+  box-shadow: 0 2px 8px #3d291e26;
+}
 .product-image,
 .image-placeholder {
   display: block;

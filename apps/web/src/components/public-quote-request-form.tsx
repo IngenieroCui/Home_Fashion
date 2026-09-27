@@ -3,6 +3,7 @@
 import { clientFetch } from '@/lib/client-fetch';
 import { FormEvent, useRef, useState } from 'react';
 import type { ProductVariant } from '@/lib/catalog';
+import { formatPrice } from '@/lib/catalog';
 import type {
   PublicQuoteRequestError,
   PublicQuoteRequestResult
@@ -27,6 +28,10 @@ export function PublicQuoteRequestForm({
   const [error, setError] = useState('');
   const [conflict, setConflict] = useState(false);
   const [result, setResult] = useState<PublicQuoteRequestResult | null>(null);
+  const [selectedVariantId, setSelectedVariantId] = useState(variants[0]?.id ?? 'custom');
+  const [quantity, setQuantity] = useState(1);
+  const selectedVariant = variants.find((variant) => variant.id === selectedVariantId);
+  const referenceTotal = selectedVariant && Number(selectedVariant.salePrice) * quantity;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -80,6 +85,8 @@ export function PublicQuoteRequestForm({
       setResult(body);
       requestIdRef.current = null;
       target.reset();
+      setSelectedVariantId(variants[0]?.id ?? 'custom');
+      setQuantity(1);
     } catch {
       setError('No pudimos conectarnos. Revisa tu conexión e inténtalo nuevamente.');
     } finally {
@@ -112,8 +119,8 @@ export function PublicQuoteRequestForm({
           Cotiza {productName}
         </h2>
         <p className="mt-2 max-w-2xl leading-7 text-[#67574d]">
-          Cuéntanos qué necesitas. El equipo de Home Fashion revisará la solicitud y se pondrá en
-          contacto contigo.
+          Elige una opción, indica los detalles y deja tus datos. Revisaremos la solicitud contigo
+          antes de confirmar precio, disponibilidad y fecha de entrega.
         </p>
       </div>
       {result && (
@@ -124,8 +131,9 @@ export function PublicQuoteRequestForm({
         >
           <strong>Recibimos tu solicitud.</strong>
           <p className="mt-1">
-            Tu código es <b>{result.requestCode}</b>. Guárdalo como referencia; pronto nos
-            comunicaremos contigo.
+            Tu código es <b>{result.requestCode}</b>. Guárdalo como referencia. El siguiente paso es
+            revisar las medidas y preparar una propuesta; el pedido se registra cuando aceptas la
+            cotización y se confirma la venta.
           </p>
         </div>
       )}
@@ -168,8 +176,9 @@ export function PublicQuoteRequestForm({
           Variante
           <select
             className={controlClass}
-            defaultValue={variants[0]?.id ?? 'custom'}
+            value={selectedVariantId}
             name="productVariantId"
+            onChange={(event) => setSelectedVariantId(event.target.value)}
             required
           >
             {allowsCustomization && <option value="custom">Diseño personalizado</option>}
@@ -184,14 +193,36 @@ export function PublicQuoteRequestForm({
           Cantidad
           <input
             className={controlClass}
-            defaultValue={1}
+            value={quantity}
             max={20}
             min={1}
             name="quantity"
+            onChange={(event) => setQuantity(Number(event.target.value))}
             required
             type="number"
           />
         </label>
+        <div
+          className="rounded-xl border border-[#ddcfbc] bg-[#f7f0e5] p-4 sm:col-span-2"
+          aria-live="polite"
+        >
+          <p className="eyebrow">Resumen de referencia</p>
+          <div className="mt-2 flex flex-wrap items-baseline justify-between gap-2">
+            <strong className="font-serif text-xl text-[#3d291e]">
+              {selectedVariant?.name ||
+                (selectedVariantId === 'custom' ? 'Diseño personalizado' : 'Variante seleccionada')}
+            </strong>
+            <strong className="text-lg text-[#3d291e]">
+              {referenceTotal && Number.isFinite(referenceTotal)
+                ? formatPrice(String(referenceTotal))
+                : 'Precio por definir'}
+            </strong>
+          </div>
+          <p className="mt-2 text-sm leading-6 text-[#67574d]">
+            {quantity || 0} unidad{quantity === 1 ? '' : 'es'}. El valor mostrado es orientativo; el
+            equipo confirma materiales, precio final y disponibilidad en la cotización.
+          </p>
+        </div>
         {allowsCustomization && (
           <fieldset className="grid gap-4 rounded-xl border border-[#eadfce] p-4 sm:col-span-2 sm:grid-cols-2">
             <legend className="px-1 font-serif text-lg font-bold text-[#3d291e]">
@@ -253,7 +284,7 @@ export function PublicQuoteRequestForm({
             {submitting ? 'Enviando…' : 'Enviar solicitud'}
           </button>
           <small className="leading-5 text-[#67574d]">
-            El precio mostrado es de referencia. No realizas ningún pago al enviar este formulario.
+            No realizas ningún pago al enviar este formulario.
           </small>
         </div>
       </form>
