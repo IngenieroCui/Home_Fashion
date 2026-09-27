@@ -115,7 +115,7 @@ export class OrderTrackingService {
       include: [
         {
           model: Order,
-          attributes: ['code', 'status', 'promisedDate', 'createdAt'],
+          attributes: ['code', 'status', 'promisedDate', ['created_at', 'createdAt']],
           required: true,
           include: [
             {

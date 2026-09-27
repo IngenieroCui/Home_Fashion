@@ -130,6 +130,13 @@ describe('PublicQuoteRequestsService', () => {
     );
   });
 
+  it('formats a numeric MySQL auto-increment id in the public request code', async () => {
+    quote.id = 42 as never;
+    await expect(service.create(dto)).resolves.toMatchObject({
+      requestCode: 'HF-SOL-2026-00042'
+    });
+  });
+
   it('creates a distinct public customer for each new requestId even when contact matches', async () => {
     await service.create(dto);
     await service.create({ ...dto, requestId: '7a1af82f-ad64-4fb8-a5c8-92b76b35cfee' });

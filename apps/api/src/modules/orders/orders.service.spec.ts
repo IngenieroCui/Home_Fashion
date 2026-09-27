@@ -50,6 +50,15 @@ describe('OrdersService', () => {
     expect(variantRows[0].update).toHaveBeenCalledWith({ quantityReserved: 2 }, expect.anything());
   });
 
+  it('matches numeric MySQL ids with string ids from the HTTP request', async () => {
+    const sale = { id: 1, customerId: 1, status: 'CONFIRMED', items: [
+      { id: 10, saleId: 1, productId: 100, productVariantId: 20, productNameSnapshot: 'Sofá', variantNameSnapshot: 'Gris', skuSnapshot: 'SOF-GRI', customization: null, quantity: 1, notes: null }
+    ] };
+    const { service, variantRows } = setup({ sale, variants: [{ id: 20, quantityOnHand: 2, quantityReserved: 0 }] });
+    await expect(service.createFromSale('1', dto([stock('10')]), 'user-1')).resolves.toBeDefined();
+    expect(variantRows[0].update).toHaveBeenCalledWith({ quantityReserved: 1 }, expect.anything());
+  });
+
   it.each([
     ['rejects a missing sale', { sale: null }, NotFoundException],
     ['rejects a non-confirmed sale', { sale: { id: '1', status: 'CANCELLED', items: [] } }, BadRequestException],

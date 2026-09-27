@@ -132,7 +132,7 @@ export class SalesService {
       { transaction }
     );
     await sale.update(
-      { code: `HF-VTA-${new Date().getFullYear()}-${sale.id.padStart(5, '0')}` },
+      { code: `HF-VTA-${new Date().getFullYear()}-${String(sale.id).padStart(5, '0')}` },
       { transaction }
     );
     return sale;
@@ -483,7 +483,7 @@ export class SalesService {
     if (query.customerId) where.customerId = query.customerId;
     if (query.status) where.status = query.status;
     if (query.dateFrom || query.dateTo) {
-      where.createdAt = {
+      where.created_at = {
         ...(query.dateFrom ? { [Op.gte]: new Date(`${query.dateFrom}T00:00:00.000Z`) } : {}),
         ...(query.dateTo ? { [Op.lte]: new Date(`${query.dateTo}T23:59:59.999Z`) } : {})
       };
@@ -505,10 +505,10 @@ export class SalesService {
         'discountTotal',
         'deliveryFee',
         'total',
-        'createdAt'
+        ['created_at', 'createdAt']
       ],
       include: [{ model: Customer, attributes: ['id', 'fullName', 'phone'] }],
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit: query.limit,
       offset: (query.page - 1) * query.limit,
       distinct: true

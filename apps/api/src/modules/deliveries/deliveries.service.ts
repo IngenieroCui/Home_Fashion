@@ -114,7 +114,7 @@ export class DeliveriesService {
       { '$order.customer.full_name$': { [Op.like]: `%${query.q}%` } }
     ];
     const result = await this.deliveries.findAndCountAll({
-      attributes: ['id', 'code', 'orderId', 'status', 'scheduledDate', 'timeWindow', 'deliveryType', 'assignedUserId', 'externalDriverName', 'address', 'contactName', 'contactPhone', 'createdAt'],
+      attributes: ['id', 'code', 'orderId', 'status', 'scheduledDate', 'timeWindow', 'deliveryType', 'assignedUserId', 'externalDriverName', 'address', 'contactName', 'contactPhone', ['created_at', 'createdAt']],
       where,
       include: this.deliveryIncludes(false),
       order: [['scheduledDate', 'ASC'], ['id', 'ASC']],

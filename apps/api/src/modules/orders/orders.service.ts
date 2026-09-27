@@ -41,7 +41,7 @@ export class OrdersService {
     if (!saleItems.length) throw new BadRequestException('Sale has no items');
     const ids = dto.items.map((item) => item.saleItemId);
     if (new Set(ids).size !== ids.length) throw new BadRequestException('Sale items cannot be duplicated');
-    const byId = new Map(saleItems.map((item) => [item.id, item]));
+    const byId = new Map(saleItems.map((item) => [String(item.id), item]));
     if (ids.length !== saleItems.length) throw new BadRequestException('All sale items must be included');
     const selected: Array<{ saleItem: SaleItem; input: CreateOrderFromSaleDto['items'][number] }> = [];
     for (const input of dto.items) {
@@ -65,7 +65,7 @@ export class OrdersService {
     const required = new Map<string, number>();
     for (const { saleItem, input } of selected) {
       if (input.supplyType === OrderSupplyType.IN_STOCK)
-        required.set(saleItem.productVariantId!, (required.get(saleItem.productVariantId!) ?? 0) + saleItem.quantity);
+        required.set(String(saleItem.productVariantId!), (required.get(String(saleItem.productVariantId!)) ?? 0) + saleItem.quantity);
     }
     const variantIds = [...required.keys()].sort((left, right) =>
       BigInt(left) === BigInt(right) ? 0 : BigInt(left) < BigInt(right) ? -1 : 1
@@ -79,12 +79,12 @@ export class OrdersService {
     });
     if (variants.length !== variantIds.length) throw new NotFoundException('Product variant not found');
     for (const variant of variants) {
-      const quantity = required.get(variant.id)!;
+      const quantity = required.get(String(variant.id))!;
       if (variant.quantityOnHand - variant.quantityReserved < quantity)
         throw new BadRequestException('Insufficient finished inventory for this order');
     }
     for (const variant of variants) {
-      await variant.update({ quantityReserved: variant.quantityReserved + required.get(variant.id)! }, { transaction });
+      await variant.update({ quantityReserved: variant.quantityReserved + required.get(String(variant.id))! }, { transaction });
     }
   }
 
@@ -112,7 +112,7 @@ export class OrdersService {
           notes: dto.notes ?? null,
           createdByUserId: userId
         }, { transaction });
-        await order.update({ code: `HF-PED-${new Date().getFullYear()}-${order.id.padStart(5, '0')}` }, { transaction });
+        await order.update({ code: `HF-PED-${new Date().getFullYear()}-${String(order.id).padStart(5, '0')}` }, { transaction });
         await this.orderItems.bulkCreate(selected.map(({ saleItem, input }) => ({
           orderId: order.id,
           saleItemId: saleItem.id,
@@ -141,7 +141,7 @@ export class OrdersService {
     const where: Record<PropertyKey, unknown> = {};
     if (query.customerId) where.customerId = query.customerId;
     if (query.status) where.status = query.status;
-    if (query.dateFrom || query.dateTo) where.createdAt = {
+    if (query.dateFrom || query.dateTo) where.created_at = {
       ...(query.dateFrom ? { [Op.gte]: new Date(`${query.dateFrom}T00:00:00.000Z`) } : {}),
       ...(query.dateTo ? { [Op.lte]: new Date(`${query.dateTo}T23:59:59.999Z`) } : {})
     };
@@ -152,12 +152,12 @@ export class OrdersService {
     ];
     const result = await this.orders.findAndCountAll({
       where,
-      attributes: ['id', 'code', 'saleId', 'customerId', 'status', 'promisedDate', 'createdAt'],
+      attributes: ['id', 'code', 'saleId', 'customerId', 'status', 'promisedDate', ['created_at', 'createdAt']],
       include: [
         { model: Customer, attributes: ['id', 'fullName', 'phone'] },
         { model: Sale, attributes: ['id', 'code'] }
       ],
-      order: [['createdAt', 'DESC']], limit: query.limit, offset: (query.page - 1) * query.limit, distinct: true
+      order: [['created_at', 'DESC']], limit: query.limit, offset: (query.page - 1) * query.limit, distinct: true
     });
     const ids = result.rows.map((order) => order.id);
     const counts = ids.length ? await this.orderItems.findAll({

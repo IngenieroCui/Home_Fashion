@@ -91,7 +91,7 @@ export class PublicQuoteRequestsService {
           { transaction }
         );
         await quote.update(
-          { code: `HF-SOL-${new Date().getFullYear()}-${quote.id.padStart(5, '0')}` },
+          { code: `HF-SOL-${new Date().getFullYear()}-${String(quote.id).padStart(5, '0')}` },
           { transaction }
         );
 
