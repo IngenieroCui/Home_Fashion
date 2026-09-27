@@ -31,7 +31,11 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
                 availability ? 'availability availability-in' : 'availability availability-out'
               }
             >
-              {availability ? 'Disponible' : 'Sin disponibilidad'}
+              {availability
+                ? 'Disponible'
+                : product.allowsCustomization
+                  ? 'Bajo pedido'
+                  : 'Sin disponibilidad'}
             </span>
           )}
         </div>

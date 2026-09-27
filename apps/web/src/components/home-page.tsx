@@ -11,9 +11,19 @@ export async function HomePage() {
     getProducts({ page: 1 })
   ]);
   const categories = categoriesResult.status === 'fulfilled' ? categoriesResult.value : [];
-  const products =
-    productsResult.status === 'fulfilled' ? productsResult.value.data.slice(0, 3) : [];
-  const featured = products.find((product) => product.images?.length);
+  const products = productsResult.status === 'fulfilled' ? productsResult.value.data : [];
+  const categoriesShown = new Set<string>();
+  const featuredProducts = products
+    .filter((product) => {
+      const category = product.category?.slug ?? product.slug;
+      if (categoriesShown.has(category)) return false;
+      categoriesShown.add(category);
+      return true;
+    })
+    .slice(0, 3);
+  const featured =
+    products.find((product) => product.category?.slug === 'sofas' && product.images?.length) ??
+    products.find((product) => product.images?.length);
   return (
     <main>
       <section className="hero">
@@ -164,8 +174,8 @@ export async function HomePage() {
                   momento.
                 </p>
               </PageState>
-            ) : products.length ? (
-              <ProductGrid products={products} />
+            ) : featuredProducts.length ? (
+              <ProductGrid products={featuredProducts} />
             ) : (
               <PageState title="Lo próximo para tu hogar está por llegar">
                 <p>Aún no hay muebles publicados. Vuelve pronto para descubrir las novedades.</p>
