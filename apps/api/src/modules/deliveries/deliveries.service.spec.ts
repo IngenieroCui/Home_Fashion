@@ -55,7 +55,7 @@ describe('DeliveriesService', () => {
       findOne: jest.fn().mockResolvedValue(options.existing ?? null),
       findByPk: jest.fn().mockResolvedValue(delivery),
       findAndCountAll: jest.fn().mockResolvedValue({ rows: [], count: 0 }),
-      create: jest.fn(async (values: Values) => modelRow({ ...values, id: '5' }))
+      create: jest.fn(async (values: Values) => modelRow({ ...values, id: 5 }))
     };
     const orders = { findByPk: jest.fn().mockResolvedValue(order) };
     const orderItems = { findAll: jest.fn().mockResolvedValue(items) };

@@ -23,7 +23,7 @@ describe('WorkshopJobsService', () => {
       sequelize: { transaction: jest.fn(async (callback) => callback(transaction)) },
       findOne: jest.fn().mockResolvedValue(options.existing ?? null),
       create: jest.fn(async (values) => {
-        const job = { ...values, id: '7', update: jest.fn(async (changes) => Object.assign(job, changes)) };
+        const job = { ...values, id: 7, update: jest.fn(async (changes) => Object.assign(job, changes)) };
         return job;
       }),
       findByPk: jest.fn().mockResolvedValue(detailJob()),

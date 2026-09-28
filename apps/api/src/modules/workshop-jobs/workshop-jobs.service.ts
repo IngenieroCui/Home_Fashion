@@ -91,7 +91,7 @@ export class WorkshopJobsService {
           assignedByUserId,
           assignedAt
         }, { transaction });
-        await job.update({ code: `HF-TAL-${assignedAt.getFullYear()}-${job.id.padStart(5, '0')}` }, { transaction });
+        await job.update({ code: `HF-TAL-${assignedAt.getFullYear()}-${String(job.id).padStart(5, '0')}` }, { transaction });
         return this.detail(job.id, transaction);
       });
     } catch (error) {

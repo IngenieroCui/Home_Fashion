@@ -84,7 +84,7 @@ export class DeliveriesService {
           deliveredAt: null,
           createdByUserId: userId
         }, { transaction });
-        await delivery.update({ code: `HF-ENT-${createdAt.getFullYear()}-${delivery.id.padStart(5, '0')}` }, { transaction });
+        await delivery.update({ code: `HF-ENT-${createdAt.getFullYear()}-${String(delivery.id).padStart(5, '0')}` }, { transaction });
         return this.loadDetail(delivery.id, transaction);
       });
     } catch (error) {

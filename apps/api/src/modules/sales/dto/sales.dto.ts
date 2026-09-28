@@ -5,7 +5,6 @@ import {
   IsEnum,
   IsInt,
   IsNotEmpty,
-  IsNumberString,
   IsObject,
   IsOptional,
   IsString,
@@ -34,7 +33,7 @@ export class SaleItemInputDto {
   @Transform(({ value }) => number(value)) @IsInt() @Min(1) quantity!: number;
   @Transform(({ value }) => decimal(value))
   @IsOptional()
-  @IsNumberString({ no_symbols: true })
+  @IsString()
   @Matches(/^\d+(\.\d{1,2})?$/)
   unitSalePrice?: string;
   @IsOptional() @IsObject() customization?: Record<string, unknown>;
@@ -50,7 +49,7 @@ export class CreateSaleDto {
   items!: SaleItemInputDto[];
   @Transform(({ value }) => decimal(value))
   @IsOptional()
-  @IsNumberString({ no_symbols: true })
+  @IsString()
   @Matches(/^\d+(\.\d{1,2})?$/)
   deliveryFee?: string;
   @IsOptional() @IsString() notes?: string;
@@ -65,7 +64,7 @@ export class RegisterSalePaymentDto {
   @IsEnum(SalePaymentType) type!: SalePaymentType;
   @IsEnum(SalePaymentMethod) method!: SalePaymentMethod;
   @Transform(({ value }) => decimal(value))
-  @IsNumberString({ no_symbols: true })
+  @IsString()
   @Matches(/^\d+(\.\d{1,2})?$/)
   amount!: string;
   @IsDateString() paidAt!: string;
