@@ -1,21 +1,16 @@
-import Link from 'next/link';
-import { PageState } from '@/components/page-state';
-
+import { ButtonLink } from '@/components/ui/button';
 export default function NotFound() {
   return (
-    <main className="page-shell py-12">
-      <PageState
-        title="Esta página no está disponible"
-        action={
-          <Link className="button-link" href="/catalogo">
-            Explorar el catálogo
-          </Link>
-        }
-      >
-        <p>
-          El enlace puede haber cambiado. Puedes seguir descubriendo muebles desde nuestro catálogo.
-        </p>
-      </PageState>
+    <main className="page-shell branded-state">
+      <p className="eyebrow">Home Fashion · 404</p>
+      <h1 className="font-serif text-5xl">Este espacio aún no existe</h1>
+      <p>No encontramos la página que buscas. Descubre algo nuevo para tu hogar.</p>
+      <div className="admin-actions">
+        <ButtonLink href="/">Volver al inicio</ButtonLink>
+        <ButtonLink href="/catalogo" variant="secondary">
+          Explorar catálogo
+        </ButtonLink>
+      </div>
     </main>
   );
 }

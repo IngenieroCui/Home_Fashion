@@ -1,0 +1,48 @@
+:root {
+  --color-background: #faf8f4;
+  --color-surface: #fffdf8;
+  --color-surface-muted: #f2eadd;
+  --color-text: #3d291e;
+  --color-text-muted: #67574d;
+  --color-primary: #a64b32;
+  --color-primary-hover: #833c2a;
+  --color-secondary: #52613c;
+  --color-border: #ddcfbc;
+  --color-success: #365c38;
+  --color-warning: #81501f;
+  --color-danger: #a22d2d;
+  --content-max: 100rem;
+  --content-wide-max: 110rem;
+  --page-gutter: clamp(1rem, 2.5vw, 3.5rem);
+  --radius-sm: 0.4rem;
+  --radius-md: 0.65rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --shadow-sm: 0 6px 16px #4a32220d;
+  --shadow-md: 0 12px 32px #35291f15;
+  --shadow-lg: 0 22px 55px #35291f1b;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --font-ui: var(--font-body, 'Segoe UI', Helvetica, sans-serif);
+  --font-heading: var(--font-display, 'Palatino Linotype', 'Book Antiqua', Palatino, serif);
+  /* Compatibility aliases keep existing public/operations selectors on one palette. */
+  --ivory: var(--color-background);
+  --coffee: var(--color-text);
+  --terracotta: var(--color-primary);
+  --olive: var(--color-secondary);
+  --surface: var(--color-surface);
+  --border: var(--color-border);
+  --ink-soft: var(--color-text-muted);
+  --shadow-lift: var(--shadow-lg);
+}
+@media (min-width: 1920px) {
+  :root {
+    --content-max: var(--content-wide-max);
+  }
+}

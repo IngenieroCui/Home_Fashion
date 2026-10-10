@@ -1,8 +1,10 @@
 'use client';
 
 import { clientFetch } from '@/lib/client-fetch';
+import { confirmAction } from '@/lib/confirm-action';
 import Link from 'next/link';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { CommerceItemVisual } from './commerce-item-visual';
 import {
   deliveryAssigneeName,
   deliveryStatusLabel,
@@ -24,19 +26,19 @@ async function loadDelivery(id: string) {
   return body as DeliveryDetailType;
 }
 
-function validEvidenceUrl(value: string) {
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' || url.protocol === 'http:';
-  } catch {
-    return false;
-  }
+function FilePreview({ file, remove, disabled }: { file: File; remove: () => void; disabled: boolean }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => { const objectUrl = URL.createObjectURL(file); setUrl(objectUrl); return () => URL.revokeObjectURL(objectUrl); }, [file]);
+  return <div style={{ width: 120 }}>{url && (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img alt={file.name} src={url} style={{ width: 120, height: 90, objectFit: 'cover', borderRadius: 9 }} />
+  )}<button className="text-link" disabled={disabled} onClick={remove} type="button">Quitar</button></div>;
 }
 
 export function DeliveryDetail({ id }: { id: string }) {
   const [delivery, setDelivery] = useState<DeliveryDetailType | null>(null);
   const [receiverName, setReceiverName] = useState('');
-  const [evidenceUrls, setEvidenceUrls] = useState(['']);
+  const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -53,7 +55,7 @@ export function DeliveryDetail({ id }: { id: string }) {
     void refresh();
   }, [refresh]);
 
-  async function mutate(action: 'start' | 'cancel' | 'complete', payload?: unknown) {
+  async function mutate(action: 'start' | 'cancel' | 'complete-media', payload?: FormData) {
     setSaving(true);
     setError(null);
     setNotice(null);
@@ -62,9 +64,7 @@ export function DeliveryDetail({ id }: { id: string }) {
         `/api/admin/deliveries/${encodeURIComponent(id)}/${action}`,
         {
           method: 'POST',
-          ...(payload
-            ? { headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) }
-            : {})
+          ...(payload ? { body: payload } : {})
         }
       );
       const body = (await response.json().catch(() => null)) as
@@ -75,7 +75,7 @@ export function DeliveryDetail({ id }: { id: string }) {
       setNotice(
         action === 'start'
           ? 'La entrega quedó en camino.'
-          : action === 'complete'
+          : action === 'complete-media'
             ? 'La entrega se completó y quedó registrada con sus evidencias.'
             : 'La entrega fue cancelada.'
       );
@@ -91,20 +91,28 @@ export function DeliveryDetail({ id }: { id: string }) {
 
   function complete(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const urls = evidenceUrls.map((url) => url.trim()).filter(Boolean);
-    if (!receiverName.trim()) {
-      setError('Escribe el nombre de quien recibió el pedido.');
-      return;
-    }
-    if (!urls.length || urls.length > 5 || urls.some((url) => !validEvidenceUrl(url))) {
-      setError('Agrega entre una y cinco URLs válidas de evidencia (http o https).');
-      return;
-    }
-    void mutate('complete', { receiverName: receiverName.trim(), evidenceUrls: urls });
+    if (saving) return;
+    if (!receiverName.trim()) { setError('Escribe el nombre de quien recibió el pedido.'); return; }
+    if (files.length < 1 || files.length > 5) { setError('Selecciona entre una y cinco fotografías.'); return; }
+    const form = new FormData();
+    form.set('receiverName', receiverName.trim());
+    files.forEach((file) => form.append('files', file));
+    void mutate('complete-media', form);
   }
 
-  function cancel() {
-    if (!window.confirm('¿Confirmas que deseas cancelar esta entrega? El pedido no se cancelará.'))
+  function addFiles(selected: FileList | null) {
+    if (!selected) return;
+    const next = [...files, ...Array.from(selected)];
+    if (next.length > 5 || next.some((file) => !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 10 * 1024 * 1024)) {
+      setError('Selecciona hasta cinco imágenes JPG, PNG o WebP de máximo 10 MB cada una.');
+      return;
+    }
+    setError(null);
+    setFiles(next);
+  }
+
+  async function cancel() {
+    if (!(await confirmAction('¿Confirmas que deseas cancelar esta entrega? El pedido no se cancelará.', 'Cancelar entrega')))
       return;
     void mutate('cancel');
   }
@@ -181,9 +189,6 @@ export function DeliveryDetail({ id }: { id: string }) {
       {delivery.status === 'OUT_FOR_DELIVERY' && (
         <form className="admin-form admin-form-wide" onSubmit={complete}>
           <h2 className="font-serif text-2xl">Completar entrega</h2>
-          <p className="notice">
-            Ingresa URLs de evidencias que ya estén alojadas. Esta pantalla no carga archivos.
-          </p>
           <label>
             Nombre de quien recibe
             <input
@@ -193,50 +198,15 @@ export function DeliveryDetail({ id }: { id: string }) {
               value={receiverName}
             />
           </label>
-          <fieldset className="delivery-evidence-fieldset">
-            <legend className="font-semibold">Evidencias (1 a 5 URLs)</legend>
-            {evidenceUrls.map((url, index) => (
-              <div className="delivery-evidence-row" key={index}>
-                <label>
-                  Evidencia {index + 1}
-                  <input
-                    onChange={(event) =>
-                      setEvidenceUrls((current) =>
-                        current.map((item, itemIndex) =>
-                          itemIndex === index ? event.target.value : item
-                        )
-                      )
-                    }
-                    placeholder="https://…"
-                    required
-                    type="url"
-                    value={url}
-                  />
-                </label>
-                {evidenceUrls.length > 1 && (
-                  <button
-                    className="button-link button-link-secondary"
-                    onClick={() =>
-                      setEvidenceUrls((current) =>
-                        current.filter((_, itemIndex) => itemIndex !== index)
-                      )
-                    }
-                    type="button"
-                  >
-                    Quitar
-                  </button>
-                )}
-              </div>
-            ))}
-            {evidenceUrls.length < 5 && (
-              <button
-                className="button-link button-link-secondary"
-                onClick={() => setEvidenceUrls((current) => [...current, ''])}
-                type="button"
-              >
-                Agregar otra evidencia
-              </button>
-            )}
+          <fieldset className="delivery-evidence-fieldset" disabled={saving}>
+            <legend className="font-semibold">Evidencias (1 a 5 fotografías)</legend>
+            <label>Seleccionar fotografías
+              <input accept="image/jpeg,image/png,image/webp" disabled={saving || files.length >= 5} multiple onChange={(event) => { addFiles(event.target.files); event.target.value = ''; }} type="file" />
+            </label>
+            <p>{files.length} / 5 fotografías</p>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              {files.map((file, index) => <FilePreview disabled={saving} file={file} key={`${file.name}-${index}`} remove={() => setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))} />)}
+            </div>
           </fieldset>
           <div className="admin-actions">
             <button className="button-link" disabled={saving} type="submit">
@@ -310,10 +280,7 @@ export function DeliveryDetail({ id }: { id: string }) {
         <div className="payment-history">
           {delivery.items.map((item) => (
             <article className="payment-entry" key={item.id}>
-              <strong>
-                {item.productNameSnapshot}
-                {item.variantNameSnapshot ? ` · ${item.variantNameSnapshot}` : ''}
-              </strong>
+              <CommerceItemVisual imageUrl={item.imageUrlSnapshot} name={item.productNameSnapshot} variant={item.variantNameSnapshot} quantity={item.quantity} />
               <p>
                 SKU: {item.skuSnapshot ?? '—'} · Cantidad: {item.quantity}
               </p>

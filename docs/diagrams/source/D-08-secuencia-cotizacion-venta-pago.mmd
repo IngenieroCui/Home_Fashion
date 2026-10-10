@@ -1,0 +1,30 @@
+%% D-08 — Secuencia: cotización a venta y pago
+%% Fuentes: quotes.service.ts; sales.service.ts
+sequenceDiagram
+  autonumber
+  actor P as Personal autorizado
+  participant W as Panel Next.js
+  participant A as API NestJS
+  participant DB as MySQL
+
+  P->>W: Marca cotización como ACCEPTED
+  W->>A: PATCH estado
+  A->>DB: Valida transición QUOTED → ACCEPTED
+  P->>W: Convertir en venta
+  W->>A: POST venta desde cotización
+  A->>DB: Bloquea cotización y verifica conversión única
+  A->>A: Copia snapshots y recalcula totales
+  A->>DB: Crea venta CONFIRMED + sale_items
+  DB-->>A: Venta creada
+  A-->>W: Total, pagado=0 y saldo
+  P->>W: Registra abono/pago
+  W->>A: POST movimiento de pago
+  A->>DB: Bloquea venta y agrega movimiento REGISTERED
+  A->>A: Deriva PENDING / PARTIALLY_PAID / PAID
+  A-->>W: Nuevo resumen financiero
+  opt corrección posterior
+    P->>W: Anula movimiento con motivo
+    W->>A: POST void
+    A->>DB: Conserva movimiento y marca VOIDED
+    A-->>W: Resumen recalculado
+  end

@@ -23,3 +23,20 @@ docs/
 **/.dart_tool/
 **/.next/
 **/*.log
+
+# Isolated QA runtime, local databases and browser sessions.
+.e2e-local/
+.e2e-results/
+**/.e2e-local/
+**/.e2e-results/
+**/owner.json
+**/*storageState*
+**/*storage-state*
+**/*auth-state*
+**/*.db
+**/*.sqlite*
+**/*.ibd
+**/*.sdi
+**/*.har
+**/*.key
+**/*.pem

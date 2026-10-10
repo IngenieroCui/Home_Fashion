@@ -1,0 +1,29 @@
+%% D-07 — Secuencia: solicitud pública a cotización
+%% Fuentes: public-quote-requests.service.ts; quotes.service.ts
+sequenceDiagram
+  autonumber
+  actor C as Cliente
+  participant W as Next.js
+  participant A as API NestJS
+  participant DB as MySQL
+  actor P as Personal
+
+  C->>W: Completa solicitud (datos + productos)
+  W->>A: POST /api/public/quote-requests<br/>Idempotency-Key
+  A->>A: Valida DTO y recalcula datos confiables
+  A->>DB: Busca public_request_key
+  alt clave nueva
+    A->>DB: Transacción: cliente + quote REQUESTED + items
+    DB-->>A: Solicitud persistida
+  else misma clave y mismo payload
+    DB-->>A: Resultado previo
+  else misma clave y payload distinto
+    A-->>W: 409 Conflict
+  end
+  A-->>W: Código y estado REQUESTED
+  W-->>C: Confirmación sin exponer datos internos
+  P->>A: Autenticación + permiso de cotizaciones
+  P->>A: Edita valores y condiciones
+  A->>DB: Actualiza snapshots y totales
+  P->>A: Cambia REQUESTED → QUOTED
+  A->>DB: Verifica ítems valorados y guarda estado

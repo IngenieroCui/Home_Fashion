@@ -1,0 +1,22 @@
+%% D-15 — Estados de WorkshopJob y revisión de reportes
+%% Fuente: workshop-progress.service.ts; workshop-jobs.types.ts
+flowchart LR
+  subgraph JOB[WorkshopJob]
+    A[ASSIGNED] -->|STARTED| I[IN_PROGRESS]
+    I -->|PROGRESS| I
+    I -->|READY_FOR_REVIEW| R[READY_FOR_REVIEW]
+    R -->|aprobar reporte final| C[COMPLETED]
+    R -->|rechazar reporte final| I
+    A -. cancelación .-> X[CANCELLED]
+    I -. cancelación .-> X
+  end
+
+  subgraph REPORT[WorkshopProgressReport]
+    N[Nuevo reporte] --> P[PENDING_REVIEW]
+    P -->|APPROVE| OK[APPROVED]
+    P -->|REJECT + comentario| NO[REJECTED]
+  end
+
+  R -. revisión del último READY_FOR_REVIEW .-> P
+  OK -. sincroniza .-> C
+  NO -. permite corrección y nuevo reporte .-> I

@@ -1,37 +1,39 @@
 'use client';
+import { formatDate } from '@/lib/formatters';
 
-import { clientFetch } from '@/lib/client-fetch';
-import { useRef, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import { clientFetch } from '@/lib/client-fetch';
+import type { OrderPreparation } from '@/lib/operations';
 import type { OrderSupplyType } from '@/lib/orders';
-import type { Sale } from '@/lib/sales';
+import { CommerceItemVisual } from './commerce-item-visual';
 
-export function CreateOrderForm({ sale }: { sale: Sale }) {
+const today = () => {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+export function CreateOrderForm({ preparation }: { preparation: OrderPreparation }) {
   const router = useRouter();
-  const firstUnclassified = useRef<HTMLDivElement | null>(null);
-  const items = sale.items ?? [];
-  const [types, setTypes] = useState<Record<string, OrderSupplyType | undefined>>(() =>
-    Object.fromEntries(
-      items.map((item) => [item.id, item.productVariantId ? undefined : 'MADE_TO_ORDER'])
-    )
+  const { sale, items } = preparation;
+  const [types, setTypes] = useState<Record<string, OrderSupplyType>>(() =>
+    Object.fromEntries(items.map((item) => [item.saleItemId, item.suggestedSupplyType]))
   );
-  const [itemNotes, setItemNotes] = useState<Record<string, string>>(() =>
-    Object.fromEntries(items.map((item) => [item.id, item.notes ?? '']))
-  );
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
-
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const unclassified = items.find((item) => item.productVariantId && !types[item.id]);
-    if (!items.length || unclassified) {
-      setError('Selecciona cómo se atenderá cada elemento antes de crear el pedido.');
-      firstUnclassified.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const form = new FormData(event.currentTarget);
+    const promisedDate = String(form.get('promisedDate') || '');
+    if (promisedDate && promisedDate < today()) {
+      setError('La fecha prometida no puede estar en el pasado.');
       return;
     }
-    const form = new FormData(event.currentTarget);
+    if (!items.length) {
+      setError('La venta no tiene elementos para preparar.');
+      return;
+    }
     setSaving(true);
-    setError(null);
+    setError('');
     try {
       const response = await clientFetch(
         `/api/admin/orders/from-sale/${encodeURIComponent(sale.id)}`,
@@ -39,12 +41,12 @@ export function CreateOrderForm({ sale }: { sale: Sale }) {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
-            promisedDate: String(form.get('promisedDate') ?? '').trim() || undefined,
-            notes: String(form.get('notes') ?? '').trim() || undefined,
+            promisedDate: promisedDate || undefined,
+            notes: String(form.get('notes') || '').trim() || undefined,
             items: items.map((item) => ({
-              saleItemId: item.id,
-              supplyType: types[item.id],
-              notes: itemNotes[item.id].trim() || undefined
+              saleItemId: item.saleItemId,
+              supplyType: types[item.saleItemId],
+              notes: String(form.get(`notes-${item.saleItemId}`) || '').trim() || undefined
             }))
           })
         }
@@ -53,8 +55,8 @@ export function CreateOrderForm({ sale }: { sale: Sale }) {
         id?: string;
         message?: string;
       } | null;
-      if (!response.ok) throw new Error(body?.message ?? 'No fue posible crear el pedido.');
-      if (!body?.id) throw new Error('La respuesta del pedido fue inesperada.');
+      if (!response.ok || !body?.id)
+        throw new Error(body?.message || 'No fue posible crear el pedido.');
       router.replace(`/panel/pedidos/${body.id}`);
       router.refresh();
     } catch (reason) {
@@ -63,27 +65,24 @@ export function CreateOrderForm({ sale }: { sale: Sale }) {
       setSaving(false);
     }
   }
-
   return (
     <form className="admin-form admin-form-wide" onSubmit={submit}>
-      <h1 className="font-serif text-3xl">Crear pedido de {sale.code}</h1>
+      <h1 className="font-serif text-3xl">Preparar pedido de {sale.code}</h1>
+      <p>
+        {sale.customer.fullName} · {formatDate(sale.createdAt)}
+      </p>
       <p className="notice">
-        Define cómo se entregará cada mueble. «Disponible en inventario» reserva unidades
-        terminadas; «Fabricación bajo pedido» inicia el recorrido de taller. El sistema comprueba la
-        disponibilidad al guardar y te avisará si cambió.
+        Define cómo atender cada mueble. La disponibilidad se vuelve a comprobar al guardar el
+        pedido.
       </p>
       {error && (
         <p className="form-error" role="alert">
           {error}
         </p>
       )}
-      <p>
-        Cliente: {sale.customer?.fullName ?? '—'} · Venta:{' '}
-        {new Date(sale.createdAt).toLocaleDateString('es-CO')}
-      </p>
       <label>
         Fecha prometida opcional
-        <input name="promisedDate" type="date" />
+        <input name="promisedDate" type="date" min={today()} />
       </label>
       <label>
         Notas generales opcionales
@@ -91,20 +90,80 @@ export function CreateOrderForm({ sale }: { sale: Sale }) {
       </label>
       <div className="order-classification">
         {items.map((item) => {
-          const needsClassification = Boolean(item.productVariantId && !types[item.id]);
+          const stock = item.inventory;
+          const enough =
+            stock?.variantStatus === 'ACTIVE' && stock.quantityAvailable >= item.quantity;
           return (
-            <article
-              className="payment-entry"
-              key={item.id}
-              ref={needsClassification ? firstUnclassified : undefined}
-            >
-              <strong>
-                {item.productNameSnapshot}
-                {item.variantNameSnapshot ? ` · ${item.variantNameSnapshot}` : ' · Personalizado'}
-              </strong>
-              <p>
-                SKU: {item.skuSnapshot ?? '—'} · Cantidad: {item.quantity}
-              </p>
+            <article className="admin-record-card" key={item.saleItemId}>
+              <CommerceItemVisual
+                imageUrl={item.imageUrlSnapshot}
+                name={item.productNameSnapshot}
+                variant={item.variantNameSnapshot}
+                quantity={item.quantity}
+                meta={<small>{item.skuSnapshot}</small>}
+              />
+              {stock && (
+                <>
+                  <h3 className="mt-4 font-semibold">Inventario terminado</h3>
+                  <dl className="record-values">
+                    <div>
+                      <dt>Existencias</dt>
+                      <dd>{stock.quantityOnHand}</dd>
+                    </div>
+                    <div>
+                      <dt>Reservadas</dt>
+                      <dd>{stock.quantityReserved}</dd>
+                    </div>
+                    <div>
+                      <dt>Disponibles</dt>
+                      <dd>{stock.quantityAvailable}</dd>
+                    </div>
+                    <div>
+                      <dt>Ubicación</dt>
+                      <dd>{stock.location || 'Sin ubicación'}</dd>
+                    </div>
+                  </dl>
+                  {!enough && (
+                    <p className="notice mt-3">
+                      {stock.variantStatus !== 'ACTIVE'
+                        ? 'La variante está inactiva.'
+                        : `Inventario insuficiente para las ${item.quantity} unidades solicitadas.`}
+                    </p>
+                  )}
+                </>
+              )}
+              {item.productVariantId ? (
+                <fieldset className="supply-options">
+                  <legend>¿Cómo atenderlo?</legend>
+                  <label>
+                    <input
+                      type="radio"
+                      name={`supply-${item.saleItemId}`}
+                      value="IN_STOCK"
+                      disabled={!enough}
+                      checked={types[item.saleItemId] === 'IN_STOCK'}
+                      onChange={() =>
+                        setTypes((current) => ({ ...current, [item.saleItemId]: 'IN_STOCK' }))
+                      }
+                    />
+                    Reservar inventario
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name={`supply-${item.saleItemId}`}
+                      value="MADE_TO_ORDER"
+                      checked={types[item.saleItemId] === 'MADE_TO_ORDER'}
+                      onChange={() =>
+                        setTypes((current) => ({ ...current, [item.saleItemId]: 'MADE_TO_ORDER' }))
+                      }
+                    />
+                    Fabricar bajo pedido
+                  </label>
+                </fieldset>
+              ) : (
+                <p className="notice mt-4">Producto personalizado. Debe fabricarse bajo pedido.</p>
+              )}
               {item.customization && (
                 <p>
                   Personalización:{' '}
@@ -113,46 +172,16 @@ export function CreateOrderForm({ sale }: { sale: Sale }) {
                     .join(' · ')}
                 </p>
               )}
-              <p className={needsClassification ? 'form-error' : undefined}>
-                Selecciona cómo se atenderá este elemento.
-              </p>
               <label>
-                Tipo de suministro
-                <select
-                  disabled={!item.productVariantId}
-                  onChange={(event) =>
-                    setTypes((current) => ({
-                      ...current,
-                      [item.id]: event.target.value as OrderSupplyType
-                    }))
-                  }
-                  value={types[item.id] ?? ''}
-                >
-                  {item.productVariantId && <option value="">Selecciona una opción</option>}
-                  <option disabled={!item.productVariantId} value="IN_STOCK">
-                    Disponible en inventario
-                  </option>
-                  <option value="MADE_TO_ORDER">Fabricación bajo pedido</option>
-                </select>
-              </label>
-              {!item.productVariantId && (
-                <p>Este elemento no tiene variante y debe fabricarse bajo pedido.</p>
-              )}
-              <label>
-                Notas para este elemento del pedido
-                <textarea
-                  onChange={(event) =>
-                    setItemNotes((current) => ({ ...current, [item.id]: event.target.value }))
-                  }
-                  value={itemNotes[item.id]}
-                />
+                Notas para este mueble
+                <textarea name={`notes-${item.saleItemId}`} defaultValue={item.notes || ''} />
               </label>
             </article>
           );
         })}
       </div>
       <div className="admin-actions">
-        <button className="button-link" disabled={saving} type="submit">
+        <button className="button-link" disabled={saving}>
           {saving ? 'Creando pedido…' : 'Crear pedido'}
         </button>
       </div>

@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-10T20:51:37.885Z",
+  "repository": "C:/Users/juand/Downloads/Proyectos/Mio/Tesis/home-fashion",
+  "isolatedMySQL": true,
+  "aivenWrites": 0,
+  "journeysExecuted": 5,
+  "passed": 5,
+  "failed": 0,
+  "browser": "Chromium real",
+  "API": "NestJS real",
+  "cloudinary": "REAL: 2 imágenes en esta ejecución (taller y entrega)",
+  "checks": {
+    "typecheck": "PASS",
+    "isolationSafetyTests": "2/2 PASS",
+    "migrationRegressionTests": "3/3 PASS",
+    "migrationLint": "PASS",
+    "evidenceSecretsScan": "PASS"
+  },
+  "screenshots": 6,
+  "android": {
+    "runtime": "PENDIENTE",
+    "detectedAndroidDevices": 0,
+    "installedSdk": false,
+    "flutterIntegrationTest": "No preparado: sin dispositivo Android disponible; alcance priorizado en journeys web/API"
+  },
+  "bugsFixed": [
+    "Carga de migraciones TypeScript en Umzug/tsx: resolver compatible con exports directos y default; conserva historial .js/.ts."
+  ],
+  "limitations": [
+    "WORKSHOP ejecutado por API real, sin prueba móvil Android.",
+    "Trazas de fallo semánticas JSON; no ZIP/HAR/storageState que persistan secretos.",
+    "Cloudinary conserva activos QA en carpeta exclusiva.",
+    "Los datos son descartables y se conservan para inspección; sin resets destructivos."
+  ]
+}

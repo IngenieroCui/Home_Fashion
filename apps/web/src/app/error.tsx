@@ -1,34 +1,17 @@
 'use client';
-
-import Link from 'next/link';
-import { PageState } from '@/components/page-state';
-
-export default function ErrorPage({
-  reset
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
+import { Button, ButtonLink } from '@/components/ui/button';
+export default function ErrorPage({ reset }: { reset: () => void }) {
   return (
-    <div className="page-shell py-12">
-      <PageState
-        title="No pudimos abrir esta página"
-        tone="error"
-        action={
-          <>
-            <button className="button-link" onClick={reset} type="button">
-              Volver a intentar
-            </button>
-            <Link className="button-link button-link-secondary" href="/">
-              Ir al inicio
-            </Link>
-          </>
-        }
-      >
-        <p>
-          Ocurrió un problema al cargar la información. Espera un momento y vuelve a intentarlo.
-        </p>
-      </PageState>
-    </div>
+    <main className="page-shell branded-state">
+      <p className="eyebrow">Home Fashion</p>
+      <h1 className="font-serif text-4xl">No pudimos cargar esta sección</h1>
+      <p>Puedes volver a intentarlo en un momento.</p>
+      <div className="admin-actions">
+        <Button onClick={reset}>Reintentar</Button>
+        <ButtonLink href="/" variant="secondary">
+          Volver al inicio
+        </ButtonLink>
+      </div>
+    </main>
   );
 }

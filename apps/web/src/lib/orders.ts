@@ -11,6 +11,7 @@ export type OrderItem = {
   productId: string;
   productVariantId: string | null;
   productNameSnapshot: string;
+  imageUrlSnapshot: string | null;
   variantNameSnapshot: string | null;
   skuSnapshot: string | null;
   customization: Record<string, unknown> | null;

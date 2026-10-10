@@ -1,0 +1,21 @@
+%% D-19 — Ruta crítica revisada al 22 de septiembre de 2026
+%% Fuente: proyecto Linear Home Fashion - Trabajo de Grado 2026 y evidencia del repositorio.
+%% Los estados son un corte de gestión; no representan resultados de validación.
+flowchart LR
+  BASE[Base técnica y 19 diagramas<br/>verificados] --> MYSQL[MySQL descartable<br/>pendiente]
+  MYSQL --> MIG[Migraciones y seed<br/>pendientes]
+  MIG --> E2E[Recorrido E2E<br/>pendiente]
+  E2E --> WEB[Web y Android reales<br/>pendientes]
+  WEB --> USERS[Evaluación con usuarios<br/>pendiente]
+  USERS --> RESULT[Resultados medibles<br/>pendientes]
+  RESULT --> FINAL[Documento final<br/>revisión del tutor]
+  DRAFT[Borrador de tesis<br/>disponible] --> FORMAT[Adaptación al formato<br/>en curso]
+  FORMAT --> FINAL
+  FINAL --> DEF[Sustentación<br/>por programar]
+
+  classDef done fill:#ECFDF5,stroke:#059669,color:#065F46;
+  classDef pending fill:#FFF7ED,stroke:#D97706,color:#78350F;
+  classDef critical fill:#FEE2E2,stroke:#DC2626,color:#7F1D1D;
+  class BASE,DRAFT done;
+  class FORMAT,FINAL,DEF pending;
+  class MYSQL,MIG,E2E,WEB,USERS,RESULT critical;

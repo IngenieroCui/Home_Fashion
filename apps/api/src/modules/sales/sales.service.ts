@@ -9,6 +9,7 @@ import { InjectModel } from '@nestjs/sequelize';
 import { randomUUID } from 'node:crypto';
 import { Op, Transaction } from 'sequelize';
 import { AuthService } from '../auth/auth.service';
+import { CatalogImageResolverService } from '../catalog/catalog-image-resolver.service';
 import { User } from '../auth/entities/user.model';
 import { Product } from '../catalog/entities/product.model';
 import { ProductVariant } from '../catalog/entities/product-variant.model';
@@ -25,6 +26,7 @@ import {
 import { SaleItem } from './entities/sale-item.model';
 import { SalePayment } from './entities/sale-payment.model';
 import { Sale } from './entities/sale.model';
+import { Order } from '../orders/entities/order.model';
 import {
   calculatePaymentSummary,
   calculateSaleItem,
@@ -60,6 +62,7 @@ export class SalesService {
     @InjectModel(QuoteItem) private readonly quoteItems: typeof QuoteItem,
     @InjectModel(Product) private readonly products: typeof Product,
     @InjectModel(ProductVariant) private readonly variants: typeof ProductVariant,
+    private readonly images: CatalogImageResolverService,
     private readonly auth: AuthService
   ) {}
 
@@ -85,6 +88,7 @@ export class SalesService {
             { model: Quote },
             { model: User, as: 'createdByUser', attributes: ['id', 'fullName', 'email'] },
             { model: SaleItem },
+            { model: Order, attributes: ['id', 'code', 'status'], required: false },
             {
               model: SalePayment,
               include: [
@@ -180,12 +184,14 @@ export class SalesService {
       throw new ForbiddenException('A sale below cost requires SALE_PRICE_OVERRIDE');
 
     const amounts = calculateSaleItem(listPrice, unitSalePrice, input.quantity);
+    if (cents(amounts.subtotal) > 999_999_999_999n || cents(amounts.discountAmount) > 999_999_999_999n) throw new BadRequestException('Sale item exceeds the monetary limit');
     return this.saleItems.create(
       {
         saleId: sale.id,
         productId: product.id,
         productVariantId: variant?.id ?? null,
         productNameSnapshot: product.name,
+        imageUrlSnapshot: await this.images.resolvePrimaryImageUrl(product.id, variant?.id, transaction),
         variantNameSnapshot: variant?.name ?? null,
         skuSnapshot: variant?.sku ?? null,
         customization: input.customization ?? null,
@@ -225,6 +231,7 @@ export class SalesService {
         productId: item.productId,
         productVariantId: item.productVariantId,
         productNameSnapshot: item.productNameSnapshot,
+        imageUrlSnapshot: item.imageUrlSnapshot,
         variantNameSnapshot: item.variantNameSnapshot,
         skuSnapshot: item.skuSnapshot,
         customization: item.customization,
@@ -246,6 +253,7 @@ export class SalesService {
   private async recalculate(sale: Sale, transaction: Transaction) {
     const items = await this.saleItems.findAll({ where: { saleId: sale.id }, transaction });
     const values = calculateSaleTotals(items, sale.deliveryFee);
+    if (cents(values.total) > 999_999_999_999n || cents(values.discountTotal) > 999_999_999_999n) throw new BadRequestException('Sale total exceeds the monetary limit');
     await sale.update(values, { transaction });
   }
 
@@ -280,6 +288,18 @@ export class SalesService {
       throw new BadRequestException('Payment movement cannot make amount paid negative');
     if (resultingPaid > total)
       throw new BadRequestException('Payment cannot exceed the current balance');
+  }
+
+  async preparePaymentMedia(saleId: string, dto: RegisterSalePaymentDto, userId: string) {
+    if (dto.reference && dto.reference.length > 160) throw new BadRequestException('La referencia admite hasta 160 caracteres');
+    if (dto.notes && Buffer.byteLength(dto.notes, 'utf8') > 65535) throw new BadRequestException('Las notas son demasiado extensas');
+    const user = await this.user(userId);
+    this.require(user, PAYMENT_REGISTER_PERMISSION);
+    const sale = await this.sales.findByPk(saleId);
+    if (!sale) throw new NotFoundException('Sale not found');
+    if (sale.status !== SaleStatus.CONFIRMED) throw new BadRequestException('Payments can only be registered for confirmed sales');
+    this.validatePayment(dto, await this.paymentSummary(sale));
+    return { code: sale.code };
   }
 
   async registerPayment(saleId: string, dto: RegisterSalePaymentDto, userId: string) {
@@ -329,7 +349,7 @@ export class SalesService {
       });
       if (!payment || payment.saleId !== sale.id) throw new NotFoundException('Sale payment not found');
       if (payment.status === SalePaymentStatus.VOIDED) {
-        return { payment: plain<Plain>(payment), ...(await this.paymentSummary(sale, transaction)) };
+        throw new ConflictException('Sale payment has already been voided');
       }
       const registered = await this.salePayments.findAll({
         where: { saleId: sale.id, status: SalePaymentStatus.REGISTERED },
@@ -410,6 +430,7 @@ export class SalesService {
   }
 
   private presentDetail(raw: Plain, user: UserContext) {
+    if (!user.permissions.includes('ORDER_MANAGE')) delete raw.order;
     const sourceItems = (raw.items as Plain[] | undefined) ?? [];
     const missingCost = sourceItems.some((item) => item.unitCostSnapshot === null);
     const items = sourceItems.map((item) => {
@@ -481,6 +502,7 @@ export class SalesService {
     this.require(user, SALE_MANAGE_PERMISSION);
     const where: Record<PropertyKey, unknown> = {};
     if (query.customerId) where.customerId = query.customerId;
+    if (query.quoteId) where.quoteId = query.quoteId;
     if (query.status) where.status = query.status;
     if (query.dateFrom || query.dateTo) {
       where.created_at = {

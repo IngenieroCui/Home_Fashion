@@ -11,6 +11,20 @@ module.exports = function load(relativePath) {
     fileName: filename
   });
   const compiled = { exports: {} };
-  new Function('module', 'exports', outputText)(compiled, compiled.exports);
+  const localRequire = (specifier) => {
+    if (specifier.startsWith('.'))
+      return module.exports(
+        path.relative(
+          path.resolve(__dirname, '..'),
+          path.resolve(path.dirname(filename), specifier + '.ts')
+        )
+      );
+    return require(specifier);
+  };
+  new Function('module', 'exports', 'require', outputText)(
+    compiled,
+    compiled.exports,
+    localRequire
+  );
   return compiled.exports;
 };

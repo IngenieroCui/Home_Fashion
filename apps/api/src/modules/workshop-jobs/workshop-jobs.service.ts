@@ -146,7 +146,7 @@ export class WorkshopJobsService {
       { model: User, as: 'assignedByUser', attributes: ['id', 'fullName', 'email'] },
       {
         model: OrderItem,
-        attributes: ['id', 'orderId', 'productNameSnapshot', 'variantNameSnapshot', 'skuSnapshot', 'customization', 'quantity', 'supplyType', 'status', 'notes'],
+        attributes: ['id', 'orderId', 'productNameSnapshot', 'variantNameSnapshot', 'skuSnapshot', 'imageUrlSnapshot', 'customization', 'quantity', 'supplyType', 'status', 'notes'],
         include: [{
           model: Order,
           attributes: detail ? ['id', 'code', 'status', 'promisedDate', 'notes'] : ['id', 'code'],
@@ -174,7 +174,7 @@ export class WorkshopJobsService {
       orderId: order.id,
       orderCode: order.code,
       customer: order.customer,
-      productNameSnapshot: item.productNameSnapshot,
+      productNameSnapshot: item.productNameSnapshot, imageUrlSnapshot: item.imageUrlSnapshot,
       variantNameSnapshot: item.variantNameSnapshot,
       quantity: item.quantity
     };
@@ -197,7 +197,7 @@ export class WorkshopJobsService {
       customer: order.customer,
       orderItem: {
         id: item.id,
-        productNameSnapshot: item.productNameSnapshot,
+        productNameSnapshot: item.productNameSnapshot, imageUrlSnapshot: item.imageUrlSnapshot,
         variantNameSnapshot: item.variantNameSnapshot,
         skuSnapshot: item.skuSnapshot,
         customization: item.customization,

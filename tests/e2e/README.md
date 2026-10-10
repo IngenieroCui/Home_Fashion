@@ -1,0 +1,98 @@
+# Automated business journeys
+
+Permanent Playwright layer; existing Jest, Node and Flutter suites remain in place.
+
+## Run
+
+```powershell
+pnpm install --frozen-lockfile
+pnpm exec playwright install chromium
+pnpm test:e2e:provision
+# After explicitly authorizing test uploads in this Cloudinary account:
+node tests/e2e/support/configure-cloud.mjs .env
+pnpm test:e2e:typecheck
+pnpm test:e2e:safety
+pnpm test:e2e:journey
+pnpm test:e2e:stop
+```
+
+The Windows provisioner uses an already installed MySQL 8.4 binary. Set E2E_MYSQLD to its path if necessary. It initializes a fresh datadir under `.e2e-local/<run>` and binds only 127.0.0.1:33307; it never controls the Windows MySQL service. Root is assigned a random password during provisioning and is never used by migrations, fixtures or journeys. The restricted account can access only `home_fashion_e2e`, without global privileges or GRANT OPTION. No DROP, TRUNCATE or reset is run. Stop checks the server UUID and owned datadir before SHUTDOWN. Data remains for inspection. Archive the old ignored configuration/runtime before provisioning a new instance; the provisioner refuses to overwrite `.env.e2e`.
+
+Without a dedicated instance and valid `.env.e2e`, the command exits nonzero with BLOQUEADO before starting services or writing business data. Missing Cloudinary credentials fail the real multipart phase; they never silently enable mocks. Cloudinary folders are forced to `home-fashion-e2e/<run>/{workshop-progress,deliveries}`. The source credential file is read only for the three Cloudinary settings, never its database settings. Assets remain as QA evidence in the isolated folder; this suite does not delete Cloudinary assets.
+
+The runner validates host, schema, restricted username, server UUID, marker and SHOW GRANTS before migrations/seeding. It applies the repository's migrations and only the role/permission seed, then seeds synthetic actors and catalog. SQL writes prepare fixtures only; business transitions use UI/API. Fixture IDs are read from MySQL and business IDs from real responses/UI. Repeated runs append synthetic business records and check reservations relative to the baseline. For long-term repeated use provision fresh disposable data when stock is exhausted.
+
+Next.js runs on 4300 and NestJS on 4301. Existing servers are refused. Both services inherit only the E2E environment for database/Cloudinary/JWT settings, and revalidate MySQL before starting. Playwright uses one worker and zero retries. Happy paths never intercept backend responses. Recovery alone drops responses *after* the actual backend commits; replay forwards the actual backend response.
+
+## Coverage and evidence
+
+1. Assisted purchase: public catalog/request → ADMIN proposal/acceptance/conversion/payment/order/assignment → WORKSHOP API authentication, STARTED/PROGRESS/PNG multipart → ADMIN approval/private tracking/schedule/start/PNG delivery → anonymous tracking COMPLETED → linked SQL joins and snapshots.
+2. Mixed order: IN_STOCK reservation and MADE_TO_ORDER assignment/STARTED, with derived OPEN → IN_PROGRESS verified in SQL.
+3. Direct sale: ADMIN creates customer/sale/deposit/order; snapshots, balance and reservation verified in SQL.
+4. Permissions: EMPLOYEE browser navigation and forbidden BFF/API; WORKSHOP ownership and finance denial; anonymous projection excludes pending/rejected reports and private fields. Independent setup uses real ADMIN business APIs.
+5. Recovery: real request committed before network loss, same requestId/code on browser retry/replay, real session refresh, ambiguous deposit not automatically retried, repeated order does not duplicate reservation.
+
+Evidence is written to `docs/thesis/evidence/automated-business-journeys.md` and its adjacent folder. A complete run saves six representative screenshots. Failed runs save semantic step/error traces as JSON. Raw Playwright ZIP traces, video, HAR and storageState are disabled because they persist tokens/cookies. Evidence contains synthetic data and safe identifiers only. A green web/API run does not prove Android runtime.
+
+Configuration follows [Playwright webServer](https://playwright.dev/docs/test-webserver) and [authentication artifact precautions](https://playwright.dev/docs/auth).
+
+
+## Release protection (2026-10-10)
+
+The catalog starts with 20 physical stock units. Direct sale, mixed order and recovery
+reserve one unit each; assisted purchase and permissions manufacture their items.
+Preflight checks `quantity_on_hand - quantity_reserved >= 3` for the active stock variant
+before starting any service/journey, inside the isolated fixture transaction. A failure
+rolls that transaction back. Reservations are never manually reset.
+
+If stock is insufficient, from the repository root, stop the dedicated server and
+preserve its configuration locally before provisioning a fresh dedicated instance:
+
+```powershell
+pnpm test:e2e:stop
+if ($LASTEXITCODE -ne 0) { throw 'Stop failed; do not provision' }
+# Verify the local 33307 listener is gone before proceeding.
+if (Get-NetTCPConnection -LocalPort 33307 -State Listen -ErrorAction SilentlyContinue) {
+  throw 'E2E listener still active'
+}
+$hfOwner = Get-Content -LiteralPath .e2e-local/owner.json -Raw | ConvertFrom-Json
+$hfRuntime = [IO.Path]::GetFullPath($hfOwner.runtime)
+$hfAllowed = [IO.Path]::GetFullPath((Join-Path (Get-Location) '.e2e-local')) + [IO.Path]::DirectorySeparatorChar
+if (-not $hfRuntime.StartsWith($hfAllowed, [StringComparison]::OrdinalIgnoreCase)) {
+  throw 'Runtime outside repository .e2e-local'
+}
+if ((Test-Path -LiteralPath (Join-Path $hfRuntime 'archived.env.e2e')) -or
+    (Test-Path -LiteralPath (Join-Path $hfRuntime 'archived-owner.json'))) {
+  throw 'Archive already exists; choose a new local archive name'
+}
+Copy-Item -LiteralPath .e2e-local/owner.json -Destination (Join-Path $hfRuntime 'archived-owner.json')
+Move-Item -LiteralPath .env.e2e -Destination (Join-Path $hfRuntime 'archived.env.e2e')
+pnpm test:e2e:provision
+```
+
+This archives the old credential file inside the ignored runtime, keeps the datadir
+and its original owner information, and lets provisioning generate a new UUID, marker,
+restricted user and catalog ID. Never share this local archive. Configure only the
+explicitly authorized Cloudinary account again if another run is needed. These steps
+were documented, not executed during RC closure. No Aiven access or SQL cleanup.
+
+Every new execution has a unique ID independent of the reusable catalog's E2E_RUN_ID.
+Results, reports, screenshots and semantic failure traces go under
+`docs/thesis/evidence/automated-business-journeys/runs/<execution-id>/`.
+The original successful folder remains intact. Only five passed scenarios update
+`automated-business-journeys.md` and `automated-business-journeys-last-success.json`.
+Failures, partial runs and configuration blocks update `automated-business-journeys-status.json`
+and their own small `status.json`; earlier run results remain available. The first
+history initialization preserves the legacy successful Markdown alongside its results,
+without copying screenshots. Semantic failure traces stay ignored and are excluded
+from the shareable archive. No raw HTTP traces/HAR/storageState are versioned.
+
+Directed checks, without starting services or running journeys:
+
+```powershell
+pnpm test:release
+pnpm test:e2e:typecheck
+pnpm test:source-package
+pnpm source:package --output <new-output-path.tar.gz>
+pnpm source:package --verify <new-output-path.tar.gz>
+```

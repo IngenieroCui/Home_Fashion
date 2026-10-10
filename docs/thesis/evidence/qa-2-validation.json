@@ -1,0 +1,74 @@
+{
+  "baseline": {
+    "apiSuites": 39,
+    "apiTests": 340,
+    "webTests": 37,
+    "flutterTests": 50
+  },
+  "final": {
+    "apiSuites": 40,
+    "apiTests": 343,
+    "webTests": 39,
+    "flutterTests": 50
+  },
+  "commands": [
+    {
+      "id": "shared-build",
+      "exit": 0,
+      "seconds": 2
+    },
+    {
+      "id": "api-build",
+      "exit": 0,
+      "seconds": 13
+    },
+    {
+      "id": "web-build",
+      "exit": 0,
+      "seconds": 55
+    },
+    {
+      "id": "api-lint",
+      "exit": 0,
+      "seconds": 11
+    },
+    {
+      "id": "web-lint",
+      "exit": 0,
+      "seconds": 9
+    },
+    {
+      "id": "api-test",
+      "exit": 0,
+      "seconds": 22
+    },
+    {
+      "id": "web-test",
+      "exit": 0,
+      "seconds": 2
+    },
+    {
+      "id": "dart-analyze",
+      "exit": 0,
+      "seconds": 4
+    },
+    {
+      "id": "flutter-analyze",
+      "exit": 0,
+      "seconds": 8
+    },
+    {
+      "id": "flutter-test",
+      "exit": 0,
+      "seconds": 11
+    },
+    {
+      "id": "apk",
+      "exit": 0,
+      "seconds": 9
+    }
+  ],
+  "lastWebLint": "PASS, 0 errores/advertencias tras retirar supresión",
+  "lastWebBuild": "PASS sobre código exacto final",
+  "warning": "APK conserva warning previo Kotlin 2.0.20; no es fallo de build"
+}

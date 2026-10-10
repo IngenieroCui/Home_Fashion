@@ -22,3 +22,10 @@ export function adminCatalogQuery(filters: {
   if (Number.isSafeInteger(page) && page > 1) params.set('page', String(page));
   return params.toString();
 }
+
+// An omitted cost is permission-protected and must survive unrelated form edits.
+export function variantCostPatch(variant: { estimatedCost?: string | null } | null, value: number | null) {
+  return variant && !Object.prototype.hasOwnProperty.call(variant, 'estimatedCost')
+    ? {}
+    : { estimatedCost: value };
+}

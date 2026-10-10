@@ -1,0 +1,446 @@
+Project home_fashion {
+  database_type: "MySQL 8"
+  Note: "Fuente: 11 migraciones vigentes al 2026-09-06. BIGINT e INTEGER de identificadores/cantidades son UNSIGNED en las migraciones."
+}
+
+Table categories {
+  id bigint [pk, increment, note: "UNSIGNED"]
+  name varchar(120) [not null]
+  slug varchar(140) [not null, unique]
+  description text
+  is_active boolean [not null, default: true]
+  created_at datetime [not null]
+  updated_at datetime [not null]
+}
+
+Table products {
+  id bigint [pk, increment, note: "UNSIGNED"]
+  category_id bigint [not null, note: "UNSIGNED"]
+  name varchar(180) [not null]
+  slug varchar(200) [not null, unique]
+  description text [not null]
+  allows_customization boolean [not null, default: false]
+  status varchar(20) [not null, default: 'ACTIVE', note: "ENUM ACTIVE|INACTIVE"]
+  created_at datetime [not null]
+  updated_at datetime [not null]
+  indexes { (category_id, status) }
+}
+
+Table product_variants {
+  id bigint [pk, increment, note: "UNSIGNED"]
+  product_id bigint [not null, note: "UNSIGNED"]
+  sku varchar(100) [not null, unique]
+  name varchar(180)
+  dimensions varchar(160)
+  material varchar(160)
+  color varchar(100)
+  fabric varchar(120)
+  finish varchar(120)
+  sale_price decimal(12,2) [not null, note: "CHECK sale_price > 0"]
+  estimated_cost decimal(12,2)
+  quantity_on_hand int [not null, default: 0, note: "UNSIGNED"]
+  quantity_reserved int [not null, default: 0, note: "UNSIGNED; CHECK quantity_reserved <= quantity_on_hand"]
+  location varchar(180)
+  status varchar(20) [not null, default: 'ACTIVE', note: "ENUM ACTIVE|INACTIVE"]
+  created_at datetime [not null]
+  updated_at datetime [not null]
+  indexes {
+    (product_id, status)
+    (status, quantity_on_hand, quantity_reserved)
+  }
+}
+
+Table product_images {
+  id bigint [pk, increment, note: "UNSIGNED"]
+  product_id bigint [not null, note: "UNSIGNED"]
+  product_variant_id bigint [note: "UNSIGNED; nullable"]
+  url varchar(2048) [not null]
+  public_id varchar(255)
+  alt_text varchar(255)
+  position int [not null, default: 0, note: "UNSIGNED"]
+  is_primary boolean [not null, default: false]
+  created_at datetime [not null]
+  updated_at datetime [not null]
+  indexes {
+    (product_id, position)
+    (product_variant_id, position)
+  }
+}
+
+Table roles {
+  id bigint [pk, increment, note: "UNSIGNED"]
+  code varchar(40) [not null, unique]
+  name varchar(100) [not null]
+  created_at datetime [not null]
+  updated_at datetime [not null]
+}
+
+Table permissions {
+  id bigint [pk, increment, note: "UNSIGNED"]
+  code varchar(80) [not null, unique]
+  description varchar(255) [not null]
+  created_at datetime [not null]
+  updated_at datetime [not null]
+}
+
+Table role_permissions {
+  role_id bigint [not null, note: "UNSIGNED"]
+  permission_id bigint [not null, note: "UNSIGNED"]
+  indexes { (role_id, permission_id) [pk] }
+}
+
+Table users {
+  id bigint [pk, increment, note: "UNSIGNED"]
+  role_id bigint [not null, note: "UNSIGNED"]
+  full_name varchar(160) [not null]
+  email varchar(254) [not null, unique]
+  password_hash varchar(255) [not null]
+  is_active boolean [not null, default: true]
+  last_login_at datetime
+  created_at datetime [not null]
+  updated_at datetime [not null]
+  indexes { (role_id, is_active) }
+}
+
+Table user_permission_overrides {
+  user_id bigint [not null, note: "UNSIGNED"]
+  permission_id bigint [not null, note: "UNSIGNED"]
+  effect varchar(10) [not null, note: "ENUM ALLOW|DENY"]
+  created_at datetime [not null]
+  updated_at datetime [not null]
+  indexes { (user_id, permission_id) [pk] }
+}
+
+Table refresh_sessions {
+  id bigint [pk, increment, note: "UNSIGNED"]
+  user_id bigint [not null, note: "UNSIGNED"]
+  token_hash varchar(64) [not null, unique]
+  expires_at datetime [not null]
+  revoked_at datetime
+  replaced_by_session_id bigint [note: "UNSIGNED; nullable"]
+  created_at datetime [not null]
+  updated_at datetime [not null]
+  indexes { (user_id, revoked_at) }
+}
+
+Table customers {
+  id bigint [pk, increment, note: "UNSIGNED"]
+  full_name varchar(180) [not null]
+  document_type varchar(20) [note: "ENUM CC|CE|NIT|PASSPORT|OTHER"]
+  document_number varchar(80) [unique]
+  phone varchar(60) [not null]
+  email varchar(254)
+  city varchar(120)
+  neighborhood varchar(120)
+  address varchar(255)
+  notes text
+  is_active boolean [not null, default: true]
+  created_by_user_id bigint [note: "UNSIGNED; nullable para solicitud pública"]
+  updated_by_user_id bigint [note: "UNSIGNED; nullable para solicitud pública"]
+  created_at datetime [not null]
+  updated_at datetime [not null]
+  indexes { (full_name, is_active) }
+}
+
+Table quotes {
+  id bigint [pk, increment, note: "UNSIGNED"]
+  code varchar(30) [not null, unique]
+  customer_id bigint [not null, note: "UNSIGNED"]
+  status varchar(24) [not null, default: 'DRAFT', note: "ENUM REQUESTED|DRAFT|QUOTED|ACCEPTED|REJECTED|EXPIRED|CANCELLED"]
+  valid_until datetime
+  customer_notes text
+  internal_notes text
+  delivery_fee decimal(12,2) [not null, default: 0]
+  subtotal decimal(12,2)
+  discount_total decimal(12,2)
+  total decimal(12,2)
+  created_by_user_id bigint [note: "UNSIGNED; nullable para solicitud pública"]
+  updated_by_user_id bigint [note: "UNSIGNED; nullable para solicitud pública"]
+  public_request_key varchar(36) [unique]
+  public_request_payload_hash varchar(64)
+  created_at datetime [not null]
+  updated_at datetime [not null]
+  indexes {
+    (customer_id, status)
+    (status, created_at)
+  }
+}
+
+Table quote_items {
+  id bigint [pk, increment, note: "UNSIGNED"]
+  quote_id bigint [not null, note: "UNSIGNED"]
+  product_id bigint [not null, note: "UNSIGNED"]
+  product_variant_id bigint [note: "UNSIGNED; nullable"]
+  product_name_snapshot varchar(180) [not null]
+  variant_name_snapshot varchar(180)
+  sku_snapshot varchar(100)
+  quantity int [not null, note: "UNSIGNED; CHECK quantity > 0"]
+  unit_list_price decimal(12,2)
+  unit_quoted_price decimal(12,2)
+  discount_amount decimal(12,2) [not null, default: 0]
+  subtotal decimal(12,2)
+  customization json
+  negotiation_reason text
+  notes text
+  created_at datetime [not null]
+  updated_at datetime [not null]
+  indexes { quote_id }
+}
+
+Table sales {
+  id bigint [pk, increment, note: "UNSIGNED"]
+  code varchar(30) [not null, unique]
+  customer_id bigint [not null, note: "UNSIGNED"]
+  quote_id bigint [unique, note: "UNSIGNED; nullable"]
+  status varchar(20) [not null, default: 'CONFIRMED', note: "ENUM CONFIRMED|CANCELLED"]
+  subtotal decimal(12,2) [not null]
+  discount_total decimal(12,2) [not null]
+  delivery_fee decimal(12,2) [not null, note: "CHECK delivery_fee >= 0"]
+  total decimal(12,2) [not null]
+  notes text
+  created_by_user_id bigint [not null, note: "UNSIGNED"]
+  cancelled_by_user_id bigint [note: "UNSIGNED; nullable"]
+  cancelled_at datetime
+  cancellation_reason text
+  created_at datetime [not null]
+  updated_at datetime [not null]
+  indexes {
+    (customer_id, status)
+    (status, created_at)
+  }
+}
+
+Table sale_items {
+  id bigint [pk, increment, note: "UNSIGNED"]
+  sale_id bigint [not null, note: "UNSIGNED"]
+  product_id bigint [not null, note: "UNSIGNED"]
+  product_variant_id bigint [note: "UNSIGNED; nullable"]
+  product_name_snapshot varchar(180) [not null]
+  variant_name_snapshot varchar(180)
+  sku_snapshot varchar(100)
+  customization json
+  quantity int [not null, note: "UNSIGNED; CHECK quantity > 0"]
+  unit_list_price decimal(12,2)
+  unit_sale_price decimal(12,2) [not null, note: "CHECK unit_sale_price > 0"]
+  unit_cost_snapshot decimal(12,2)
+  discount_amount decimal(12,2) [not null]
+  subtotal decimal(12,2) [not null]
+  negotiation_reason text
+  is_below_cost boolean [not null, default: false]
+  below_cost_reason text
+  notes text
+  created_at datetime [not null]
+  updated_at datetime [not null]
+  indexes {
+    sale_id
+    product_id
+  }
+}
+
+Table sale_payments {
+  id bigint [pk, increment, note: "UNSIGNED"]
+  sale_id bigint [not null, note: "UNSIGNED"]
+  customer_id bigint [not null, note: "UNSIGNED"]
+  type varchar(24) [not null, note: "ENUM DEPOSIT|PAYMENT|FINAL_PAYMENT|REFUND|ADJUSTMENT"]
+  method varchar(24) [not null, note: "ENUM CASH|DEBIT_CARD|CREDIT_CARD|ADDI|SISTECREDITO|BANK_TRANSFER|OTHER"]
+  adjustment_effect varchar(24) [note: "ENUM ADD_TO_PAID|SUBTRACT_FROM_PAID"]
+  amount decimal(12,2) [not null, note: "CHECK amount > 0"]
+  paid_at datetime [not null]
+  reference varchar(160)
+  notes text
+  evidence_url varchar(500)
+  status varchar(16) [not null, default: 'REGISTERED', note: "ENUM REGISTERED|VOIDED"]
+  created_by_user_id bigint [not null, note: "UNSIGNED"]
+  voided_by_user_id bigint [note: "UNSIGNED; nullable"]
+  voided_at datetime
+  void_reason text
+  created_at datetime [not null]
+  updated_at datetime [not null]
+  indexes {
+    sale_id
+    customer_id
+    status
+    paid_at
+  }
+}
+
+Table orders {
+  id bigint [pk, increment, note: "UNSIGNED"]
+  code varchar(30) [not null, unique]
+  sale_id bigint [not null, unique, note: "UNSIGNED"]
+  customer_id bigint [not null, note: "UNSIGNED"]
+  status varchar(20) [not null, default: 'OPEN', note: "ENUM OPEN|IN_PROGRESS|READY|COMPLETED|CANCELLED"]
+  promised_date date
+  notes text
+  created_by_user_id bigint [not null, note: "UNSIGNED"]
+  created_at datetime [not null]
+  updated_at datetime [not null]
+  indexes {
+    (customer_id, status)
+    (status, created_at)
+  }
+}
+
+Table order_items {
+  id bigint [pk, increment, note: "UNSIGNED"]
+  order_id bigint [not null, note: "UNSIGNED"]
+  sale_item_id bigint [not null, unique, note: "UNSIGNED"]
+  product_id bigint [not null, note: "UNSIGNED"]
+  product_variant_id bigint [note: "UNSIGNED; nullable"]
+  product_name_snapshot varchar(180) [not null]
+  variant_name_snapshot varchar(180)
+  sku_snapshot varchar(100)
+  customization json
+  quantity int [not null, note: "UNSIGNED; CHECK quantity > 0"]
+  supply_type varchar(20) [not null, note: "ENUM IN_STOCK|MADE_TO_ORDER"]
+  status varchar(24) [not null, note: "ENUM RESERVED|PENDING_PRODUCTION|IN_PRODUCTION|READY|DELIVERED|CANCELLED"]
+  notes text
+  created_at datetime [not null]
+  updated_at datetime [not null]
+  indexes {
+    order_id
+    product_variant_id
+  }
+}
+
+Table workshop_jobs {
+  id bigint [pk, increment, note: "UNSIGNED"]
+  code varchar(50) [not null, unique]
+  order_item_id bigint [not null, unique, note: "UNSIGNED"]
+  workshop_user_id bigint [not null, note: "UNSIGNED"]
+  status varchar(24) [not null, default: 'ASSIGNED', note: "ENUM ASSIGNED|IN_PROGRESS|READY_FOR_REVIEW|COMPLETED|CANCELLED"]
+  instructions text
+  expected_completion_date date
+  assigned_by_user_id bigint [not null, note: "UNSIGNED"]
+  assigned_at datetime [not null]
+  created_at datetime [not null]
+  updated_at datetime [not null]
+  indexes {
+    workshop_user_id
+    status
+    expected_completion_date
+  }
+}
+
+Table workshop_progress_reports {
+  id bigint [pk, increment, note: "UNSIGNED"]
+  workshop_job_id bigint [not null, note: "UNSIGNED"]
+  type varchar(24) [not null, note: "ENUM STARTED|PROGRESS|READY_FOR_REVIEW"]
+  message text [not null]
+  progress_percent int [note: "UNSIGNED; reglas 1-99/100 en servicio"]
+  evidence_urls json
+  review_status varchar(24) [not null, default: 'PENDING_REVIEW', note: "ENUM PENDING_REVIEW|APPROVED|REJECTED"]
+  submitted_by_user_id bigint [not null, note: "UNSIGNED"]
+  submitted_at datetime [not null]
+  reviewed_by_user_id bigint [note: "UNSIGNED; nullable"]
+  reviewed_at datetime
+  review_comment text
+  created_at datetime [not null]
+  updated_at datetime [not null]
+  indexes {
+    workshop_job_id
+    review_status
+    type
+    submitted_at
+  }
+}
+
+Table order_tracking_accesses {
+  id bigint [pk, increment, note: "UNSIGNED"]
+  order_id bigint [not null, unique, note: "UNSIGNED"]
+  token_hash varchar(64) [not null, unique]
+  token_prefix varchar(16) [not null]
+  active boolean [not null, default: true]
+  expires_at datetime
+  created_by_user_id bigint [not null, note: "UNSIGNED"]
+  rotated_at datetime
+  revoked_by_user_id bigint [note: "UNSIGNED; nullable"]
+  revoked_at datetime
+  created_at datetime [not null]
+  updated_at datetime [not null]
+  indexes {
+    active
+    expires_at
+  }
+}
+
+Table deliveries {
+  id bigint [pk, increment, note: "UNSIGNED"]
+  code varchar(50) [not null, unique]
+  order_id bigint [not null, unique, note: "UNSIGNED"]
+  status varchar(24) [not null, default: 'SCHEDULED', note: "ENUM SCHEDULED|OUT_FOR_DELIVERY|DELIVERED|CANCELLED"]
+  address varchar(500) [not null]
+  address_reference varchar(255)
+  contact_name varchar(160) [not null]
+  contact_phone varchar(40) [not null]
+  scheduled_date date [not null]
+  time_window varchar(80)
+  delivery_type varchar(24) [not null, note: "ENUM OWNER|EMPLOYEE|EXTERNAL_DRIVER"]
+  assigned_user_id bigint [note: "UNSIGNED; nullable según delivery_type"]
+  external_driver_name varchar(160)
+  fee decimal(12,2) [note: "CHECK fee IS NULL OR fee >= 0"]
+  notes text
+  receiver_name varchar(160)
+  evidence_urls json
+  delivered_at datetime
+  created_by_user_id bigint [not null, note: "UNSIGNED"]
+  created_at datetime [not null]
+  updated_at datetime [not null]
+  indexes {
+    (status, scheduled_date)
+    scheduled_date
+    assigned_user_id
+    created_by_user_id
+  }
+  Note: "CHECK de asignación: EXTERNAL_DRIVER usa nombre sin usuario; OWNER/EMPLOYEE usan usuario sin nombre externo."
+}
+
+Ref: products.category_id > categories.id [delete: restrict, update: cascade]
+Ref: product_variants.product_id > products.id [delete: restrict, update: cascade]
+Ref: product_images.product_id > products.id [delete: restrict, update: cascade]
+Ref: product_images.product_variant_id > product_variants.id [delete: restrict, update: cascade]
+Ref: role_permissions.role_id > roles.id [delete: cascade]
+Ref: role_permissions.permission_id > permissions.id [delete: cascade]
+Ref: users.role_id > roles.id [delete: restrict]
+Ref: user_permission_overrides.user_id > users.id [delete: cascade]
+Ref: user_permission_overrides.permission_id > permissions.id [delete: cascade]
+Ref: refresh_sessions.user_id > users.id [delete: cascade]
+Ref: refresh_sessions.replaced_by_session_id > refresh_sessions.id [delete: set null]
+Ref: customers.created_by_user_id > users.id [delete: restrict, update: cascade]
+Ref: customers.updated_by_user_id > users.id [delete: restrict, update: cascade]
+Ref: quotes.customer_id > customers.id [delete: restrict, update: cascade]
+Ref: quotes.created_by_user_id > users.id [delete: restrict, update: cascade]
+Ref: quotes.updated_by_user_id > users.id [delete: restrict, update: cascade]
+Ref: quote_items.quote_id > quotes.id [delete: cascade, update: cascade]
+Ref: quote_items.product_id > products.id [delete: restrict, update: cascade]
+Ref: quote_items.product_variant_id > product_variants.id [delete: restrict, update: cascade]
+Ref: sales.customer_id > customers.id [delete: restrict, update: cascade]
+Ref: sales.quote_id > quotes.id [delete: restrict, update: cascade]
+Ref: sales.created_by_user_id > users.id [delete: restrict, update: cascade]
+Ref: sales.cancelled_by_user_id > users.id [delete: restrict, update: cascade]
+Ref: sale_items.sale_id > sales.id [delete: restrict, update: cascade]
+Ref: sale_items.product_id > products.id [delete: restrict, update: cascade]
+Ref: sale_items.product_variant_id > product_variants.id [delete: restrict, update: cascade]
+Ref: sale_payments.sale_id > sales.id [delete: restrict, update: cascade]
+Ref: sale_payments.customer_id > customers.id [delete: restrict, update: cascade]
+Ref: sale_payments.created_by_user_id > users.id [delete: restrict, update: cascade]
+Ref: sale_payments.voided_by_user_id > users.id [delete: restrict, update: cascade]
+Ref: orders.sale_id > sales.id [delete: restrict, update: cascade]
+Ref: orders.customer_id > customers.id [delete: restrict, update: cascade]
+Ref: orders.created_by_user_id > users.id [delete: restrict, update: cascade]
+Ref: order_items.order_id > orders.id [delete: restrict, update: cascade]
+Ref: order_items.sale_item_id > sale_items.id [delete: restrict, update: cascade]
+Ref: order_items.product_id > products.id [delete: restrict, update: cascade]
+Ref: order_items.product_variant_id > product_variants.id [delete: restrict, update: cascade]
+Ref: workshop_jobs.order_item_id > order_items.id [delete: restrict, update: cascade]
+Ref: workshop_jobs.workshop_user_id > users.id [delete: restrict, update: cascade]
+Ref: workshop_jobs.assigned_by_user_id > users.id [delete: restrict, update: cascade]
+Ref: workshop_progress_reports.workshop_job_id > workshop_jobs.id [delete: restrict, update: cascade]
+Ref: workshop_progress_reports.submitted_by_user_id > users.id [delete: restrict, update: cascade]
+Ref: workshop_progress_reports.reviewed_by_user_id > users.id [delete: restrict, update: cascade]
+Ref: order_tracking_accesses.order_id > orders.id [delete: restrict, update: cascade]
+Ref: order_tracking_accesses.created_by_user_id > users.id [delete: restrict, update: cascade]
+Ref: order_tracking_accesses.revoked_by_user_id > users.id [delete: restrict, update: cascade]
+Ref: deliveries.order_id > orders.id [delete: restrict, update: cascade]
+Ref: deliveries.assigned_user_id > users.id [delete: restrict, update: cascade]
+Ref: deliveries.created_by_user_id > users.id [delete: restrict, update: cascade]

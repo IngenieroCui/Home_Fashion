@@ -14,6 +14,7 @@
     "db:migrate:undo": "tsx src/database/cli.ts migrate:undo",
     "db:migrate:undo:all": "tsx src/database/cli.ts migrate:undo:all",
     "db:seed": "tsx src/database/cli.ts seed",
+    "catalog:media:sync": "tsx src/database/catalog-media-sync.ts",
     "db:seed:status": "tsx src/database/cli.ts seed:status",
     "db:seed:undo": "tsx src/database/cli.ts seed:undo",
     "db:seed:undo:all": "tsx src/database/cli.ts seed:undo:all",

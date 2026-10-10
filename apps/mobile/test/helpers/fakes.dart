@@ -152,7 +152,7 @@ class FakeWorkshopJobsRepository implements WorkshopJobsRepository {
       type: command.type,
       message: command.message,
       progressPercent: command.progressPercent,
-      evidenceUrls: command.evidenceUrls,
+      evidenceUrls: const [],
       reviewStatus: ProgressReviewStatus.pending,
       submittedAt: DateTime(2026),
     );

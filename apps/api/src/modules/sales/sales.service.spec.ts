@@ -88,6 +88,7 @@ describe('SalesService', () => {
       {} as never,
       products as never,
       variants as never,
+      { resolvePrimaryImageUrl: jest.fn().mockResolvedValue(null) } as never,
       auth as never
     );
     return { instance, saleItems, salePayments, sales, quotes, products, variants };
@@ -98,6 +99,14 @@ describe('SalesService', () => {
     productVariantId: '20',
     quantity: 2,
     ...overrides
+  });
+
+  it('finds the sale for one quote without matching another customer sale', async () => {
+    const { instance, sales } = setup({ permissions: ['SALE_MANAGE'] });
+    await instance.list({ page: 1, limit: 1, quoteId: '33' }, 'u');
+    expect(sales.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({
+      where: { quoteId: '33' }, limit: 1, offset: 0
+    }));
   });
 
   it('creates a direct item with a valid product variant and snapshots', async () => {
@@ -485,6 +494,7 @@ describe('SalesService payment movements', () => {
       {} as never,
       {} as never,
       {} as never,
+      { resolvePrimaryImageUrl: jest.fn().mockResolvedValue(null) } as never,
       { getAuthenticatedUser: jest.fn().mockResolvedValue({ id: 'user-1', permissions: options.permissions ?? ['FINANCIAL_PAYMENT_REGISTER', 'FINANCIAL_PAYMENT_CORRECT'] }) } as never
     );
     return { instance, payments, salePayments, sales, transaction };
@@ -528,11 +538,11 @@ describe('SalesService payment movements', () => {
     await expect(instance.registerPayment('1', paymentDto(), 'user-1')).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it('voids a payment idempotently and keeps the record', async () => {
+  it('voids a payment once, rejects a repeat and keeps the record', async () => {
     const { instance, payments } = setupPayment({ payments: [{ id: 'first', saleId: '1', type: SalePaymentType.PAYMENT, amount: '25.00' }] });
     await expect(instance.voidPayment('1', 'first', 'Duplicado', 'user-1')).resolves.toMatchObject({ amountPaid: '0.00', paymentStatus: 'PENDING' });
     expect(payments[0]).toMatchObject({ status: SalePaymentStatus.VOIDED, voidReason: 'Duplicado' });
-    await expect(instance.voidPayment('1', 'first', 'Duplicado', 'user-1')).resolves.toMatchObject({ amountPaid: '0.00' });
+    await expect(instance.voidPayment('1', 'first', 'Duplicado', 'user-1')).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('rejects a payment from another sale, missing correction permission, and a refund void that overpays', async () => {

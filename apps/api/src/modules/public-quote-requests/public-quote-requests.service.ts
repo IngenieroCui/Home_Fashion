@@ -7,6 +7,7 @@ import {
 import { InjectModel } from '@nestjs/sequelize';
 import { createHash } from 'node:crypto';
 import type { Transaction } from 'sequelize';
+import { CatalogImageResolverService } from '../catalog/catalog-image-resolver.service';
 import { CatalogStatus } from '../catalog/catalog.types';
 import { Product } from '../catalog/entities/product.model';
 import { ProductVariant } from '../catalog/entities/product-variant.model';
@@ -32,10 +33,11 @@ export class PublicQuoteRequestsService {
     @InjectModel(Quote) private readonly quotes: typeof Quote,
     @InjectModel(QuoteItem) private readonly items: typeof QuoteItem,
     @InjectModel(Product) private readonly products: typeof Product,
-    @InjectModel(ProductVariant) private readonly variants: typeof ProductVariant
+    @InjectModel(ProductVariant) private readonly variants: typeof ProductVariant,
+    private readonly images: CatalogImageResolverService
   ) {}
 
-  async create(dto: CreatePublicQuoteRequestDto) {
+  async create(dto: CreatePublicQuoteRequestDto, attempt = 0): Promise<{ received: true; requestCode: string; status: QuoteStatus }> {
     const payloadHash = this.payloadHash(dto);
     try {
       return await this.quotes.sequelize!.transaction(async (transaction) => {
@@ -71,6 +73,7 @@ export class PublicQuoteRequestsService {
 
         const customer = await this.createCustomer(dto, transaction);
         const total = variant ? money(cents(variant.salePrice) * BigInt(dto.quantity)) : null;
+        if (total !== null && cents(total) > 999_999_999_999n) throw new BadRequestException('Request total exceeds the monetary limit');
         const quote = await this.quotes.create(
           {
             code: 'PENDING',
@@ -101,6 +104,7 @@ export class PublicQuoteRequestsService {
             productId: product.id,
             productVariantId: variant?.id ?? null,
             productNameSnapshot: product.name,
+            imageUrlSnapshot: await this.images.resolvePrimaryImageUrl(product.id, variant?.id, transaction),
             variantNameSnapshot: variant?.name ?? null,
             skuSnapshot: variant?.sku ?? null,
             quantity: dto.quantity,
@@ -118,6 +122,12 @@ export class PublicQuoteRequestsService {
         return this.response(quote);
       });
     } catch (error) {
+      const code = (error as { parent?: { code?: string } }).parent?.code;
+      if (code === 'ER_LOCK_DEADLOCK' || code === 'ER_LOCK_WAIT_TIMEOUT') {
+        // The entire failed transaction has rolled back; retry with the same key.
+        if (attempt < 2) return this.create(dto, attempt + 1);
+        throw new ConflictException('Request changed concurrently; retry with the same requestId');
+      }
       if ((error as { name?: string }).name !== 'SequelizeUniqueConstraintError') throw error;
       const repeated = await this.quotes.findOne({ where: { publicRequestKey: dto.requestId } });
       if (!repeated) throw error;

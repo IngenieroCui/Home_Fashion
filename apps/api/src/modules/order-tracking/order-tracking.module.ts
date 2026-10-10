@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { AuthModule } from '../auth/auth.module';
+import { Delivery } from '../deliveries/entities/delivery.model';
 import { OrderItem } from '../orders/entities/order-item.model';
 import { Order } from '../orders/entities/order.model';
 import { WorkshopJob } from '../workshop-jobs/entities/workshop-job.model';
@@ -10,7 +11,7 @@ import { OrderTrackingAccess } from './entities/order-tracking-access.model';
 import { OrderTrackingService } from './order-tracking.service';
 
 @Module({
-  imports: [AuthModule, SequelizeModule.forFeature([OrderTrackingAccess, Order, OrderItem, WorkshopJob, WorkshopProgressReport])],
+  imports: [AuthModule, SequelizeModule.forFeature([OrderTrackingAccess, Order, OrderItem, WorkshopJob, WorkshopProgressReport, Delivery])],
   controllers: [AdminOrderTrackingController, PublicOrderTrackingController],
   providers: [OrderTrackingService]
 })

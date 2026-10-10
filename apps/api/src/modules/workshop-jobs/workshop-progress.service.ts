@@ -34,13 +34,27 @@ export class WorkshopProgressService {
       attributes: ['id', 'code', 'status', 'instructions', 'expectedCompletionDate', 'assignedAt', 'orderItemId'], where,
       include: this.jobIncludes({ reports: { separate: true, limit: 1 } }), order: [['assignedAt', 'DESC']], limit: query.limit, offset: (query.page - 1) * query.limit, distinct: true
     });
-    return { data: result.rows.map((job) => this.serializeOwnJob(job, false)), pagination: this.pagination(query.page, query.limit, result.count) };
+    const counts = await Promise.all([WorkshopJobStatus.ASSIGNED, WorkshopJobStatus.IN_PROGRESS, WorkshopJobStatus.READY_FOR_REVIEW, WorkshopJobStatus.COMPLETED].map((status) => this.jobs.count({ where: { workshopUserId: userId, status } })));
+    const summary = { assigned: counts[0], inProgress: counts[1], readyForReview: counts[2], completed: counts[3] };
+    return { data: result.rows.map((job) => this.serializeOwnJob(job, false)), pagination: this.pagination(query.page, query.limit, result.count), summary };
   }
 
   async ownJobDetail(userId: string, id: string) {
     const job = await this.jobs.findOne({ where: { id, workshopUserId: userId }, include: this.jobIncludes({ reports: { separate: true } }) });
     if (!job) throw new NotFoundException('Workshop job not found');
     return this.serializeOwnJob(job, true);
+  }
+
+  async validateMediaSubmission(userId: string, id: string, dto: SubmitWorkshopProgressDto) {
+    return this.reports.sequelize!.transaction(async (transaction) => {
+      await this.ensureWorkshopUser(userId, transaction);
+      const job = await this.jobs.findOne({ where: { id, workshopUserId: userId }, transaction });
+      if (!job) throw new NotFoundException('Workshop job not found');
+      const item = await this.orderItems.findByPk(job.orderItemId, { transaction });
+      if (!item) throw new NotFoundException('Order item not found');
+      this.validateSubmission(job, item, dto);
+      return job.code;
+    });
   }
 
   async submit(userId: string, id: string, dto: SubmitWorkshopProgressDto) {
@@ -139,22 +153,22 @@ export class WorkshopProgressService {
   }
 
   private jobIncludes({ reports }: { reports?: { separate: true; limit?: number } }) {
-    return [{ model: OrderItem, attributes: ['id', 'orderId', 'productNameSnapshot', 'variantNameSnapshot', 'skuSnapshot', 'customization', 'quantity', 'status', 'notes'], include: [{ model: Order, attributes: ['id', 'code'] }] }, ...(reports ? [{ model: WorkshopProgressReport, as: 'progressReports', attributes: ['id', 'type', 'message', 'progressPercent', 'evidenceUrls', 'reviewStatus', 'submittedAt', 'reviewedAt', 'reviewComment'], separate: true, limit: reports.limit, order: [['submittedAt', 'DESC'], ['id', 'DESC']] }] : [])] as Includeable[];
+    return [{ model: OrderItem, attributes: ['id', 'orderId', 'productNameSnapshot', 'variantNameSnapshot', 'skuSnapshot', 'imageUrlSnapshot', 'customization', 'quantity', 'status', 'notes'], include: [{ model: Order, attributes: ['id', 'code'] }] }, ...(reports ? [{ model: WorkshopProgressReport, as: 'progressReports', attributes: ['id', 'type', 'message', 'progressPercent', 'evidenceUrls', 'reviewStatus', 'submittedAt', 'reviewedAt', 'reviewComment'], separate: true, limit: reports.limit, order: [['submittedAt', 'DESC'], ['id', 'DESC']] }] : [])] as Includeable[];
   }
 
   private reportIncludes({ jobWhere = {}, orderWhere = {}, detail = false }: { jobWhere?: Record<string, unknown>; itemWhere?: Record<string, unknown>; orderWhere?: Record<string, unknown>; detail?: boolean }) {
-    return [{ model: User, as: 'submittedByUser', attributes: ['id', 'fullName', 'email'] }, { model: User, as: 'reviewedByUser', attributes: ['id', 'fullName', 'email'], required: false }, { model: WorkshopJob, attributes: detail ? ['id', 'code', 'status', 'instructions', 'expectedCompletionDate', 'assignedAt', 'workshopUserId'] : ['id', 'code', 'status', 'orderItemId'], where: jobWhere, required: Boolean(Object.keys(jobWhere).length), include: [{ model: User, as: 'workshopUser', attributes: ['id', 'fullName', 'email'] }, { model: OrderItem, attributes: ['id', 'orderId', 'productNameSnapshot', 'variantNameSnapshot', 'skuSnapshot', 'customization', 'quantity', 'status', 'notes'], include: [{ model: Order, attributes: ['id', 'code'], where: orderWhere, required: Boolean(Object.keys(orderWhere).length), include: [{ model: Customer, attributes: ['id', 'fullName', 'phone'] }] }] }] }] as Includeable[];
+    return [{ model: User, as: 'submittedByUser', attributes: ['id', 'fullName', 'email'] }, { model: User, as: 'reviewedByUser', attributes: ['id', 'fullName', 'email'], required: false }, { model: WorkshopJob, attributes: detail ? ['id', 'code', 'status', 'instructions', 'expectedCompletionDate', 'assignedAt', 'workshopUserId'] : ['id', 'code', 'status', 'orderItemId'], where: jobWhere, required: Boolean(Object.keys(jobWhere).length), include: [{ model: User, as: 'workshopUser', attributes: ['id', 'fullName', 'email'] }, { model: OrderItem, attributes: ['id', 'orderId', 'productNameSnapshot', 'variantNameSnapshot', 'skuSnapshot', 'imageUrlSnapshot', 'customization', 'quantity', 'status', 'notes'], include: [{ model: Order, attributes: ['id', 'code'], where: orderWhere, required: Boolean(Object.keys(orderWhere).length), include: [{ model: Customer, attributes: ['id', 'fullName', 'phone'] }] }] }] }] as Includeable[];
   }
 
   private serializeOwnJob(job: WorkshopJob, detail: boolean) {
     const value = asPlain<Plain & { orderItem?: Plain & { order?: Plain }; progressReports?: Plain[] }>(job); const item = value.orderItem ?? {}; const order = item.order ?? {};
     const reports = (value.progressReports ?? []).map((report) => this.publicReport(report));
-    return { id: value.id, code: value.code, status: value.status, instructions: value.instructions, expectedCompletionDate: value.expectedCompletionDate, assignedAt: value.assignedAt, order: { id: order.id, code: order.code }, productNameSnapshot: item.productNameSnapshot, variantNameSnapshot: item.variantNameSnapshot, skuSnapshot: item.skuSnapshot, quantity: item.quantity, customization: item.customization, orderItemStatus: item.status, ...(detail ? { notes: item.notes, progressReports: reports.reverse() } : { latestReport: reports[0] ?? null }) };
+    return { id: value.id, code: value.code, status: value.status, instructions: value.instructions, expectedCompletionDate: value.expectedCompletionDate, assignedAt: value.assignedAt, order: { id: order.id, code: order.code }, productNameSnapshot: item.productNameSnapshot, imageUrlSnapshot: item.imageUrlSnapshot, variantNameSnapshot: item.variantNameSnapshot, skuSnapshot: item.skuSnapshot, quantity: item.quantity, customization: item.customization, orderItemStatus: item.status, ...(detail ? { notes: item.notes, progressReports: reports.reverse() } : { latestReport: reports[0] ?? null }) };
   }
 
   private publicReport(report: Plain) { return { id: report.id, type: report.type, message: report.message, progressPercent: report.progressPercent, evidenceUrls: report.evidenceUrls, reviewStatus: report.reviewStatus, submittedAt: report.submittedAt, reviewedAt: report.reviewedAt, reviewComment: report.reviewComment }; }
   private serializeReport(report: WorkshopProgressReport) { return this.publicReport(asPlain<Plain>(report)); }
-  private serializeAdminList(report: WorkshopProgressReport) { const value = asPlain<Plain & { workshopJob?: Plain & { workshopUser?: Plain; orderItem?: Plain & { order?: Plain & { customer?: Plain } } } }>(report); const job = value.workshopJob ?? {}; const item = job.orderItem ?? {}; const order = item.order ?? {}; return { id: value.id, type: value.type, message: String(value.message).slice(0, 240), progressPercent: value.progressPercent, reviewStatus: value.reviewStatus, submittedAt: value.submittedAt, workshop: job.workshopUser, workshopJob: { id: job.id, code: job.code, status: job.status }, order: { id: order.id, code: order.code }, customer: order.customer, product: { name: item.productNameSnapshot, variant: item.variantNameSnapshot, sku: item.skuSnapshot }, quantity: item.quantity }; }
-  private serializeAdminDetail(report: WorkshopProgressReport) { const value = asPlain<Plain & { workshopJob?: Plain & { workshopUser?: Plain; orderItem?: Plain & { order?: Plain & { customer?: Plain } } }; submittedByUser?: Plain; reviewedByUser?: Plain }>(report); const job = value.workshopJob ?? {}; const item = job.orderItem ?? {}; const order = item.order ?? {}; return { ...this.publicReport(value), submittedByUser: value.submittedByUser, reviewedByUser: value.reviewedByUser, workshop: job.workshopUser, workshopJob: { id: job.id, code: job.code, status: job.status, instructions: job.instructions, expectedCompletionDate: job.expectedCompletionDate, assignedAt: job.assignedAt }, order: { id: order.id, code: order.code }, customer: order.customer, orderItem: { id: item.id, productNameSnapshot: item.productNameSnapshot, variantNameSnapshot: item.variantNameSnapshot, skuSnapshot: item.skuSnapshot, customization: item.customization, quantity: item.quantity, notes: item.notes, status: item.status } }; }
+  private serializeAdminList(report: WorkshopProgressReport) { const value = asPlain<Plain & { workshopJob?: Plain & { workshopUser?: Plain; orderItem?: Plain & { order?: Plain & { customer?: Plain } } } }>(report); const job = value.workshopJob ?? {}; const item = job.orderItem ?? {}; const order = item.order ?? {}; return { id: value.id, type: value.type, message: String(value.message).slice(0, 240), progressPercent: value.progressPercent, reviewStatus: value.reviewStatus, submittedAt: value.submittedAt, workshop: job.workshopUser, workshopJob: { id: job.id, code: job.code, status: job.status }, order: { id: order.id, code: order.code }, customer: order.customer, product: { name: item.productNameSnapshot, imageUrlSnapshot: item.imageUrlSnapshot, variant: item.variantNameSnapshot, sku: item.skuSnapshot }, quantity: item.quantity }; }
+  private serializeAdminDetail(report: WorkshopProgressReport) { const value = asPlain<Plain & { workshopJob?: Plain & { workshopUser?: Plain; orderItem?: Plain & { order?: Plain & { customer?: Plain } } }; submittedByUser?: Plain; reviewedByUser?: Plain }>(report); const job = value.workshopJob ?? {}; const item = job.orderItem ?? {}; const order = item.order ?? {}; return { ...this.publicReport(value), submittedByUser: value.submittedByUser, reviewedByUser: value.reviewedByUser, workshop: job.workshopUser, workshopJob: { id: job.id, code: job.code, status: job.status, instructions: job.instructions, expectedCompletionDate: job.expectedCompletionDate, assignedAt: job.assignedAt }, order: { id: order.id, code: order.code }, customer: order.customer, orderItem: { id: item.id, productNameSnapshot: item.productNameSnapshot, imageUrlSnapshot: item.imageUrlSnapshot, variantNameSnapshot: item.variantNameSnapshot, skuSnapshot: item.skuSnapshot, customization: item.customization, quantity: item.quantity, notes: item.notes, status: item.status } }; }
   private pagination(page: number, limit: number, total: number) { return { page, limit, total, totalPages: Math.ceil(total / limit) }; }
 }

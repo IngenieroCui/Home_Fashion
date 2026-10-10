@@ -1,7 +1,8 @@
 import 'server-only';
 import { createHash } from 'node:crypto';
 import { createRefreshCoordinator } from './refresh-coordinator';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
+import { safePanelPath } from './session-redirect';
 import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from './cookies';
 import type { LoginResponse, MeResponse, RefreshResponse } from './types';
 
@@ -11,6 +12,11 @@ export function apiServerUrl() {
     (process.env.NODE_ENV === 'development' ? process.env.NEXT_PUBLIC_API_URL : undefined) ??
     'http://localhost:3001/api'
   ).replace(/\/$/, '');
+}
+
+export async function sessionRefreshRedirect() {
+  const next = safePanelPath((await headers()).get('x-hf-panel-path'));
+  return `/api/session/refresh?next=${encodeURIComponent(next)}`;
 }
 
 async function authRequest<T>(

@@ -1,3 +1,4 @@
+import 'workshop_product_image.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -59,6 +60,9 @@ class _WorkshopJobsViewState extends State<_WorkshopJobsView> {
       body: SafeArea(
         child: Column(
           children: [
+            BlocBuilder<WorkshopJobsCubit, WorkshopJobsState>(
+              builder: (context, state) => _WorkspaceHeader(state: state),
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
               child: TextField(
@@ -92,7 +96,7 @@ class _WorkshopJobsViewState extends State<_WorkshopJobsView> {
               ),
             ),
             SizedBox(
-              height: 44,
+              height: MediaQuery.textScalerOf(context).scale(36) + 20,
               child: BlocBuilder<WorkshopJobsCubit, WorkshopJobsState>(
                 buildWhen: (previous, current) =>
                     previous.filter != current.filter,
@@ -139,9 +143,11 @@ class _WorkshopJobsViewState extends State<_WorkshopJobsView> {
             children: [
               const CircularProgressIndicator(),
               const SizedBox(height: 16),
-              Text(state.isSlow
-                  ? 'La conexión está tardando. Seguimos intentando…'
-                  : 'Cargando tus trabajos…'),
+              Text(
+                  state.isSlow
+                      ? 'La conexión está tardando. Seguimos intentando…'
+                      : 'Cargando tus trabajos…',
+                  textAlign: TextAlign.center),
             ],
           ),
         ),
@@ -250,6 +256,66 @@ class _FilterChip extends StatelessWidget {
       );
 }
 
+class _WorkspaceHeader extends StatelessWidget {
+  const _WorkspaceHeader({required this.state});
+  final WorkshopJobsState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final user = context.watch<SessionCubit>().state.user;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF3D352C),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(
+            user == null
+                ? 'Tu espacio de trabajo'
+                : 'Hola, ${user.fullName.split(' ').first}',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: const Color(0xFFFFF8EA), fontWeight: FontWeight.w700)),
+        const SizedBox(height: 4),
+        const Text('Consulta tus asignaciones y reporta cada avance.',
+            style: TextStyle(color: Color(0xFFE4D9C9))),
+        if (state.status == WorkshopJobsLoadStatus.success) ...[
+          const SizedBox(height: 14),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            _CountPill(label: 'Por iniciar', count: state.summary.assigned),
+            _CountPill(label: 'En proceso', count: state.summary.inProgress),
+            _CountPill(
+                label: 'En revisión', count: state.summary.readyForReview),
+          ]),
+          const SizedBox(height: 6),
+          const Text('Resumen de todo tu taller',
+              style: TextStyle(color: Color(0xFFC8BBAA), fontSize: 11)),
+        ],
+      ]),
+    );
+  }
+}
+
+class _CountPill extends StatelessWidget {
+  const _CountPill({required this.label, required this.count});
+  final String label;
+  final int count;
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+            color: const Color(0xFF615649),
+            borderRadius: BorderRadius.circular(20)),
+        child: Text('$count $label',
+            style: const TextStyle(
+                color: Color(0xFFFFF8EA),
+                fontSize: 12,
+                fontWeight: FontWeight.w600)),
+      );
+}
+
 class _JobCard extends StatelessWidget {
   const _JobCard({required this.job});
 
@@ -260,6 +326,13 @@ class _JobCard extends StatelessWidget {
     final primary = Theme.of(context).colorScheme.primary;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      elevation: 0,
+      color: Theme.of(context).brightness == Brightness.light
+          ? const Color(0xFFFFFDF8)
+          : Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: Color(0xFFE4D8C9))),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () async {
@@ -271,18 +344,33 @@ class _JobCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
+              Text(
+                  job.status == WorkshopJobStatus.assigned
+                      ? 'PENDIENTE DE INICIO'
+                      : job.status == WorkshopJobStatus.inProgress
+                          ? 'EN FABRICACIÓN'
+                          : 'FABRICACIÓN',
+                  style: const TextStyle(
+                      color: Color(0xFF65733D),
+                      fontSize: 11,
+                      letterSpacing: 1.2,
+                      fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                alignment: WrapAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: Text(job.code,
-                        style: Theme.of(context).textTheme.titleMedium),
-                  ),
+                  Text(job.code,
+                      style: Theme.of(context).textTheme.titleMedium),
                   StatusBadge(
                     label: jobStatusLabel(job.status),
                     color: primary,
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
+              WorkshopProductImage(url: job.imageUrlSnapshot, height: 130),
               const SizedBox(height: 12),
               Text(job.productName,
                   style: Theme.of(context).textTheme.titleSmall),
@@ -302,6 +390,14 @@ class _JobCard extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
+              const SizedBox(height: 14),
+              Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                Text('Ver trabajo',
+                    style:
+                        TextStyle(color: primary, fontWeight: FontWeight.w700)),
+                const SizedBox(width: 4),
+                Icon(Icons.arrow_forward, size: 17, color: primary)
+              ]),
             ],
           ),
         ),

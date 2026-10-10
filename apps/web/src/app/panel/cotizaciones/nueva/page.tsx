@@ -2,8 +2,9 @@ import Link from 'next/link';
 import { QuoteHeaderForm } from '@/components/customer-quote';
 import { requireQuoteManage } from '@/lib/auth/customer-quote-access';
 export const dynamic = 'force-dynamic';
-export default async function NewQuotePage() {
+export default async function NewQuotePage({ searchParams }: { searchParams: Promise<{ customerId?: string }> }) {
   await requireQuoteManage();
+  const { customerId } = await searchParams;
   return (
     <div className="admin-stack">
       <section className="admin-heading">
@@ -15,7 +16,7 @@ export default async function NewQuotePage() {
           <h1 className="font-serif text-4xl">Nueva cotización</h1>
         </div>
       </section>
-      <QuoteHeaderForm />
+      <QuoteHeaderForm initialCustomerId={customerId} />
     </div>
   );
 }

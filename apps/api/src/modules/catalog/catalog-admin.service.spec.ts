@@ -8,7 +8,8 @@ function instance<T extends object>(value: T) {
 describe('CatalogAdminService', () => {
   const categories = { findByPk: jest.fn(), findOne: jest.fn(), create: jest.fn(), findAndCountAll: jest.fn() };
   const products = { findByPk: jest.fn(), findOne: jest.fn(), create: jest.fn(), findAndCountAll: jest.fn() };
-  const variants = { findByPk: jest.fn(), findOne: jest.fn(), create: jest.fn() };
+  const transaction = { LOCK: { UPDATE: 'UPDATE' } };
+  const variants = { findByPk: jest.fn(), findOne: jest.fn(), create: jest.fn(), sequelize: { transaction: jest.fn(async (callback) => callback(transaction)) } };
   const images = { findByPk: jest.fn(), create: jest.fn(), update: jest.fn(), sequelize: { transaction: jest.fn(async (callback) => callback({})) } };
   const cloudinary = { destroy: jest.fn() };
   const service = new CatalogAdminService(categories as never, products as never, variants as never, images as never, cloudinary as never);
@@ -44,7 +45,7 @@ describe('CatalogAdminService', () => {
     variants.create.mockResolvedValue(instance({ id: '3', sku: 'MESA-01', estimatedCost: null, quantityOnHand: 2, quantityReserved: 0 }));
     const result = await service.createVariant('2', { sku: ' mesa 01 ', salePrice: 120000, estimatedCost: null, quantityOnHand: 2, status: 'ACTIVE' });
     expect(result).toMatchObject({ sku: 'MESA-01', estimatedCost: null });
-    expect(variants.create).toHaveBeenCalledWith(expect.objectContaining({ estimatedCost: null }));
+    expect(variants.create).toHaveBeenCalledWith(expect.objectContaining({ productId: '2', estimatedCost: null, quantityReserved: 0 }));
   });
 
   it('rejects duplicate SKU and invalid inventory', async () => {
@@ -52,7 +53,24 @@ describe('CatalogAdminService', () => {
     variants.findOne.mockResolvedValue({ id: 'other' });
     await expect(service.createVariant('2', { sku: 'MESA-01', salePrice: 1, quantityOnHand: 1, status: 'ACTIVE' })).rejects.toBeInstanceOf(ConflictException);
     variants.findOne.mockResolvedValue(null);
-    await expect(service.createVariant('2', { sku: 'MESA-01', salePrice: 1, quantityOnHand: 1, quantityReserved: 2, status: 'ACTIVE' })).rejects.toBeInstanceOf(BadRequestException);
+    variants.create.mockResolvedValue(instance({ id: '3', quantityReserved: 0 }));
+    await service.createVariant('2', { sku: 'MESA-01', salePrice: 1, quantityOnHand: 1, quantityReserved: 2, status: 'ACTIVE' } as never);
+    expect(variants.create).toHaveBeenCalledWith(expect.objectContaining({ productId: '2', quantityReserved: 0 }));
+  });
+
+  it('uses locked real reservations when updating inventory and never persists external reservations', async () => {
+    const variant = instance({ id: '3', quantityOnHand: 2, quantityReserved: 1 });
+    variants.findByPk.mockResolvedValue(variant);
+    await expect(service.updateVariant('3', { quantityOnHand: 0 })).rejects.toBeInstanceOf(BadRequestException);
+    await service.updateVariant('3', { quantityReserved: 0, quantityOnHand: 1 } as never);
+    expect(variants.findByPk).toHaveBeenCalledWith('3', { transaction, lock: 'UPDATE' });
+    expect(variant.update).toHaveBeenCalledWith({ quantityOnHand: 1 }, { transaction });
+  });
+
+  it('accepts a numeric MySQL owner matching a string route product id', async () => {
+    products.findByPk.mockResolvedValue({ id: 2 });
+    variants.findByPk.mockResolvedValue({ id: 3, productId: 2 });
+    await expect(service.validateImageTarget('2', '3')).resolves.toBeUndefined();
   });
 
   it('rejects an image variant from another product', async () => {

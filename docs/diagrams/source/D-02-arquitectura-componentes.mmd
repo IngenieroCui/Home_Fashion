@@ -1,0 +1,50 @@
+%% D-02 — Arquitectura y componentes
+%% Fuentes: docs/architecture.md; estructura apps/ y packages/
+flowchart TB
+  subgraph USERS[Usuarios]
+    C([Cliente])
+    S([ADMIN / EMPLOYEE])
+    T([WORKSHOP])
+  end
+
+  subgraph WEB[apps/web · Next.js 15]
+    PUB[Catálogo, solicitud<br/>y seguimiento]
+    PANEL[Panel administrativo]
+    BFF[Handlers BFF<br/>cookies HttpOnly]
+  end
+
+  subgraph MOBILE[apps/mobile · Flutter]
+    UI[Login, trabajos y detalle]
+    BLOC[BLoC / Cubit + GoRouter]
+    DIO[Dio + almacenamiento seguro]
+  end
+
+  subgraph API[apps/api · NestJS 11 · monolito modular]
+    AUTH[Auth, roles y permisos]
+    CAT[Catálogo]
+    COM[Cotizaciones, ventas y pagos]
+    OPS[Pedidos, talleres,<br/>tracking y entregas]
+    ORM[Sequelize + migraciones Umzug]
+  end
+
+  SH[packages/shared]
+  DB[(MySQL 8)]
+
+  C --> PUB
+  S --> PANEL
+  PUB --> BFF
+  PANEL --> BFF
+  T --> UI --> BLOC --> DIO
+  BFF --> AUTH
+  BFF --> CAT
+  BFF --> COM
+  BFF --> OPS
+  DIO --> AUTH
+  DIO --> OPS
+  CAT --> ORM
+  AUTH --> ORM
+  COM --> ORM
+  OPS --> ORM
+  ORM --> DB
+  SH -. contratos TS .-> WEB
+  SH -. constantes .-> API

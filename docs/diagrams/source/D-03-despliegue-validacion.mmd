@@ -1,0 +1,32 @@
+%% D-03 — Despliegue propuesto para validación (no representa producción verificada)
+%% Fuentes: docs/architecture.md; docs/development.md
+flowchart TB
+  subgraph CLIENTS[Dispositivos de prueba]
+    B[Chrome / Edge]
+    A[Android<br/>APK de pruebas]
+  end
+
+  subgraph EDGE[Entrada HTTPS propuesta]
+    TLS[Proxy inverso / TLS]
+  end
+
+  subgraph APP[Servidor de aplicaciones]
+    NEXT[Next.js 15<br/>web + BFF]
+    NEST[NestJS 11<br/>API /api]
+  end
+
+  subgraph DATA[Capa de datos]
+    MYSQL[(MySQL 8<br/>volumen persistente)]
+    BACKUP[(Copias de seguridad<br/>pendientes de configurar)]
+  end
+
+  B -->|HTTPS| TLS
+  A -->|HTTPS + JWT| TLS
+  TLS --> NEXT
+  TLS --> NEST
+  NEXT -->|API_SERVER_URL| NEST
+  NEST -->|conexión cifrada si aplica| MYSQL
+  MYSQL -.->|programación por definir| BACKUP
+
+  NOTE["Estado: arquitectura objetivo para pruebas/E2E.<br/>No afirmar producción hasta verificar dominio, HTTPS,<br/>secretos, backup, monitoreo y distribución Android."]
+  NOTE -.-> APP

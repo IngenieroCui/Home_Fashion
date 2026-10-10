@@ -1,5 +1,7 @@
 'use client';
+import { useActionFeedback } from './ui/action-feedback';
 
+import { EvidenceLinks } from './evidence-links';
 import { clientFetch } from '@/lib/client-fetch';
 import { useEffect, useState, type FormEvent } from 'react';
 import {
@@ -28,6 +30,18 @@ export function PaymentForm({
   balance: string | null | undefined;
   onChanged: () => Promise<void>;
 }) {
+  const notify = useActionFeedback();
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  useEffect(() => {
+    if (!file) {
+      setPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
   const [type, setType] = useState<PaymentType>('DEPOSIT');
   const [amount, setAmount] = useState('');
   const [paidAt, setPaidAt] = useState(localDateTime);
@@ -57,27 +71,31 @@ export function PaymentForm({
     }
     const form = event.currentTarget;
     const data = new FormData(event.currentTarget);
+    const upload = new FormData();
+    upload.set('type', type);
+    upload.set('method', String(data.get('method')));
+    upload.set('amount', amount.trim());
+    upload.set('paidAt', paymentDate.toISOString());
+    for (const key of ['reference', 'notes']) {
+      const value = String(data.get(key) || '').trim();
+      if (value) upload.set(key, value);
+    }
+    if (type === 'ADJUSTMENT') upload.set('adjustmentEffect', adjustmentEffect);
+    if (file) upload.set('file', file);
     setSaving(true);
     try {
       const response = await clientFetch(
-        `/api/admin/sales/${encodeURIComponent(saleId)}/payments`,
+        `/api/admin/sales/${encodeURIComponent(saleId)}/payments-media`,
         {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({
-            type,
-            method: data.get('method'),
-            amount: amount.trim(),
-            paidAt: paymentDate.toISOString(),
-            reference: String(data.get('reference') ?? '').trim() || undefined,
-            notes: String(data.get('notes') ?? '').trim() || undefined,
-            evidenceUrl: String(data.get('evidenceUrl') ?? '').trim() || undefined,
-            ...(type === 'ADJUSTMENT' ? { adjustmentEffect } : {})
-          })
+          body: upload,
+          signal: AbortSignal.timeout(60000)
         }
       );
       const body = (await response.json().catch(() => null)) as { message?: string } | null;
       if (!response.ok) throw new Error(body?.message ?? 'No fue posible registrar el movimiento.');
+      notify('Pago registrado');
+      setFile(null);
       setAmount('');
       setPaidAt(localDateTime());
       setAdjustmentEffect('');
@@ -92,10 +110,10 @@ export function PaymentForm({
     }
   }
   return (
-    <form className="admin-form admin-form-wide" onSubmit={submit}>
+    <form id="registrar-movimiento" className="admin-form admin-form-wide" onSubmit={submit}>
       <h2 className="font-serif text-2xl">Registrar movimiento</h2>
       <p className="notice">
-        Saldo informado por la venta: {money(balance)}. El backend confirma el valor final.
+        Saldo pendiente: {money(balance)}. El valor se verifica al registrar el movimiento.
       </p>
       {error && (
         <p className="form-error" role="alert">
@@ -119,6 +137,17 @@ export function PaymentForm({
           ))}
         </select>
       </label>
+      <p className="notice">
+        {
+          {
+            DEPOSIT: 'Abono recibido del cliente.',
+            PAYMENT: 'Pago adicional.',
+            FINAL_PAYMENT: 'Completa exactamente el saldo pendiente.',
+            REFUND: 'Devolución que reduce el monto pagado.',
+            ADJUSTMENT: 'Corrige el monto pagado según el efecto seleccionado.'
+          }[type]
+        }
+      </p>
       <label>
         Método
         <select defaultValue="CASH" name="method">
@@ -167,12 +196,43 @@ export function PaymentForm({
       )}
       <label>
         Referencia opcional
-        <input name="reference" />
+        <input name="reference" maxLength={160} />
       </label>
       <label>
-        Enlace de evidencia opcional
-        <input name="evidenceUrl" placeholder="https://…" type="url" />
+        Evidencia opcional
+        <input
+          key={file ? 'selected' : 'empty'}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          aria-label="Seleccionar comprobante"
+          onChange={(event) => {
+            const selected = event.target.files?.[0];
+            if (!selected) {
+              setFile(null);
+              return;
+            }
+            if (
+              !['image/jpeg', 'image/png', 'image/webp'].includes(selected.type) ||
+              selected.size > 10 * 1024 * 1024
+            ) {
+              setError('Selecciona un comprobante JPG, PNG o WebP de hasta 10 MB.');
+              event.target.value = '';
+              return;
+            }
+            setError(null);
+            setFile(selected);
+          }}
+        />
       </label>
+      {file && (
+        <div>
+          <p>{file.name}</p>
+          {preview && <EvidenceLinks urls={[preview]} />}
+          <button className="text-link" type="button" onClick={() => setFile(null)}>
+            Quitar comprobante
+          </button>
+        </div>
+      )}
       <label>
         Notas opcionales
         <textarea name="notes" />

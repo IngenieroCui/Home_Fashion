@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { AuthModule } from '../auth/auth.module';
+import { MediaModule } from '../media/media.module';
 import { Role } from '../auth/entities/role.model';
 import { User } from '../auth/entities/user.model';
 import { OrderItem } from '../orders/entities/order-item.model';
@@ -11,7 +12,7 @@ import { DeliveriesService } from './deliveries.service';
 import { Delivery } from './entities/delivery.model';
 
 @Module({
-  imports: [AuthModule, SequelizeModule.forFeature([Delivery, Order, OrderItem, Customer, User, Role])],
+  imports: [AuthModule, MediaModule, SequelizeModule.forFeature([Delivery, Order, OrderItem, Customer, User, Role])],
   controllers: [DeliveriesController],
   providers: [DeliveriesService]
 })

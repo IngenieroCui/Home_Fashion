@@ -22,6 +22,7 @@ function safeMessage(body: unknown, status: number) {
     typeof (body as { message?: unknown }).message === 'string'
       ? (body as { message: string }).message
       : '';
+  if (status === 400 && /fotografías|comprobante/i.test(message)) return 'Selecciona un comprobante JPG, PNG o WebP de hasta 10 MB.';
   const paymentMessages: Array<[RegExp, string]> = [
     [/must be greater than zero/i, 'El monto debe ser mayor que cero.'],
     [/cannot exceed the current balance/i, 'El monto supera el saldo disponible.'],

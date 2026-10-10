@@ -1,3 +1,5 @@
+import { MediaModule } from '../media/media.module';
+import { CatalogModule } from '../catalog/catalog.module';
 import { Module } from '@nestjs/common';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { AuthModule } from '../auth/auth.module';
@@ -16,6 +18,8 @@ import { SalesService } from './sales.service';
 @Module({
   imports: [
     AuthModule,
+    CatalogModule,
+    MediaModule,
     SequelizeModule.forFeature([
       Sale,
       SaleItem,

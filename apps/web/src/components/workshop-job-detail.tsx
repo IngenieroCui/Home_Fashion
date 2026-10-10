@@ -1,5 +1,9 @@
 'use client';
 
+import { orderItemStatusLabel, orderStatusLabel, supplyTypeLabel } from '@/lib/orders';
+import { CommerceItemVisual } from './commerce-item-visual';
+
+
 import { clientFetch } from '@/lib/client-fetch';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
@@ -12,6 +16,7 @@ import {
 } from '@/lib/workshop-jobs';
 import { WorkshopJobStatusBadge } from './workshop-job-status-badge';
 import { WorkshopProgressHistory } from './workshop-progress-history';
+import { ListError } from './page-state';
 
 async function loadJob(id: string) {
   const response = await clientFetch(`/api/admin/workshop-jobs/${encodeURIComponent(id)}`);
@@ -36,9 +41,7 @@ export function WorkshopJobDetail({ id, canReview }: { id: string; canReview: bo
   }, [refresh]);
   if (error)
     return (
-      <p className="form-error" role="alert">
-        {error}
-      </p>
+      <ListError message={error} retry={() => void refresh()} />
     );
   if (!job) return <p className="notice">Cargando trabajo…</p>;
   const customization = formatCustomization(job.orderItem.customization);
@@ -74,7 +77,7 @@ export function WorkshopJobDetail({ id, canReview }: { id: string; canReview: bo
             {job.order.code}
           </Link>
         </p>
-        <p>Estado: {job.order.status}</p>
+        <p>Estado: {orderStatusLabel[job.order.status]}</p>
         <p>Fecha prometida: {formatDate(job.order.promisedDate)}</p>
         <p>Notas: {job.order.notes ?? '—'}</p>
         <p>
@@ -84,12 +87,12 @@ export function WorkshopJobDetail({ id, canReview }: { id: string; canReview: bo
       </section>
       <section className="admin-section">
         <h2 className="font-serif text-2xl">Elemento del pedido</h2>
-        <p>Producto: {job.orderItem.productNameSnapshot}</p>
+        <CommerceItemVisual imageUrl={job.orderItem.imageUrlSnapshot} name={job.orderItem.productNameSnapshot} variant={job.orderItem.variantNameSnapshot} quantity={job.orderItem.quantity} />
         <p>Variante: {job.orderItem.variantNameSnapshot ?? '—'}</p>
         <p>SKU: {job.orderItem.skuSnapshot ?? '—'}</p>
         <p>Cantidad: {job.orderItem.quantity}</p>
-        <p>Suministro: {job.orderItem.supplyType}</p>
-        <p>Estado actual: {job.orderItem.status}</p>
+        <p>Suministro: {supplyTypeLabel[job.orderItem.supplyType]}</p>
+        <p>Estado actual: {orderItemStatusLabel[job.orderItem.status]}</p>
         <p>Notas: {job.orderItem.notes ?? '—'}</p>
         {customization.length > 0 && (
           <div>

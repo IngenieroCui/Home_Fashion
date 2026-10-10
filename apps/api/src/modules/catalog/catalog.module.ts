@@ -9,7 +9,8 @@ import { Category } from './entities/category.model';
 import { ProductImage } from './entities/product-image.model';
 import { Product } from './entities/product.model';
 import { ProductVariant } from './entities/product-variant.model';
-import { CloudinaryImageService } from './cloudinary-image.service';
+import { MediaModule } from '../media/media.module';
+import { CatalogImageResolverService } from './catalog-image-resolver.service';
 
-@Module({ imports: [AuthModule, SequelizeModule.forFeature([Category, Product, ProductVariant, ProductImage])], controllers: [CatalogController, CatalogAdminController], providers: [CatalogService, CatalogAdminService, CloudinaryImageService] })
+@Module({ imports: [AuthModule, MediaModule, SequelizeModule.forFeature([Category, Product, ProductVariant, ProductImage])], controllers: [CatalogController, CatalogAdminController], providers: [CatalogService, CatalogAdminService, CatalogImageResolverService], exports: [CatalogImageResolverService] })
 export class CatalogModule {}

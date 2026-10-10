@@ -1,0 +1,19 @@
+{
+  "devices": {
+    "exit": 0,
+    "stdout": "List of devices attached\r\n\r\n",
+    "stderr": ""
+  },
+  "avds": {
+    "exit": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "flutter": {
+    "exit": 0,
+    "stdout": "Found 3 connected devices:\n  Windows (desktop) • windows • windows-x64    • Microsoft Windows [Version 10.0.26200.9457]\n  Chrome (web)      • chrome  • web-javascript • unknown\n  Edge (web)        • edge    • web-javascript • Microsoft Edge 154.0.4258.37\n\nRun \"flutter emulators\" to list and start any available device emulators.\n\nIf you expected another device to be detected, please run \"flutter doctor\" to diagnose potential issues. You may also try increasing the time to wait for connected devices with the \"--device-timeout\" flag. Visit https://flutter.dev/setup/ for troubleshooting tips.\n",
+    "stderr": ""
+  },
+  "androidPresent": false,
+  "avdPresent": false
+}

@@ -36,6 +36,18 @@ describe('CatalogService', () => {
     expect(JSON.stringify(productModel.findAndCountAll.mock.calls[0][0])).not.toContain('location');
   });
 
+  it('sorts newest using the physical timestamp in both pagination queries without exposing it', async () => {
+    productModel.findAndCountAll.mockResolvedValue({
+      count: 1,
+      rows: [{ get: () => ({ id: '1', created_at: '2026-09-29', variants: [] }) }]
+    });
+    const result = await service.listProducts({ page: 1, limit: 12, sort: 'newest' });
+    const options = productModel.findAndCountAll.mock.calls[0][0];
+    expect(options.attributes).toContain('created_at');
+    expect(options.order[0]).toEqual(['created_at', 'DESC']);
+    expect(result.data[0]).not.toHaveProperty('created_at');
+  });
+
   it('filters searches and category slugs', async () => {
     productModel.findAndCountAll.mockResolvedValue({ count: 0, rows: [] });
     await service.listProducts({ page: 1, limit: 12, q: 'Verona', category: 'sofas' });

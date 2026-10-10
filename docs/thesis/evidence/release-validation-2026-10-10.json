@@ -1,0 +1,37 @@
+{
+  "date": "2026-10-10T21:19:14.332526+00:00",
+  "timezone": "America/Bogota",
+  "commit": "ff3fbb867812617e34752d5e1cd1e0f99c211e2f",
+  "branch": "master",
+  "packageVersion": "0.1.0",
+  "localChangesUncommitted": true,
+  "releasePublication": "NOT_VERIFIED_CURRENT_RC",
+  "publishedBuildCommit": "ff3fbb8",
+  "publishedApiHealth": 500,
+  "checks": {
+    "releaseTests": "4/4 PASS",
+    "e2eTypecheck": "PASS",
+    "sourcePackageTests": "3/3 PASS",
+    "archiveInspection": "PASS; final manifest is authoritative",
+    "trackedSourceOmissions": 0,
+    "evidenceSecretsDetected": 0,
+    "gitDiffCheck": "PASS"
+  },
+  "priorJourneys": {
+    "runId": "20261010204640-afd3702f",
+    "passed": 5,
+    "repeated": false
+  },
+  "e2eStockRead": "BLOCKED: dedicated server unavailable; no mutations",
+  "androidRuntime": "PENDIENTE",
+  "smoke": {
+    "partialPass": 1,
+    "fail": 3,
+    "blocked": 8,
+    "capturedConsoleWarningsErrors": 0
+  },
+  "preservedHashes": {
+    "automated-business-journeys.md": "2508a79da66c16bda45ae1a0c97c1b339404be2d154d755ab20cd8a307bd1a7c",
+    "automated-business-journeys/results.json": "3d73ee1ea34b0a86fbe75faa67caeef151a75143f0f2975dac0ed80cecac9607"
+  }
+}

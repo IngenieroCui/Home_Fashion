@@ -1,3 +1,4 @@
+import { formatMoney } from './formatters';
 export type Category = { id: string; name: string; slug: string; description: string | null };
 
 export type ProductImage = {
@@ -44,10 +45,14 @@ export type PaginatedProducts = {
 
 export type CatalogFilters = {
   page?: number;
+  limit?: number;
   q?: string;
   category?: string;
   allowsCustomization?: boolean;
   inStock?: boolean;
+  sort?: 'name' | 'newest' | 'price-asc' | 'price-desc';
+  minPrice?: number;
+  maxPrice?: number;
 };
 
 export class CatalogApiError extends Error {
@@ -77,34 +82,46 @@ async function request<T>(path: string): Promise<T> {
 export function catalogQuery(filters: CatalogFilters): string {
   const params = new URLSearchParams();
   if (filters.page && filters.page > 1) params.set('page', String(filters.page));
+  if (filters.limit && filters.limit !== 12) params.set('limit', String(filters.limit));
   if (filters.q) params.set('q', filters.q);
   if (filters.category) params.set('category', filters.category);
   if (filters.allowsCustomization) params.set('allowsCustomization', 'true');
   if (filters.inStock) params.set('inStock', 'true');
+  if (filters.sort && filters.sort !== 'name') params.set('sort', filters.sort);
+  if (filters.minPrice !== undefined) params.set('minPrice', String(filters.minPrice));
+  if (filters.maxPrice !== undefined) params.set('maxPrice', String(filters.maxPrice));
   const query = params.toString();
   return query ? `?${query}` : '';
 }
 
 export const getCategories = () => request<Category[]>('/catalog/categories');
-export const getProducts = (filters: CatalogFilters = {}) =>
-  request<PaginatedProducts>(`/catalog/products${catalogQuery(filters)}`);
-export const getProduct = (slug: string) =>
-  request<CatalogProduct>(`/catalog/products/${encodeURIComponent(slug)}`);
+export function normalizeCatalogProduct(product: CatalogProduct): CatalogProduct {
+  return {
+    ...product,
+    id: String(product.id),
+    category: product.category
+      ? { ...product.category, id: String(product.category.id) }
+      : undefined,
+    images: product.images?.map((image) => ({ ...image, id: String(image.id) })),
+    variants: product.variants?.map((variant) => ({
+      ...variant,
+      id: String(variant.id),
+      images: variant.images?.map((image) => ({ ...image, id: String(image.id) }))
+    }))
+  };
+}
+export async function getProducts(filters: CatalogFilters = {}) {
+  const result = await request<PaginatedProducts>(`/catalog/products${catalogQuery(filters)}`);
+  return { ...result, data: result.data.map(normalizeCatalogProduct) };
+}
+export async function getProduct(slug: string) {
+  return normalizeCatalogProduct(
+    await request<CatalogProduct>(`/catalog/products/${encodeURIComponent(slug)}`)
+  );
+}
 
 export function formatPrice(value: string): string {
-  if (
-    value === null ||
-    value === undefined ||
-    String(value).trim() === '' ||
-    !Number.isFinite(Number(value))
-  )
-    return 'Precio por confirmar';
-  return new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2
-  }).format(Number(value));
+  return formatMoney(value, 'Precio por confirmar');
 }
 
 export function productPrice(product: CatalogProduct): string | null {

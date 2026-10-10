@@ -1,0 +1,26 @@
+%% D-11 — Secuencia: seguimiento privado
+%% Fuentes: order-tracking.service.ts; order-tracking controller/tests
+sequenceDiagram
+  autonumber
+  actor P as Personal autorizado
+  participant A as API NestJS
+  participant DB as MySQL
+  actor C as Cliente
+  participant W as Web pública
+
+  P->>A: Generar o rotar acceso del pedido
+  A->>A: Genera token aleatorio de 32 bytes
+  A->>DB: Guarda solo SHA-256 + expiración/revocación
+  A-->>P: Devuelve token completo una sola vez
+  P-->>C: Comparte enlace privado
+  C->>W: Abre /tracking/{token}
+  W->>A: GET seguimiento con token
+  A->>DB: Busca hash, vigencia y no revocado
+  A->>DB: Lee pedido + avances APPROVED
+  A->>A: Construye proyección minimizada
+  A-->>W: Estado, líneas y avances públicos
+  W-->>C: Seguimiento sin precios, costos ni datos internos
+  opt rotar o revocar
+    P->>A: Rota/revoca acceso
+    A->>DB: Invalida token anterior
+  end

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { CustomerForm } from '@/components/customer-quote';
+import { CustomerForm } from '@/components/customer-form';
 import { requireCustomerManage } from '@/lib/auth/customer-quote-access';
 export const dynamic = 'force-dynamic';
 export default async function NewCustomerPage() {

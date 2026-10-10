@@ -261,7 +261,7 @@ export class DeliveriesService {
         required: true,
         include: [
           { model: Customer, attributes: ['id', 'fullName', 'phone'], required: true },
-          ...(detail ? [{ model: OrderItem, attributes: ['id', 'productNameSnapshot', 'variantNameSnapshot', 'skuSnapshot', 'quantity', 'supplyType', 'status'] }] : [])
+          ...(detail ? [{ model: OrderItem, attributes: ['id', 'productNameSnapshot', 'variantNameSnapshot', 'skuSnapshot', 'imageUrlSnapshot', 'quantity', 'supplyType', 'status'] }] : [])
         ]
       }
     ] as Includeable[];

@@ -1,3 +1,6 @@
+import { formatMoney } from './formatters';
+import { formatDateTime } from './formatters';
+import { formatDate } from './formatters';
 import type { OrderItemStatus, OrderStatus, OrderSupplyType } from './orders';
 
 export type DeliveryStatus = 'SCHEDULED' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'CANCELLED';
@@ -16,6 +19,7 @@ export type DeliveryUser = {
 export type DeliveryOrderItem = {
   id: string;
   productNameSnapshot: string;
+  imageUrlSnapshot: string | null;
   variantNameSnapshot: string | null;
   skuSnapshot: string | null;
   quantity: number;
@@ -94,26 +98,8 @@ export function deliveryAssigneeName(delivery: {
   );
 }
 
-export function formatDeliveryDate(value: string | null | undefined) {
-  if (!value) return '—';
-  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00` : value;
-  const date = new Date(normalized);
-  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString('es-CO');
-}
+export const formatDeliveryDate = formatDate;
 
-export function formatDeliveryDateTime(value: string | null | undefined) {
-  if (!value) return '—';
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('es-CO');
-}
+export const formatDeliveryDateTime = formatDateTime;
 
-export function formatDeliveryFee(value: string | null | undefined) {
-  if (value === null || value === undefined || value === '') return '—';
-  const amount = Number(value);
-  if (!Number.isFinite(amount)) return '—';
-  return new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: 'COP',
-    maximumFractionDigits: 2
-  }).format(amount);
-}
+export const formatDeliveryFee = formatMoney;

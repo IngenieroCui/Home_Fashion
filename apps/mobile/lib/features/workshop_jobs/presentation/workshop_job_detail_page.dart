@@ -1,3 +1,4 @@
+import 'workshop_product_image.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -60,27 +61,37 @@ class _DetailView extends StatelessWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(job.productName,
-                    style: Theme.of(context).textTheme.headlineSmall),
-              ),
-              StatusBadge(
-                label: jobStatusLabel(job.status),
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+                color: const Color(0xFF3D352C),
+                borderRadius: BorderRadius.circular(20)),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              WorkshopProductImage(url: job.imageUrlSnapshot, height: 220),
+              const SizedBox(height: 16),
+              const Text('ORDEN DE FABRICACIÓN',
+                  style: TextStyle(
+                      color: Color(0xFFD9C6AC),
+                      fontSize: 11,
+                      letterSpacing: 1.2,
+                      fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              Text(job.productName,
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineSmall
+                      ?.copyWith(color: const Color(0xFFFFF8EA))),
+              const SizedBox(height: 8),
+              if (job.variantName != null)
+                Text(job.variantName!,
+                    style: const TextStyle(color: Color(0xFFE7DCCB))),
+              Text(
+                  '${job.code} · ${job.orderCode} · ${job.quantity} unidad(es)',
+                  style: const TextStyle(color: Color(0xFFE7DCCB))),
+            ]),
           ),
-          if (job.variantName != null) ...[
-            const SizedBox(height: 4),
-            Text(job.variantName!),
-          ],
-          const SizedBox(height: 16),
-          _Section(
-            title: 'Instrucciones',
-            child: Text(job.instructions ?? 'Sin instrucciones adicionales.'),
-          ),
+          const SizedBox(height: 18),
           _Section(
             title: 'Pedido y especificaciones',
             child: Column(
@@ -90,7 +101,15 @@ class _DetailView extends StatelessWidget {
                 if (job.sku != null) _Fact(label: 'SKU', value: job.sku!),
                 _Fact(
                   label: 'Estado del elemento',
-                  value: job.orderItemStatus,
+                  value: const {
+                        'RESERVED': 'Reservado',
+                        'PENDING_PRODUCTION': 'Pendiente de fabricación',
+                        'IN_PRODUCTION': 'En fabricación',
+                        'READY': 'Listo',
+                        'DELIVERED': 'Entregado',
+                        'CANCELLED': 'Cancelado'
+                      }[job.orderItemStatus] ??
+                      'En seguimiento',
                 ),
                 _Fact(
                   label: 'Asignado',
@@ -105,6 +124,15 @@ class _DetailView extends StatelessWidget {
               ],
             ),
           ),
+          _Section(
+            title: 'Instrucciones Home Fashion',
+            child: Text(job.instructions ?? 'Sin instrucciones adicionales.'),
+          ),
+          StatusBadge(
+              label: jobStatusLabel(job.status),
+              color: Theme.of(context).colorScheme.primary),
+          const SizedBox(height: 12),
+          _ProductionProgress(status: job.status),
           if (job.customization != null)
             _Section(
               title: 'Personalización',
@@ -112,29 +140,6 @@ class _DetailView extends StatelessWidget {
             ),
           if (job.notes != null)
             _Section(title: 'Notas', child: Text(job.notes!)),
-          if (job.allowedReportTypes.isNotEmpty)
-            _Section(
-              title: 'Reportar avance',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final type in job.allowedReportTypes) ...[
-                    FilledButton.tonalIcon(
-                      onPressed: () => _openReport(context, type),
-                      icon: Icon(_reportIcon(type)),
-                      label: Text(reportTypeLabel(type)),
-                    ),
-                    if (type != job.allowedReportTypes.last)
-                      const SizedBox(height: 10),
-                  ],
-                ],
-              ),
-            )
-          else
-            _Section(
-              title: 'Acciones',
-              child: Text(_blockedMessage(job.status)),
-            ),
           _Section(
             title: 'Historial de reportes',
             child: job.progressReports.isEmpty
@@ -151,6 +156,31 @@ class _DetailView extends StatelessWidget {
                     ],
                   ),
           ),
+          if (job.allowedReportTypes.isNotEmpty)
+            _Section(
+              title: 'Reportar avance',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final type in job.allowedReportTypes) ...[
+                    FilledButton.tonalIcon(
+                      onPressed: () => _openReport(context, type),
+                      icon: Icon(_reportIcon(type)),
+                      label: Text(type == ProgressReportType.started
+                          ? 'Iniciar trabajo'
+                          : reportTypeLabel(type)),
+                    ),
+                    if (type != job.allowedReportTypes.last)
+                      const SizedBox(height: 10),
+                  ],
+                ],
+              ),
+            )
+          else
+            _Section(
+              title: 'Acciones',
+              child: Text(_blockedMessage(job.status)),
+            ),
         ],
       ),
     );
@@ -172,7 +202,7 @@ class _DetailView extends StatelessWidget {
     );
     if (sent == true && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Reporte enviado correctamente.')),
+        const SnackBar(content: Text('Avance enviado correctamente')),
       );
     }
   }
@@ -219,6 +249,37 @@ class _DetailView extends StatelessWidget {
   }
 }
 
+class _ProductionProgress extends StatelessWidget {
+  const _ProductionProgress({required this.status});
+  final WorkshopJobStatus status;
+  @override
+  Widget build(BuildContext context) {
+    final stage = switch (status) {
+      WorkshopJobStatus.assigned => 0,
+      WorkshopJobStatus.inProgress => 1,
+      WorkshopJobStatus.readyForReview => 2,
+      WorkshopJobStatus.completed => 3,
+      WorkshopJobStatus.cancelled => 0
+    };
+    return Card(
+        child: Padding(
+            padding: const EdgeInsets.all(16),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Progreso del trabajo',
+                  style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              LinearProgressIndicator(
+                  value: (stage + 1) / 4,
+                  minHeight: 7,
+                  borderRadius: BorderRadius.circular(10),
+                  backgroundColor: const Color(0xFFE6E0D6)),
+              const SizedBox(height: 8),
+              Text(jobStatusLabel(status)),
+            ])));
+  }
+}
+
 class _Section extends StatelessWidget {
   const _Section({required this.title, required this.child});
   final String title;
@@ -249,17 +310,24 @@ class _Fact extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 130,
-              child: Text(label,
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
-            ),
-            Expanded(child: Text(value)),
-          ],
-        ),
+        child: MediaQuery.textScalerOf(context).scale(14) > 18
+            ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(label,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(value),
+              ])
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 130,
+                    child: Text(label,
+                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+                  Expanded(child: Text(value)),
+                ],
+              ),
       );
 }
 
@@ -272,20 +340,13 @@ class _ReportTile extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                reportTypeLabel(report.type),
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-            ),
-            StatusBadge(
+        Wrap(spacing: 12, runSpacing: 8, children: [
+          Text(reportTypeLabel(report.type),
+              style: Theme.of(context).textTheme.titleSmall),
+          StatusBadge(
               label: reviewStatusLabel(report.reviewStatus),
-              color: reviewStatusColor(context, report.reviewStatus),
-            ),
-          ],
-        ),
+              color: reviewStatusColor(context, report.reviewStatus)),
+        ]),
         const SizedBox(height: 6),
         Text(dateTimeLabel(report.submittedAt)),
         const SizedBox(height: 8),
@@ -296,9 +357,44 @@ class _ReportTile extends StatelessWidget {
         ],
         if (report.evidenceUrls.isNotEmpty) ...[
           const SizedBox(height: 8),
-          for (final url in report.evidenceUrls)
-            Text(url,
-                style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final url in report.evidenceUrls)
+              if (_isImageUrl(url))
+                InkWell(
+                  onTap: () => showDialog<void>(
+                    context: context,
+                    builder: (_) => Dialog(
+                      child: InteractiveViewer(
+                        child: Image.network(
+                          url,
+                          errorBuilder: (_, __, ___) => const Padding(
+                            padding: EdgeInsets.all(24),
+                            child: Text('No se pudo cargar la imagen.'),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.network(
+                      url,
+                      width: 104,
+                      height: 82,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox(
+                        width: 104,
+                        height: 82,
+                        child: Icon(Icons.broken_image_outlined),
+                      ),
+                    ),
+                  ),
+                )
+              else
+                const Chip(
+                    avatar: Icon(Icons.attach_file, size: 16),
+                    label: Text('Archivo adjunto')),
+          ]),
         ],
         if (report.reviewComment != null) ...[
           const SizedBox(height: 10),
@@ -310,4 +406,13 @@ class _ReportTile extends StatelessWidget {
       ],
     );
   }
+}
+
+bool _isImageUrl(String url) {
+  final uri = Uri.tryParse(url);
+  return uri != null &&
+      (uri.scheme == 'https' || uri.scheme == 'http') &&
+      (RegExp(r'\.(jpg|jpeg|png|webp|gif)$', caseSensitive: false)
+              .hasMatch(uri.path) ||
+          uri.path.contains('/image/upload/'));
 }

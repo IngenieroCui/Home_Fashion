@@ -119,6 +119,7 @@ export class OrdersService {
           productId: saleItem.productId,
           productVariantId: saleItem.productVariantId,
           productNameSnapshot: saleItem.productNameSnapshot,
+          imageUrlSnapshot: saleItem.imageUrlSnapshot,
           variantNameSnapshot: saleItem.variantNameSnapshot,
           skuSnapshot: saleItem.skuSnapshot,
           customization: saleItem.customization,
@@ -132,6 +133,9 @@ export class OrdersService {
     } catch (error) {
       if ((error as { name?: string }).name === 'SequelizeUniqueConstraintError')
         throw new ConflictException('Sale already converted to order');
+      const code = (error as { parent?: { code?: string } }).parent?.code;
+      if (code === 'ER_LOCK_DEADLOCK' || code === 'ER_LOCK_WAIT_TIMEOUT')
+        throw new ConflictException('Inventory changed concurrently; retry the order');
       throw error;
     }
   }

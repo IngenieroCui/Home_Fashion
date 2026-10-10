@@ -55,7 +55,6 @@ temp/
 *.tmp
 .dart-appdata/
 
-docs/
 
 ./.pnpm-store/
 certs/
@@ -63,3 +62,64 @@ certs/
 *.key
 *.p12
 *.pfx
+
+# Isolated journey runtime and secrets
+.env.e2e
+.e2e-local/
+.e2e-results/
+!.env.e2e.example
+
+# Selective academic evidence: default deny, traverse directories, allow reviewed types.
+!docs/
+docs/**
+!docs/**/
+!docs/**/*.md
+!docs/**/*.mmd
+!docs/**/*.dbml
+!docs/diagrams/export/*.svg
+!docs/diagrams/export/*.pdf
+!docs/thesis/evidence/qa-2-screenshots/*.png
+!docs/thesis/evidence/automated-business-journeys/**/*.png
+!docs/thesis/evidence/automated-business-journeys/**/results.json
+!docs/thesis/evidence/automated-business-journeys/**/validation.json
+!docs/thesis/evidence/automated-business-journeys/**/status.json
+!docs/thesis/evidence/qa-2-summary.json
+!docs/thesis/evidence/qa-2-validation.json
+!docs/thesis/evidence/qa-2-scenarios.json
+!docs/thesis/evidence/qa-2-scenarios.csv
+!docs/thesis/evidence/qa-2-cleanup.json
+!docs/thesis/evidence/qa-2-android-environment.json
+!docs/thesis/evidence/automated-business-journeys-status.json
+!docs/thesis/evidence/automated-business-journeys-last-success.json
+!docs/thesis/evidence/release-validation-2026-10-10.json
+
+# Sensitive artifacts remain ignored even within academic directories.
+.tmp/
+__pycache__/
+*.pyc
+*.crt
+*.cer
+*.jks
+*.db
+*.sqlite*
+*.ibd
+*.sdi
+*.har
+*.zip
+*.tar.gz
+**/owner.json
+**/*storageState*
+**/*storage-state*
+**/*auth-state*
+**/*network-console*
+**/*http-trace*
+**/*failure-trace*
+**/credentials/
+**/secrets/
+**/sessions/
+docs/**/*token*
+docs/**/*cookie*
+docs/**/*credential*
+docs/**/*secret*
+docs/**/*dump*
+docs/**/*backup*

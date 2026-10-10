@@ -204,3 +204,33 @@ test('A lost mutation response explains uncertainty and never retries automatica
   );
   assert.equal(calls, 1);
 });
+
+test('Variant galleries lead with the chosen option, deduplicate URLs and exclude other variants', () => {
+  const { variantImages } = load('src/lib/product-selection.ts');
+  const image = (url, isPrimary = false) => ({ id: url, url, position: 0, isPrimary });
+  const beige = { id: 'beige', images: [image('beige.jpg', true), image('shared.jpg')] };
+  const grey = { id: 'grey', images: [image('grey.jpg')] };
+  const product = { images: [image('shared.jpg', true), image('general.jpg')], variants: [beige, grey] };
+  assert.deepEqual(variantImages(product, beige).map(i => i.url), ['beige.jpg', 'shared.jpg', 'general.jpg']);
+  assert.deepEqual(variantImages(product).map(i => i.url), ['shared.jpg', 'general.jpg']);
+});
+
+test('Cloudinary sizes are centralized and arbitrary or signed hosts are preserved', () => {
+  const { cloudinaryImageUrl } = load('src/lib/cloudinary.ts');
+  assert.equal(cloudinaryImageUrl('https://res.cloudinary.com/demo/image/upload/v1/a.jpg', {width:750}), 'https://res.cloudinary.com/demo/image/upload/w_750,c_limit,q_auto,f_auto/v1/a.jpg');
+  for (const url of ['https://example.com/a.jpg', 'https://res.cloudinary.com/demo/image/upload/s--signed--/v1/a.jpg']) assert.equal(cloudinaryImageUrl(url, {width:200}), url);
+});
+
+test('Numeric catalog IDs are normalized for variant deep links', () => {
+  const { normalizeCatalogProduct } = load('src/lib/catalog.ts');
+  const product = normalizeCatalogProduct({id:1, variants:[{id:2, images:[{id:3}]}]});
+  assert.equal(product.id, '1'); assert.equal(product.variants[0].id, '2'); assert.equal(product.variants[0].images[0].id, '3');
+});
+
+test('Editing a variant preserves a cost omitted by financial permissions and keeps explicit nullable cost edits', () => {
+  const { variantCostPatch } = load('src/lib/admin-catalog-utils.ts');
+  assert.deepEqual(variantCostPatch({}, null), {});
+  assert.deepEqual(variantCostPatch({ estimatedCost: '100.00' }, 50), { estimatedCost: 50 });
+  assert.deepEqual(variantCostPatch({ estimatedCost: '100.00' }, null), { estimatedCost: null });
+  assert.deepEqual(variantCostPatch(null, 50), { estimatedCost: 50 });
+});

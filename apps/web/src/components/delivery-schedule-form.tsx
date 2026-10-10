@@ -1,4 +1,5 @@
 'use client';
+import { useActionFeedback } from './ui/action-feedback';
 
 import { clientFetch } from '@/lib/client-fetch';
 import { useState, type FormEvent } from 'react';
@@ -20,6 +21,7 @@ export function DeliveryScheduleForm({
   onCreated: (delivery: DeliveryDetail) => void;
   mode?: 'schedule' | 'reschedule';
 }) {
+  const notify = useActionFeedback();
   const [deliveryType, setDeliveryType] = useState<DeliveryType>('OWNER');
   const [assignee, setAssignee] = useState<DeliveryUser | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +72,7 @@ export function DeliveryScheduleForm({
               : 'No fue posible programar la entrega.')
         );
       if (!body?.id) throw new Error('La respuesta de la entrega fue inesperada.');
+      notify(mode === 'reschedule' ? 'Entrega reprogramada' : 'Entrega programada');
       onCreated(body);
     } catch (reason) {
       setError(
@@ -121,6 +124,7 @@ export function DeliveryScheduleForm({
       <label>
         Teléfono de contacto
         <input
+          inputMode="tel"
           autoComplete="tel"
           defaultValue={order.customer?.phone ?? ''}
           maxLength={40}

@@ -31,6 +31,7 @@ describe('OrderTrackingService', () => {
       existing?: ReturnType<typeof access> | null;
       publicAccess?: ReturnType<typeof access> | null;
       permissions?: string[];
+      delivery?: { status: string; getDataValue: (key: string) => unknown };
     } = {}
   ) {
     const transaction = { LOCK: { UPDATE: 'UPDATE' } };
@@ -48,7 +49,12 @@ describe('OrderTrackingService', () => {
       }))
     };
     return {
-      service: new OrderTrackingService(accesses as never, orders as never, auth as never),
+      service: new OrderTrackingService(
+        accesses as never,
+        orders as never,
+        { findOne: jest.fn().mockResolvedValue(options.delivery ?? null) } as never,
+        auth as never
+      ),
       accesses,
       orders,
       auth
@@ -160,6 +166,7 @@ describe('OrderTrackingService', () => {
         ...dates,
         order: {
           code: 'HF-PED-2026-00001',
+          updatedAt: new Date('2030-01-01T00:00:00Z'),
           status: 'IN_PROGRESS',
           promisedDate: '2026-09-01',
           createdAt: now,
@@ -230,6 +237,7 @@ describe('OrderTrackingService', () => {
     expect(result).toEqual(
       expect.objectContaining({ orderCode: 'HF-PED-2026-00001', orderStatus: 'IN_PROGRESS' })
     );
+    expect(result.lastPublicUpdateAt).not.toEqual('2030-01-01T00:00:00.000Z');
     expect(result).not.toHaveProperty('customerId');
     expect(result.items[0]).toEqual(
       expect.objectContaining({
@@ -237,6 +245,10 @@ describe('OrderTrackingService', () => {
         expectedCompletionDate: '2026-09-10'
       })
     );
+    expect(result.items[0]).not.toHaveProperty('publicItemId');
+    expect(result.items[0]).not.toHaveProperty('id');
+    expect(result.items[0].publicItemKey).toMatch(/^[A-Za-z0-9_-]{22}$/);
+    expect(result.items[0].publicItemKey).not.toEqual(result.items[1].publicItemKey);
     expect(result.items[0].timeline.map((report) => report.message)).toEqual([
       'Primero',
       'Segundo'
@@ -246,6 +258,15 @@ describe('OrderTrackingService', () => {
     expect(result.items[1]).toEqual(
       expect.objectContaining({ expectedCompletionDate: null, timeline: [] })
     );
+  });
+
+  it.each(['OUT_FOR_DELIVERY', 'SCHEDULED', 'DELIVERED', 'CANCELLED'])('uses the public delivery event timestamp for %s', async (status) => {
+    const eventAt = new Date('2026-08-06T12:10:00.000Z');
+    const publicAccess = access({ get: () => ({ order: { code: 'QA', status: 'READY', createdAt: now, updatedAt: '2030-01-01', items: [] } }) });
+    const delivery = { status, getDataValue: (key: string) => key === 'updatedAt' ? eventAt : now };
+    const result = await setup({ publicAccess, delivery }).service.publicLookup(Buffer.alloc(32, 7).toString('base64url'));
+    expect(result.lastPublicUpdateAt).toBe(eventAt.toISOString());
+    if (status === 'CANCELLED') expect(result.delivery).toBeNull();
   });
 
   it('never exposes financial, internal or nested data supplied through customization', async () => {

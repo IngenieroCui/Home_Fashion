@@ -7,7 +7,7 @@ import { ProductImage } from './entities/product-image.model';
 import { Product } from './entities/product.model';
 import { ProductVariant } from './entities/product-variant.model';
 import { resolveSlug } from './utils/slug.util';
-import { CloudinaryImageService } from './cloudinary-image.service';
+import { CloudinaryMediaService } from '../media/cloudinary-media.service';
 
 const productAttributes = ['id', 'categoryId', 'name', 'slug', 'description', 'allowsCustomization', 'status'];
 const variantAttributes = ['id', 'productId', 'sku', 'name', 'dimensions', 'material', 'color', 'fabric', 'finish', 'salePrice', 'estimatedCost', 'quantityOnHand', 'quantityReserved', 'location', 'status'];
@@ -22,7 +22,7 @@ export class CatalogAdminService {
     @InjectModel(Product) private readonly products: typeof Product,
     @InjectModel(ProductVariant) private readonly variants: typeof ProductVariant,
     @InjectModel(ProductImage) private readonly images: typeof ProductImage,
-    private readonly cloudinary: CloudinaryImageService
+    private readonly cloudinary: CloudinaryMediaService
   ) {}
 
   private async categoryOrFail(id: string) { const category = await this.categories.findByPk(id); if (!category) throw new NotFoundException('Category not found'); return category; }
@@ -106,24 +106,27 @@ export class CatalogAdminService {
     await this.productOrFail(productId);
     const sku = normalizeSku(dto.sku);
     await this.ensureSkuAvailable(sku);
-    this.validateInventory(dto.quantityOnHand, dto.quantityReserved ?? 0);
-    return plain(await this.variants.create({ ...dto, sku, quantityReserved: dto.quantityReserved ?? 0 }));
+    this.validateInventory(dto.quantityOnHand, 0);
+    return plain(await this.variants.create({ ...dto, productId, sku, quantityReserved: 0 }));
   }
 
   async updateVariant(id: string, dto: UpdateVariantDto) {
-    const variant = await this.variantOrFail(id);
-    const sku = dto.sku ? normalizeSku(dto.sku) : undefined;
-    if (sku) await this.ensureSkuAvailable(sku, variant.id);
-    const quantityOnHand = dto.quantityOnHand ?? variant.quantityOnHand;
-    const quantityReserved = dto.quantityReserved ?? variant.quantityReserved;
-    this.validateInventory(quantityOnHand, quantityReserved);
-    await variant.update({ ...dto, ...(sku ? { sku } : {}), ...(dto.quantityOnHand !== undefined || dto.quantityReserved !== undefined ? { quantityOnHand, quantityReserved } : {}) });
-    return plain(variant);
+    return this.variants.sequelize!.transaction(async (transaction) => {
+      const variant = await this.variants.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE });
+      if (!variant) throw new NotFoundException('Product variant not found');
+      const sku = dto.sku ? normalizeSku(dto.sku) : undefined;
+      if (sku) await this.ensureSkuAvailable(sku, variant.id);
+      this.validateInventory(dto.quantityOnHand ?? variant.quantityOnHand, variant.quantityReserved);
+      const { quantityReserved: _reserved, ...fields } = dto as UpdateVariantDto & { quantityReserved?: unknown };
+      void _reserved;
+      await variant.update({ ...fields, ...(sku ? { sku } : {}) }, { transaction });
+      return plain(variant);
+    });
   }
 
   async validateImageTarget(productId: string, productVariantId?: string | null) {
     await this.productOrFail(productId);
-    if (productVariantId) { const variant = await this.variantOrFail(productVariantId); if (variant.productId !== productId) throw new BadRequestException('Product variant does not belong to product'); }
+    if (productVariantId) { const variant = await this.variantOrFail(productVariantId); if (String(variant.productId) !== String(productId)) throw new BadRequestException('Product variant does not belong to product'); }
   }
 
   async createImage(productId: string, dto: CreateImageDto) {

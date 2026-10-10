@@ -1,21 +1,14 @@
 'use client';
 import { clientFetch } from '@/lib/client-fetch';
+import { normalizeSelectRecord } from '@/lib/select-record';
 import Link from 'next/link';
+import { SaleCustomerSection } from './sales/sale-customer-section';
+import { SaleItemEditor } from './sales/sale-item-editor';
+import { SaleDraftItems } from './sales/sale-draft-items';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { money, number, text, type Customer, type Page, type Product } from '@/lib/sales';
-type Draft = {
-  productId: string;
-  productVariantId?: string;
-  quantity: number;
-  unitSalePrice?: number;
-  customization?: Record<string, string>;
-  negotiationReason?: string;
-  belowCostReason?: string;
-  notes?: string;
-  label: string;
-  product: Product;
-};
+import { number, text, type Customer, type Page, type Product } from '@/lib/sales';
+import type { SaleDraft as Draft } from '@/lib/sale-draft';
 async function api<T>(path: string, init?: RequestInit) {
   const response = await clientFetch(path, {
     ...init,
@@ -25,8 +18,28 @@ async function api<T>(path: string, init?: RequestInit) {
   if (!response.ok) throw new Error(body?.message ?? 'No fue posible completar la operación.');
   return body as T;
 }
-export function SaleForm({ canOverride }: { canOverride: boolean }) {
+export function SaleForm({
+  canOverride,
+  initialCustomerId
+}: {
+  canOverride: boolean;
+  initialCustomerId?: string;
+}) {
   const router = useRouter();
+  useEffect(() => {
+    if (!initialCustomerId) return;
+    let active = true;
+    api<Customer>(`/api/admin/customers/${encodeURIComponent(initialCustomerId)}`)
+      .then((value) => {
+        if (active) setCustomer(normalizeSelectRecord(value));
+      })
+      .catch(() => {
+        if (active) setError('No pudimos seleccionar el cliente. Búscalo nuevamente.');
+      });
+    return () => {
+      active = false;
+    };
+  }, [initialCustomerId]);
   const [customerQuery, setCustomerQuery] = useState('');
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -42,20 +55,42 @@ export function SaleForm({ canOverride }: { canOverride: boolean }) {
   useEffect(() => {
     const params = new URLSearchParams({ isActive: 'true' });
     if (customerQuery) params.set('q', customerQuery);
-    api<Page<Customer>>(`/api/admin/customers?${params}`)
-      .then((result) => setCustomers(result.data))
-      .catch((reason) =>
-        setError(reason instanceof Error ? reason.message : 'No fue posible cargar clientes.')
-      );
+    let active = true;
+    const timer = setTimeout(() => {
+      api<Page<Customer>>(`/api/admin/customers?${params}`)
+        .then((result) => {
+          if (active) setCustomers(result.data.map(normalizeSelectRecord));
+        })
+        .catch(
+          (reason) =>
+            active &&
+            setError(reason instanceof Error ? reason.message : 'No fue posible cargar clientes.')
+        );
+    }, 250);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   }, [customerQuery]);
   useEffect(() => {
     const params = new URLSearchParams();
     if (productQuery) params.set('q', productQuery);
-    api<Page<Product>>(`/api/admin/quote-products?${params}`)
-      .then((result) => setProducts(result.data))
-      .catch((reason) =>
-        setError(reason instanceof Error ? reason.message : 'No fue posible cargar productos.')
-      );
+    let active = true;
+    const timer = setTimeout(() => {
+      api<Page<Product>>(`/api/admin/quote-products?${params}`)
+        .then((result) => {
+          if (active) setProducts(result.data.map(normalizeSelectRecord));
+        })
+        .catch(
+          (reason) =>
+            active &&
+            setError(reason instanceof Error ? reason.message : 'No fue posible cargar productos.')
+        );
+    }, 250);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   }, [productQuery]);
   const editingItem = editingIndex === null ? undefined : items[editingIndex];
   const product = products.find((entry) => entry.id === productId) ?? editingItem?.product;
@@ -173,45 +208,16 @@ export function SaleForm({ canOverride }: { canOverride: boolean }) {
         </div>
       </section>
       <form className="admin-form admin-form-wide" onSubmit={submit}>
-        <label>
-          Buscar cliente
-          <input
-            onChange={(event) => setCustomerQuery(event.target.value)}
-            placeholder="Nombre, documento o teléfono"
-            type="search"
-            value={customerQuery}
-          />
-        </label>
-        <label>
-          Cliente seleccionado
-          <select
-            onChange={(event) =>
-              setCustomer(customers.find((entry) => entry.id === event.target.value) ?? customer)
-            }
-            required
-            value={customer?.id ?? ''}
-          >
-            <option value="">Selecciona un cliente</option>
-            {customer && !customers.some((entry) => entry.id === customer.id) && (
-              <option value={customer.id}>{customer.fullName}</option>
-            )}
-            {customers.map((entry) => (
-              <option key={entry.id} value={entry.id}>
-                {entry.fullName} · {entry.documentNumber ?? 'Sin documento'} ·{' '}
-                {entry.phone ?? 'Sin teléfono'}
-              </option>
-            ))}
-          </select>
-          {customerQuery && !customers.length && (
-            <small>No se encontraron clientes para la búsqueda.</small>
-          )}
-        </label>
-        <Link className="text-link" href="/panel/clientes/nuevo">
-          Registrar nuevo cliente
-        </Link>
+        <SaleCustomerSection
+          customerQuery={customerQuery}
+          setCustomerQuery={setCustomerQuery}
+          customer={customer}
+          setCustomer={setCustomer}
+          customers={customers}
+        />
         <label>
           Costo de entrega
-          <input min="0" name="deliveryFee" step="0.01" type="number" />
+          <input inputMode="decimal" min="0" name="deliveryFee" step="0.01" type="number" />
         </label>
         <label>
           Notas generales
@@ -221,223 +227,44 @@ export function SaleForm({ canOverride }: { canOverride: boolean }) {
           {saving ? 'Guardando…' : 'Crear venta'}
         </button>
       </form>
-      <section className="admin-section admin-stack">
+      <section className="admin-section admin-stack sale-item-editor">
         <h2 className="font-serif text-2xl">Añadir elemento</h2>
-        <form className="admin-form admin-form-wide" key={editingIndex ?? 'new'} onSubmit={addItem}>
-          <label>
-            Buscar producto
-            <input
-              onChange={(event) => setProductQuery(event.target.value)}
-              placeholder="Buscar producto"
-              type="search"
-              value={productQuery}
-            />
-          </label>
-          <label>
-            Producto
-            <select
-              onChange={(event) => {
-                setProductId(event.target.value);
-                setSelectedVariantId('');
-              }}
-              required
-              value={productId}
-            >
-              <option value="">Selecciona un producto</option>
-              {editingItem && !products.some((entry) => entry.id === editingItem.product.id) && (
-                <option value={editingItem.product.id}>{editingItem.product.name}</option>
-              )}
-              {products.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.name}
-                </option>
-              ))}
-            </select>
-            {productQuery && !products.length && (
-              <small>No se encontraron productos para la búsqueda.</small>
-            )}
-          </label>
-          {product && (
-            <label>
-              Variante
-              <select
-                name="productVariantId"
-                onChange={(event) => setSelectedVariantId(event.target.value)}
-                value={selectedVariantId}
-              >
-                <option value="">
-                  {product.allowsCustomization
-                    ? 'Personalizado sin variante'
-                    : 'Selecciona una variante'}
-                </option>
-                {product.variants
-                  ?.filter((variant) => variant.status !== 'INACTIVE')
-                  .map((variant) => (
-                    <option key={variant.id} value={variant.id}>
-                      {variant.name ?? variant.sku} · {variant.sku} · {money(variant.salePrice)}
-                      {variant.quantityOnHand !== undefined
-                        ? ` · Disponible: ${variant.quantityOnHand}`
-                        : ''}
-                    </option>
-                  ))}
-              </select>
-            </label>
-          )}
-          <label>
-            Cantidad
-            <input
-              defaultValue={editingItem?.quantity ?? 1}
-              min="1"
-              name="quantity"
-              required
-              step="1"
-              type="number"
-            />
-          </label>
-          {(canOverride || (product?.allowsCustomization && !selectedVariantId)) && (
-            <>
-              <label>
-                Precio de venta (opcional)
-                <input
-                  defaultValue={editingItem?.unitSalePrice ?? ''}
-                  min="0.01"
-                  name="unitSalePrice"
-                  step="0.01"
-                  type="number"
-                />
-              </label>
-              {canOverride && (
-                <label>
-                  Motivo de negociación
-                  <input
-                    defaultValue={editingItem?.negotiationReason ?? ''}
-                    name="negotiationReason"
-                  />
-                </label>
-              )}
-              {canOverride && needsBelowReason && (
-                <label>
-                  Motivo de venta bajo costo
-                  <input
-                    defaultValue={editingItem?.belowCostReason ?? ''}
-                    name="belowCostReason"
-                    required
-                  />
-                </label>
-              )}
-            </>
-          )}
-          {product?.allowsCustomization && !selectedVariantId && (
-            <>
-              <label>
-                Dimensiones
-                <input
-                  defaultValue={editingItem?.customization?.dimensions ?? ''}
-                  name="dimensions"
-                />
-              </label>
-              <label>
-                Puestos
-                <input defaultValue={editingItem?.customization?.seats ?? ''} name="seats" />
-              </label>
-              <label>
-                Material
-                <input defaultValue={editingItem?.customization?.material ?? ''} name="material" />
-              </label>
-              <label>
-                Tela
-                <input defaultValue={editingItem?.customization?.fabric ?? ''} name="fabric" />
-              </label>
-              <label>
-                Color
-                <input defaultValue={editingItem?.customization?.color ?? ''} name="color" />
-              </label>
-              <label>
-                Acabado
-                <input defaultValue={editingItem?.customization?.finish ?? ''} name="finish" />
-              </label>
-              <label>
-                Restricciones de acceso
-                <input
-                  defaultValue={editingItem?.customization?.accessRestrictions ?? ''}
-                  name="accessRestrictions"
-                />
-              </label>
-              <label>
-                Observaciones
-                <textarea
-                  defaultValue={editingItem?.customization?.observations ?? ''}
-                  name="observations"
-                />
-              </label>
-            </>
-          )}
-          <label>
-            Observaciones del elemento
-            <textarea defaultValue={editingItem?.notes ?? ''} name="notes" />
-          </label>
-          <button className="button-link button-link-secondary" type="submit">
-            {editingIndex === null ? 'Añadir elemento' : 'Guardar elemento'}
-          </button>
-        </form>
-        {items.length ? (
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Elemento</th>
-                  <th>Cantidad</th>
-                  <th>Precio solicitado</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item, index) => (
-                  <tr key={`${item.productId}-${index}`}>
-                    <td>{item.label}</td>
-                    <td>{item.quantity}</td>
-                    <td>
-                      {item.unitSalePrice === undefined
-                        ? 'Precio de catálogo'
-                        : money(item.unitSalePrice)}
-                    </td>
-                    <td>
-                      <button
-                        className="text-link"
-                        onClick={() => {
-                          setEditingIndex(index);
-                          setProductId(item.productId);
-                          setSelectedVariantId(item.productVariantId ?? '');
-                          setProducts((current) =>
-                            current.some((entry) => entry.id === item.product.id)
-                              ? current
-                              : [item.product, ...current]
-                          );
-                        }}
-                        type="button"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        className="text-link"
-                        onClick={() =>
-                          setItems((current) =>
-                            current.filter((_, itemIndex) => itemIndex !== index)
-                          )
-                        }
-                        type="button"
-                      >
-                        Eliminar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="notice">Aún no hay elementos en la venta.</p>
-        )}
+        <SaleItemEditor
+          editingIndex={editingIndex}
+          editingItem={editingItem}
+          product={product}
+          products={products}
+          productId={productId}
+          setProductId={setProductId}
+          productQuery={productQuery}
+          setProductQuery={setProductQuery}
+          selectedVariantId={selectedVariantId}
+          setSelectedVariantId={setSelectedVariantId}
+          canOverride={canOverride}
+          needsBelowReason={needsBelowReason}
+          addItem={addItem}
+        />
+        <SaleDraftItems
+          items={items}
+          disabled={saving}
+          onEdit={(index) => {
+            const item = items[index];
+            setEditingIndex(index);
+            setProductId(item.productId);
+            setSelectedVariantId(item.productVariantId ?? '');
+            setProducts((current) =>
+              current.some((entry) => entry.id === item.product.id)
+                ? current
+                : [item.product, ...current]
+            );
+            requestAnimationFrame(() =>
+              document.querySelector<HTMLSelectElement>('.sale-item-editor select')?.focus()
+            );
+          }}
+          onRemove={(index) =>
+            setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))
+          }
+        />
       </section>
       {error && (
         <p className="form-error" role="alert">

@@ -1,0 +1,499 @@
+{
+  "runId": "20261010204640-afd3702f",
+  "date": "2026-10-10T20:51:33.466Z",
+  "status": "passed",
+  "stack": {
+    "browser": "Chromium real",
+    "api": "NestJS real",
+    "database": "MySQL aislado, UUID y privilegios verificados",
+    "cloudinary": "REAL: multipart de taller y entrega en carpeta E2E; URLs persistidas en MySQL",
+    "android": "PENDIENTE: no ejecutado en dispositivo"
+  },
+  "results": [
+    {
+      "scenario": "01 · Solicitud pública → cotización → venta → taller → entrega del mismo pedido",
+      "status": "passed",
+      "durationMs": 83502,
+      "actors": [
+        "Visitante",
+        "ADMIN (navegador)",
+        "WORKSHOP (API)"
+      ],
+      "modules": [
+        "Catálogo",
+        "Solicitud pública",
+        "Cotizaciones",
+        "Ventas",
+        "Abonos",
+        "Pedidos",
+        "Taller",
+        "Revisión",
+        "Tracking",
+        "Entregas",
+        "Cloudinary"
+      ],
+      "ids": {
+        "requestId": "c93cc000-f1e4-4020-908c-7c5a9fade8c2",
+        "requestCode": "HF-SOL-2026-00001",
+        "quoteId": "1",
+        "saleId": "1",
+        "paymentId": "1",
+        "orderId": "1",
+        "jobId": "1",
+        "workshopId": "3",
+        "startedId": "1",
+        "progressId": "2",
+        "reportId": "3",
+        "deliveryId": "1"
+      },
+      "finalMySQL": {
+        "chain": [
+          {
+            "quote_id": "1",
+            "request_code": "HF-SOL-2026-00001",
+            "quote_status": "ACCEPTED",
+            "request_id": "c93cc000-f1e4-4020-908c-7c5a9fade8c2",
+            "quote_customer_id": "1",
+            "sale_id": "1",
+            "customer_id": "1",
+            "sale_quote_id": "1",
+            "order_id": "1",
+            "order_sale_id": "1",
+            "order_customer_id": "1",
+            "order_status": "COMPLETED",
+            "delivery_id": "1",
+            "delivery_status": "DELIVERED",
+            "job_id": "1",
+            "job_status": "COMPLETED",
+            "report_id": "3",
+            "review_status": "APPROVED",
+            "report_evidence": [
+              "https://res.cloudinary.com/dhgcts852/image/upload/v1791665311/home-fashion-e2e/20261010204640-afd3702f/workshop-progress/HF-TAL-2026-00001/x0w7woiq7ujanmtva6bk.webp"
+            ],
+            "delivery_evidence": [
+              "https://res.cloudinary.com/dhgcts852/image/upload/v1791665339/home-fashion-e2e/20261010204640-afd3702f/deliveries/HF-ENT-2026-00001/vmbyaywcjvugolqqdocn.webp"
+            ]
+          }
+        ],
+        "payments": [
+          {
+            "id": "1",
+            "sale_id": "1",
+            "amount": "50000.00",
+            "type": "DEPOSIT"
+          }
+        ],
+        "items": [
+          {
+            "product_id": "1",
+            "product_variant_id": "2",
+            "quote_name": "QA Mueble 20261010204640-afd3702f",
+            "sale_variant": "2",
+            "order_variant": "2",
+            "quote_quantity": 1,
+            "sale_quantity": 1,
+            "order_quantity": 1,
+            "sale_name": "QA Mueble 20261010204640-afd3702f",
+            "order_name": "QA Mueble 20261010204640-afd3702f",
+            "status": "DELIVERED"
+          }
+        ]
+      },
+      "operations": [
+        "POST /api/public/quote-requests HTTP 201",
+        "POST /api/session/login HTTP 200",
+        "GET /api/admin/operations/overview HTTP 200",
+        "GET /api/admin/quotes HTTP 200",
+        "GET /api/admin/quotes HTTP 200",
+        "GET /api/admin/sales HTTP 200",
+        "GET /api/admin/sales HTTP 200",
+        "GET /api/admin/quotes/1 HTTP 200",
+        "GET /api/admin/quotes/1 HTTP 200",
+        "GET /api/admin/quotes/1 HTTP 200",
+        "GET /api/admin/quotes/1 HTTP 200",
+        "PATCH /api/admin/quotes/1 HTTP 200",
+        "GET /api/admin/quote-products HTTP 200",
+        "GET /api/admin/quote-products HTTP 200",
+        "PATCH /api/admin/quotes/1/items/1 HTTP 200",
+        "GET /api/admin/quotes/1 HTTP 200",
+        "POST /api/admin/quotes/1/status HTTP 201",
+        "POST /api/admin/quotes/1/status HTTP 201",
+        "GET /api/admin/sales HTTP 200",
+        "GET /api/admin/quotes/1 HTTP 200",
+        "GET /api/admin/quotes/1 HTTP 200",
+        "POST /api/admin/sales/from-quote/1 HTTP 201",
+        "GET /api/admin/sales/1 HTTP 200",
+        "GET /api/admin/sales/1 HTTP 200",
+        "POST /api/admin/sales/1/payments-media HTTP 201",
+        "GET /api/admin/sales/1 HTTP 200",
+        "GET /api/admin/operations/sales/1/order-preparation HTTP 200",
+        "POST /api/admin/orders/from-sale/1 HTTP 201",
+        "GET /api/admin/orders/1 HTTP 200",
+        "GET /api/admin/orders/1 HTTP 200",
+        "GET /api/admin/workshop-users HTTP 200",
+        "GET /api/admin/workshop-users HTTP 200",
+        "GET /api/admin/deliveries HTTP 200",
+        "GET /api/admin/workshop-users HTTP 200",
+        "GET /api/admin/deliveries HTTP 200",
+        "GET /api/admin/orders/1/tracking-access HTTP 200",
+        "GET /api/admin/delivery-assignees HTTP 200",
+        "GET /api/admin/orders/1/tracking-access HTTP 200",
+        "POST /api/admin/workshop-jobs HTTP 201",
+        "GET /api/admin/orders/1 HTTP 200",
+        "GET /api/admin/workshop-progress/3 HTTP 200",
+        "POST /api/admin/workshop-progress/3/review HTTP 201",
+        "GET /api/admin/workshop-progress/3 HTTP 200",
+        "GET /api/admin/orders/1 HTTP 200",
+        "GET /api/admin/deliveries HTTP 200",
+        "GET /api/admin/orders/1/tracking-access HTTP 200",
+        "GET /api/admin/deliveries HTTP 200",
+        "GET /api/admin/delivery-assignees HTTP 200",
+        "GET /api/admin/orders/1/tracking-access HTTP 200",
+        "POST /api/admin/orders/1/tracking-access HTTP 201",
+        "GET /api/admin/orders/1/tracking-access HTTP 200",
+        "POST /api/admin/deliveries HTTP 201",
+        "GET /api/admin/deliveries/1 HTTP 200",
+        "GET /api/admin/deliveries/1 HTTP 200",
+        "POST /api/admin/deliveries/1/start HTTP 200",
+        "POST /api/admin/deliveries/1/complete-media HTTP 200"
+      ],
+      "notes": [
+        "WORKSHOP: integración API real, no Android. Imagen PNG multipart enviada a Cloudinary real."
+      ],
+      "screenshots": [
+        "assisted-purchase-01-solicitud.png",
+        "assisted-purchase-02-avance-aprobado.png",
+        "assisted-purchase-03-pedido-completado.png"
+      ],
+      "errors": []
+    },
+    {
+      "scenario": "03 · ADMIN registra cliente, venta directa, abono y pedido de inventario",
+      "status": "passed",
+      "durationMs": 28277,
+      "actors": [
+        "ADMIN (navegador)"
+      ],
+      "modules": [
+        "Clientes",
+        "Catálogo",
+        "Ventas",
+        "Abonos",
+        "Pedidos",
+        "Inventario"
+      ],
+      "ids": {
+        "customerId": "2",
+        "saleId": "2",
+        "paymentId": "2",
+        "orderId": "2"
+      },
+      "finalMySQL": {
+        "sales": [
+          {
+            "id": "2",
+            "customer_id": "2",
+            "quote_id": null,
+            "total": "250000.00"
+          }
+        ],
+        "payments": [
+          {
+            "id": "2",
+            "sale_id": "2",
+            "amount": "50000.00"
+          }
+        ],
+        "items": [
+          {
+            "sale_item_id": "2",
+            "product_id": "1",
+            "product_variant_id": "1",
+            "sale_name": "QA Mueble 20261010204640-afd3702f",
+            "sku_snapshot": "QA-STOCK-20261010204640-afd3702f",
+            "quantity": 1,
+            "order_id": "2",
+            "linked_sale_item": "2",
+            "order_name": "QA Mueble 20261010204640-afd3702f",
+            "supply_type": "IN_STOCK",
+            "status": "RESERVED"
+          }
+        ],
+        "inventory": [
+          {
+            "id": "1",
+            "quantity_reserved": 1
+          }
+        ],
+        "balance": 200000
+      },
+      "operations": [
+        "POST /api/session/login HTTP 200",
+        "GET /api/admin/operations/overview HTTP 200",
+        "POST /api/admin/customers HTTP 201",
+        "GET /api/admin/quote-products HTTP 200",
+        "GET /api/admin/customers HTTP 200",
+        "GET /api/admin/customers/2 HTTP 200",
+        "GET /api/admin/quote-products HTTP 200",
+        "POST /api/admin/sales HTTP 201",
+        "GET /api/admin/sales/2 HTTP 200",
+        "GET /api/admin/sales/2 HTTP 200",
+        "POST /api/admin/sales/2/payments-media HTTP 201",
+        "GET /api/admin/sales/2 HTTP 200",
+        "GET /api/admin/operations/sales/2/order-preparation HTTP 200",
+        "POST /api/admin/orders/from-sale/2 HTTP 201",
+        "GET /api/admin/orders/2 HTTP 200",
+        "GET /api/admin/orders/2 HTTP 200",
+        "GET /api/admin/deliveries HTTP 200",
+        "GET /api/admin/orders/2/tracking-access HTTP 200",
+        "GET /api/admin/deliveries HTTP 200",
+        "GET /api/admin/delivery-assignees HTTP 200",
+        "GET /api/admin/orders/2/tracking-access HTTP 200"
+      ],
+      "notes": [],
+      "screenshots": [
+        "direct-sale-05-venta-directa-pedido.png"
+      ],
+      "errors": []
+    },
+    {
+      "scenario": "02 · Pedido mixto: reserva real y fabricación conservan venta y líneas",
+      "status": "passed",
+      "durationMs": 7505,
+      "actors": [
+        "ADMIN (navegador)",
+        "WORKSHOP (API)"
+      ],
+      "modules": [
+        "Clientes",
+        "Ventas",
+        "Pedidos",
+        "Inventario",
+        "Taller"
+      ],
+      "ids": {
+        "customerId": "3",
+        "saleId": "3",
+        "orderId": "3",
+        "jobId": "2"
+      },
+      "finalMySQL": {
+        "orders": [
+          {
+            "id": "3",
+            "sale_id": "3",
+            "status": "IN_PROGRESS"
+          }
+        ],
+        "items": [
+          {
+            "id": "3",
+            "sale_item_id": "3",
+            "supply_type": "IN_STOCK",
+            "status": "RESERVED"
+          },
+          {
+            "id": "4",
+            "sale_item_id": "4",
+            "supply_type": "MADE_TO_ORDER",
+            "status": "IN_PRODUCTION"
+          }
+        ],
+        "jobs": [
+          {
+            "id": "2",
+            "order_item_id": "4",
+            "status": "IN_PROGRESS"
+          }
+        ],
+        "inventory": [
+          {
+            "id": "1",
+            "quantity_reserved": 2
+          }
+        ],
+        "reservationBefore": 1
+      },
+      "operations": [
+        "POST /api/session/login HTTP 200",
+        "GET /api/admin/operations/overview HTTP 200",
+        "POST /api/admin/customers HTTP 201",
+        "GET /api/admin/customers/3 HTTP 200",
+        "GET /api/admin/customers HTTP 200",
+        "GET /api/admin/quote-products HTTP 200",
+        "POST /api/admin/sales HTTP 201",
+        "GET /api/admin/sales/3 HTTP 200",
+        "GET /api/admin/sales/3 HTTP 200",
+        "GET /api/admin/operations/sales/3/order-preparation HTTP 200",
+        "POST /api/admin/orders/from-sale/3 HTTP 201",
+        "GET /api/admin/orders/3 HTTP 200",
+        "GET /api/admin/orders/3 HTTP 200",
+        "GET /api/admin/workshop-users HTTP 200",
+        "GET /api/admin/deliveries HTTP 200",
+        "GET /api/admin/orders/3/tracking-access HTTP 200",
+        "GET /api/admin/workshop-users HTTP 200",
+        "GET /api/admin/workshop-users HTTP 200",
+        "GET /api/admin/deliveries HTTP 200",
+        "GET /api/admin/delivery-assignees HTTP 200",
+        "GET /api/admin/orders/3/tracking-access HTTP 200",
+        "POST /api/admin/workshop-jobs HTTP 201",
+        "GET /api/admin/orders/3 HTTP 200"
+      ],
+      "notes": [],
+      "screenshots": [
+        "mixed-order-04-pedido-mixto.png"
+      ],
+      "errors": []
+    },
+    {
+      "scenario": "04 · EMPLOYEE limitado, WORKSHOP ajeno y tracking público protegen datos",
+      "status": "passed",
+      "durationMs": 12609,
+      "actors": [
+        "ADMIN (API setup)",
+        "EMPLOYEE (navegador/API)",
+        "WORKSHOP (API)",
+        "Visitante"
+      ],
+      "modules": [
+        "Sesión",
+        "Permisos",
+        "Navegación",
+        "Finanzas",
+        "Taller",
+        "Revisión",
+        "Tracking"
+      ],
+      "ids": {
+        "customerId": "4",
+        "saleId": "4",
+        "orderId": "4",
+        "jobId": "3",
+        "foreignJobId": "4"
+      },
+      "finalMySQL": {
+        "reports": [
+          {
+            "id": "5",
+            "workshop_job_id": "3",
+            "review_status": "APPROVED"
+          },
+          {
+            "id": "6",
+            "workshop_job_id": "3",
+            "review_status": "REJECTED"
+          },
+          {
+            "id": "7",
+            "workshop_job_id": "3",
+            "review_status": "PENDING_REVIEW"
+          }
+        ],
+        "foreignJob": [
+          {
+            "id": "4",
+            "status": "ASSIGNED"
+          }
+        ]
+      },
+      "operations": [
+        "POST /api/session/login HTTP 200",
+        "GET /api/admin/operations/overview HTTP 200",
+        "GET /api/admin/customers HTTP 200",
+        "GET /api/admin/operations/overview HTTP 200"
+      ],
+      "notes": [
+        "Preparación de privacidad mediante API ADMIN real. Navegación EMPLOYEE y tracking en navegador real."
+      ],
+      "screenshots": [
+        "permissions-session-06-permiso-denegado.png"
+      ],
+      "errors": []
+    },
+    {
+      "scenario": "05 · Respuesta perdida conserva requestId, refresh continúa y acciones repetidas no duplican",
+      "status": "passed",
+      "durationMs": 19118,
+      "actors": [
+        "Visitante",
+        "ADMIN (navegador)"
+      ],
+      "modules": [
+        "Solicitud pública",
+        "Sesión/refresh",
+        "Ventas",
+        "Abonos",
+        "Pedidos",
+        "Inventario",
+        "Red"
+      ],
+      "ids": {
+        "requestId": "da5c8f28-930e-4d5f-8399-74b25e7bbc06",
+        "requestCode": "HF-SOL-2026-00002",
+        "quoteId": "2",
+        "saleId": "5",
+        "orderId": "5"
+      },
+      "finalMySQL": {
+        "publicRequest": [
+          {
+            "id": "2",
+            "code": "HF-SOL-2026-00002",
+            "public_request_key": "da5c8f28-930e-4d5f-8399-74b25e7bbc06",
+            "status": "REQUESTED"
+          }
+        ],
+        "payments": [
+          {
+            "id": "3",
+            "sale_id": "5",
+            "amount": "50000.00"
+          }
+        ],
+        "orders": [
+          {
+            "id": "5",
+            "sale_id": "5",
+            "status": "OPEN"
+          }
+        ],
+        "inventory": [
+          {
+            "id": "1",
+            "quantity_reserved": 3
+          }
+        ]
+      },
+      "operations": [
+        "POST /api/public/quote-requests HTTP 201",
+        "POST /api/session/login HTTP 200",
+        "GET /api/admin/operations/overview HTTP 200",
+        "GET /api/session/refresh HTTP 307",
+        "GET /api/admin/customers HTTP 200",
+        "POST /api/admin/customers HTTP 201",
+        "GET /api/admin/customers/6 HTTP 200",
+        "GET /api/admin/customers HTTP 200",
+        "GET /api/admin/quote-products HTTP 200",
+        "POST /api/admin/sales HTTP 201",
+        "GET /api/admin/sales/5 HTTP 200",
+        "GET /api/admin/sales/5 HTTP 200",
+        "GET /api/admin/sales/5 HTTP 200",
+        "GET /api/admin/operations/sales/5/order-preparation HTTP 200",
+        "POST /api/admin/orders/from-sale/5 HTTP 201",
+        "GET /api/admin/orders/5 HTTP 200",
+        "GET /api/admin/orders/5 HTTP 200",
+        "GET /api/admin/deliveries HTTP 200",
+        "GET /api/admin/orders/5/tracking-access HTTP 200",
+        "GET /api/admin/deliveries HTTP 200",
+        "GET /api/admin/delivery-assignees HTTP 200",
+        "GET /api/admin/orders/5/tracking-access HTTP 200"
+      ],
+      "notes": [
+        "Cookies solo en memoria; refresh real vía ruta de sesión y NestJS, sin JWT fabricados.",
+        "Fallos de red inducidos después de respuestas reales de negocio. No se interceptan happy paths ni se fabrican éxitos."
+      ],
+      "screenshots": [],
+      "errors": []
+    }
+  ]
+}

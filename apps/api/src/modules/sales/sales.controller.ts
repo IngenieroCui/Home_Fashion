@@ -1,4 +1,8 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { CloudinaryMediaService } from '../media/cloudinary-media.service';
+import { validateMediaFiles } from '../media/validate-media-files';
+import type { ImageFile } from '../media/media.types';
 import { CurrentUser } from '../auth/security/current-user.decorator';
 import { JwtAuthGuard } from '../auth/security/jwt-auth.guard';
 import { RequirePermissions } from '../auth/security/permissions.decorator';
@@ -21,7 +25,7 @@ import { SalesService } from './sales.service';
 @Controller('admin/sales')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class SalesController {
-  constructor(private readonly sales: SalesService) {}
+  constructor(private readonly sales: SalesService, private readonly media: CloudinaryMediaService) {}
   @Get() @RequirePermissions(SALE_MANAGE_PERMISSION) list(
     @Query() query: SaleQueryDto,
     @CurrentUser() user: { id: string }
@@ -46,6 +50,21 @@ export class SalesController {
     @CurrentUser() user: { id: string }
   ) {
     return this.sales.registerPayment(params.id, body, user.id);
+  }
+  @Post(':id/payments-media') @RequirePermissions(PAYMENT_REGISTER_PERMISSION)
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024, files: 1 } }))
+  async registerPaymentMedia(@Param() params: IdParamDto, @Body() body: RegisterSalePaymentDto,
+    @UploadedFile() file: ImageFile | undefined, @CurrentUser() user: { id: string }) {
+    validateMediaFiles(file ? [file] : [], 0);
+    const dto = { ...body, evidenceUrl: undefined };
+    const sale = await this.sales.preparePaymentMedia(params.id, dto, user.id);
+    const uploaded = file ? await this.media.uploadImage(file, 'payments', sale.code) : undefined;
+    try {
+      return await this.sales.registerPayment(params.id, { ...dto, evidenceUrl: uploaded?.secureUrl }, user.id);
+    } catch (error) {
+      if (uploaded) await this.media.destroyMany([uploaded.publicId]);
+      throw error;
+    }
   }
   @Post(':saleId/payments/:paymentId/void') @RequirePermissions(PAYMENT_CORRECT_PERMISSION) voidPayment(
     @Param() params: SalePaymentParamDto,
