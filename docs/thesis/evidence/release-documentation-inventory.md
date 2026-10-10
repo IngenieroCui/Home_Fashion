@@ -1,10 +1,8 @@
 # Documentación seleccionada para Git
 
-2026-10-10. 143 archivos disponibles después del cambio, sin staging automático.
+2026-10-10. 144 archivos académicos seleccionados y auditados.
 
-Incluye QA-1/QA-2, matriz de trazabilidad, diccionario/modelo de datos, 19 diagramas fuente y sus exportaciones, documentación académica, reportes y PNG sintéticos.
-
-Excluye qa-2-network-console.json (eventos de red), JSON arbitrarios, secretos, HAR/storageState, sesiones, dumps y runtime. Las nuevas evidencias requieren revisión.
+Incluye documentación, 19 diagramas con exportaciones, QA-1/QA-2 y journeys seguros. Excluye red, sesiones, secretos, bases y runtime.
 
 - `docs/api.md`
 - `docs/architecture.md`
@@ -139,6 +137,7 @@ Excluye qa-2-network-console.json (eventos de red), JSON arbitrarios, secretos, 
 - `docs/thesis/evidence/release-candidate-2026-10-10.md`
 - `docs/thesis/evidence/release-checklist.md`
 - `docs/thesis/evidence/release-documentation-inventory.md`
+- `docs/thesis/evidence/release-git-inventory.md`
 - `docs/thesis/evidence/release-validation-2026-10-10.json`
 - `docs/thesis/implementation-status.md`
 - `docs/thesis/objectives.md`

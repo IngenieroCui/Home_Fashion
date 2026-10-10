@@ -1,36 +1,183 @@
 {
-  "date": "2026-10-10T21:19:14.332526+00:00",
+  "date": "2026-10-10T22:15:42.606196+00:00",
   "timezone": "America/Bogota",
-  "commit": "ff3fbb867812617e34752d5e1cd1e0f99c211e2f",
   "branch": "master",
-  "packageVersion": "0.1.0",
-  "localChangesUncommitted": true,
-  "releasePublication": "NOT_VERIFIED_CURRENT_RC",
-  "publishedBuildCommit": "ff3fbb8",
-  "publishedApiHealth": 500,
+  "validatedCodeCommit": "293dcc0db0f4867b4f2fe122bfbc8872d4756932",
+  "publishedCommit": "ff3fbb867812617e34752d5e1cd1e0f99c211e2f",
+  "releasePublication": "PENDING_EXPLICIT_AUTHORIZATION",
   "checks": {
-    "releaseTests": "4/4 PASS",
+    "build": "PASS shared/API/web",
+    "lint": "PASS API/web",
     "e2eTypecheck": "PASS",
+    "releaseTests": "4/4 PASS synthetic only",
     "sourcePackageTests": "3/3 PASS",
-    "archiveInspection": "PASS; final manifest is authoritative",
-    "trackedSourceOmissions": 0,
-    "evidenceSecretsDetected": 0,
+    "gitIndexSecurity": "PASS",
     "gitDiffCheck": "PASS"
   },
+  "aiven": {
+    "status": "ONLINE",
+    "tlsVerified": true,
+    "tlsCipherPresent": true,
+    "executedCount": 13,
+    "localMigrationCount": 13,
+    "pending": [],
+    "imageSnapshotTables": [
+      "order_items",
+      "quote_items",
+      "sale_items"
+    ]
+  },
+  "publishedApi": [
+    {
+      "endpoint": "/api/health",
+      "status": 200,
+      "valid": true,
+      "keys": [
+        "status",
+        "service"
+      ]
+    },
+    {
+      "endpoint": "/api/catalog/products",
+      "status": 200,
+      "valid": true,
+      "keys": [
+        "data",
+        "pagination"
+      ]
+    }
+  ],
+  "vercel": [
+    {
+      "id": "prj_tdbYXXR52PidgJ0AIiAwwcfEtL5b",
+      "name": "home-fashion-api",
+      "rootDirectory": "apps/api",
+      "framework": "nestjs",
+      "nodeVersion": "22.x",
+      "buildCommand": null,
+      "installCommand": null,
+      "git": {
+        "type": "github",
+        "repo": "Home_Fashion",
+        "org": "IngenieroCui",
+        "productionBranch": "master"
+      },
+      "production": {
+        "id": "dpl_EQKFZkndvNQHZKXZzLvWAVx26xu5",
+        "url": "home-fashion-8gnwc08f2-ingenierocuis-projects.vercel.app",
+        "readyState": "READY",
+        "createdAt": 1790639009877,
+        "commit": "ff3fbb867812617e34752d5e1cd1e0f99c211e2f",
+        "branch": "master"
+      }
+    },
+    {
+      "id": "prj_HKG4VCXuG26AKbQkwtGHClXtNRg0",
+      "name": "home-fashion-web",
+      "rootDirectory": "apps/web",
+      "framework": "nextjs",
+      "nodeVersion": "22.x",
+      "buildCommand": null,
+      "installCommand": null,
+      "git": {
+        "type": "github",
+        "repo": "Home_Fashion",
+        "org": "IngenieroCui",
+        "productionBranch": "master"
+      },
+      "production": {
+        "id": "dpl_J2WfMUcXRXnCQyRTmzDZoixqhQee",
+        "url": "home-fashion-pvspafhyj-ingenierocuis-projects.vercel.app",
+        "readyState": "READY",
+        "createdAt": 1790639009870,
+        "commit": "ff3fbb867812617e34752d5e1cd1e0f99c211e2f",
+        "branch": "master"
+      }
+    }
+  ],
+  "environmentChanges": [],
+  "migrationsAppliedThisReview": [],
   "priorJourneys": {
     "runId": "20261010204640-afd3702f",
     "passed": 5,
     "repeated": false
   },
-  "e2eStockRead": "BLOCKED: dedicated server unavailable; no mutations",
-  "androidRuntime": "PENDIENTE",
-  "smoke": {
-    "partialPass": 1,
-    "fail": 3,
-    "blocked": 8,
-    "capturedConsoleWarningsErrors": 0
+  "qa1": {
+    "passed": 212,
+    "repeated": false
   },
-  "preservedHashes": {
+  "qa2": {
+    "passed": 153,
+    "androidPending": 1,
+    "repeated": false
+  },
+  "androidRuntime": "PENDIENTE",
+  "productionSmoke": {
+    "status": "PENDING_CURRENT_RC_DEPLOYMENT",
+    "maximumChecks": 12,
+    "newCommercialJourney": false
+  },
+  "codeFreeze": "PENDING_PUBLICATION_AND_SMOKE",
+  "security": {
+    "findings": 0,
+    "localSecretValuesCompared": 11,
+    "screenshotsReviewed": 36,
+    "preservedEvidenceHashes": {
+      "docs/thesis/evidence/automated-business-journeys-last-success.json": "a5902bd3a8701268c26c3f0ac66e9c376c82e6c9e63c9e6c9e05ee3bb12ff11c",
+      "docs/thesis/evidence/automated-business-journeys.md": "2508a79da66c16bda45ae1a0c97c1b339404be2d154d755ab20cd8a307bd1a7c",
+      "docs/thesis/evidence/automated-business-journeys/assisted-purchase-01-solicitud.png": "4be4bb6d7108ea76ee1ab6aec68e9023a15cfecd595bb5cd1807ff33fb6fe15e",
+      "docs/thesis/evidence/automated-business-journeys/assisted-purchase-02-avance-aprobado.png": "ce4a846d36cfeeb2185b28dfa3e0dff92d10b1784f5c936dcd81aecd2c6a07b6",
+      "docs/thesis/evidence/automated-business-journeys/assisted-purchase-03-pedido-completado.png": "2131e2557a3ce273235aba8189ca5830fcaa897dd9d3aef522570ff64a041b6b",
+      "docs/thesis/evidence/automated-business-journeys/direct-sale-05-venta-directa-pedido.png": "03a9a0757c748dc31c6ba1f695f07e940a6a54d5aff84f38fa86a100fa8d38be",
+      "docs/thesis/evidence/automated-business-journeys/mixed-order-04-pedido-mixto.png": "c4ef57d9cc617c788b27f01e11c774d389e00839916a94e2cd88d8125aa8d121",
+      "docs/thesis/evidence/automated-business-journeys/permissions-session-06-permiso-denegado.png": "5318ed597a47fb7ee14178616711916a7486eba9e17a6abd22e5b4fa93e4f4fc",
+      "docs/thesis/evidence/automated-business-journeys/report.md": "2508a79da66c16bda45ae1a0c97c1b339404be2d154d755ab20cd8a307bd1a7c",
+      "docs/thesis/evidence/automated-business-journeys/results.json": "3d73ee1ea34b0a86fbe75faa67caeef151a75143f0f2975dac0ed80cecac9607",
+      "docs/thesis/evidence/automated-business-journeys/validation.json": "304b6b39d968dbe4bcd71630c31ec4722a05843fcfaf955e6b8b38d9db309ba0",
+      "docs/thesis/evidence/qa-1-2026-09-29.md": "8369a43dda9e6f5c530401ae06e090f60da951d1f4fc1795098992e3d7d262b1",
+      "docs/thesis/evidence/qa-1-bugs.md": "975f48de5793421deac997a601a8b2b6228a174e55e7dc14fc1bdacc2f5f5f5a",
+      "docs/thesis/evidence/qa-2-2026-09-30.md": "fb3ced5a91c73701311bab5cb2686c149fe457a1b332a61ad1444a7ea04fc048",
+      "docs/thesis/evidence/qa-2-android-environment.json": "295b9c3be84340dcf94e858c59e94d011aca34036f6f9f3b6ca6e0132a38421d",
+      "docs/thesis/evidence/qa-2-android-evidence.md": "8c47f3020cb1030066fc32c884233cb7367ec8bd728d72317737bdd315642de2",
+      "docs/thesis/evidence/qa-2-bugs.md": "d38afc64938f200e921204ee90ec271e06eaf342db8fd73b41aaa4233927cae7",
+      "docs/thesis/evidence/qa-2-cleanup.json": "5c59342e9704be37572fc5e69cfb7baae38203d579a9a4c1302e2417d8a3d4fb",
+      "docs/thesis/evidence/qa-2-scenarios.csv": "cb4b67abb80a4a372d9794bdf40bc9d8bb82e0c496255bb6ca8930e115b5669b",
+      "docs/thesis/evidence/qa-2-scenarios.json": "5c81b59815188c9f422503df011c7989c3e3f87cb4ef4402fef9aa68d48056b3",
+      "docs/thesis/evidence/qa-2-screenshots/admin-dashboard-1440.png": "86f93cbc14e5cb6bf0c3ade79ac0ffde562401bfaa9dbebc937b06a00ea89bce",
+      "docs/thesis/evidence/qa-2-screenshots/admin-dashboard-3840.png": "701b7890bb69ced7d8f42ea3c2748ce764fde93ef4a7c5d5728b2b5b0dd79a71",
+      "docs/thesis/evidence/qa-2-screenshots/admin-dashboard-4k-viewport.png": "390ffe88f6d35baf758d8d19d5a51eebb6644b97bce7d0ba539107db80dd278a",
+      "docs/thesis/evidence/qa-2-screenshots/admin-dashboard-final-1440.png": "ee0b98bff576c8c47da21a2559d6db56f1e5c264143903fe6c2ba870f286f7bc",
+      "docs/thesis/evidence/qa-2-screenshots/admin-dashboard-money-initial.png": "231ae08f49722345480277038da09be84935fed98ead6c2b37f84235a32f4213",
+      "docs/thesis/evidence/qa-2-screenshots/admin-delivery-390.png": "54991e0d80cd5f06bd6ee385902de6e2ac69b7f708c0bf63cc9e498c43001b13",
+      "docs/thesis/evidence/qa-2-screenshots/admin-inventory-390.png": "2e1f14f714b39dff1558c3eb4040243808b9718cfead54e38b6cd8a25fad0779",
+      "docs/thesis/evidence/qa-2-screenshots/admin-order-390.png": "896066e25b7107f96bc926e4d6c7f3e19f4a1edba7fde2672bba09a49f11a569",
+      "docs/thesis/evidence/qa-2-screenshots/admin-quote-multiline-390.png": "34cc54e195f0fb3ad3924d52bd35b320d185abf1ec2ed7484e3210fe83a2c9a4",
+      "docs/thesis/evidence/qa-2-screenshots/catalog-4k-viewport.png": "c15231ca04a5b893d785b66faab906820c9a6b9ef9563f682746d17daccf4df7",
+      "docs/thesis/evidence/qa-2-screenshots/diagnose-quote-390.png": "15cda4528c39d0f0b4ae0884e690fd3490a5b7237e0df5d06af0e57fccf81756",
+      "docs/thesis/evidence/qa-2-screenshots/home-4k-viewport.png": "6b05c0fade08eff93bc51c23f04d12494e2cd2af90afe081534c4bef65fe6960",
+      "docs/thesis/evidence/qa-2-screenshots/offline-avance-initial.png": "83ae4e472a20da2483bd204952414863864c0785cf027b3766772f2949ad9d15",
+      "docs/thesis/evidence/qa-2-screenshots/offline-trabajo-initial.png": "e8e4bfe34d07e895546a3bb499e7292447165918e205accdad4e88390a8a670b",
+      "docs/thesis/evidence/qa-2-screenshots/public-catalog-1440.png": "d83ccbbd81a297f6426815ff36791bf0c87eb44f63400cfc0802363a4941a88a",
+      "docs/thesis/evidence/qa-2-screenshots/public-catalog-3840.png": "53b5fb51cf141ec0ae9a73a742c1dc8c876eb1028faaf84a9e9d5080fc805c6b",
+      "docs/thesis/evidence/qa-2-screenshots/public-catalog-390.png": "0ef3f90dd0bfcf33fdd60899145f33ef75f1dfc47ae7380120c1bf6297ab0d15",
+      "docs/thesis/evidence/qa-2-screenshots/public-home-1440.png": "8150427540cdc18c542f4669c0b279e73896cabec68a8fa343de644ca4d00b71",
+      "docs/thesis/evidence/qa-2-screenshots/public-home-3840.png": "e48fb7b3ec786f4256ce9119e750de7c934867f955cb2eaab7809a1d2763436b",
+      "docs/thesis/evidence/qa-2-screenshots/public-home-390.png": "ad2ecc2fe23176e7cbde5bdc9298fcd5835bbf34391e3c017816fffcfae8a70a",
+      "docs/thesis/evidence/qa-2-screenshots/public-login-1440.png": "1b3ec90c7589bd6beee0113a3129bf0854ce7019ae991226be4763906ed35811",
+      "docs/thesis/evidence/qa-2-screenshots/public-login-3840.png": "d14e46c7bc0c5be894029e847d56b910103c1002c8122016cbead7937f649479",
+      "docs/thesis/evidence/qa-2-screenshots/public-login-390.png": "cf04f09dbf9cbabf22e3dbac664b2e6182c26c011bb08cf97d5ebf1160b8f9ff",
+      "docs/thesis/evidence/qa-2-screenshots/public-product-1440.png": "4971f19558de65bb6fe62d23a21d5807431fa7c68d54eb3e65bc5d26c1e5b8be",
+      "docs/thesis/evidence/qa-2-screenshots/public-product-3840.png": "32a3129816ab0f2225804445d4f0244a259d66c5b0234c6155bd48c7e1812c49",
+      "docs/thesis/evidence/qa-2-screenshots/public-product-390.png": "3c191bb8a98e18e56214e1ea797fedc20e451b6e495ca1425417c0c96b68a923",
+      "docs/thesis/evidence/qa-2-screenshots/quote-controls-390.png": "ba9ac33c4a8d6e17feae98a4ed1a9444a67f6dc513a54e6e3a52e503dfb01851",
+      "docs/thesis/evidence/qa-2-screenshots/quote-edit-error-390.png": "e6663343475900feb725e85dec6ff8f03a968e817bc1849a5dd9adb37471071e",
+      "docs/thesis/evidence/qa-2-screenshots/tracking-390.png": "50e6f01737eab3258b829f3227a0a3bec8de5f42a83bd6f940c8f92022fc2131",
+      "docs/thesis/evidence/qa-2-screenshots/tracking-final-390.png": "f049fcec51a5151197532b29671acf07d35930a319dcd7ec86ed7a066a96434e",
+      "docs/thesis/evidence/qa-2-summary.json": "7923421407eebca45771eaa4981436f43c71f6e036a0a2ce47a2ea5b46d7359d",
+      "docs/thesis/evidence/qa-2-validation.json": "cc151ad11dd67c19847024a10d526a4af27268f7d0a74c4426cb97d9ecd8342a"
+    }
+  },
+  "priorPreservedHashes": {
     "automated-business-journeys.md": "2508a79da66c16bda45ae1a0c97c1b339404be2d154d755ab20cd8a307bd1a7c",
     "automated-business-journeys/results.json": "3d73ee1ea34b0a86fbe75faa67caeef151a75143f0f2975dac0ed80cecac9607"
   }

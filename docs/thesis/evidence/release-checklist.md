@@ -1,22 +1,28 @@
 # Release checklist — Home Fashion
 
-Fecha de revisión: 2026-10-10, America/Bogota. Estado: RC LOCAL CONSERVADO; PUBLICACIÓN BLOQUEADA.
+Fecha: 2026-10-10, America/Bogota. Estado: RC COMMITADO; PENDIENTE DE AUTORIZACIÓN DE PUBLICACIÓN.
+Commit de código validado: `293dcc0db0f4867b4f2fe122bfbc8872d4756932` (master). El commit posterior de evidencia sólo modifica documentación.
 
-- [x] Conservar cambios locales existentes; sin commit, push ni deploy.
-- [x] Conservar QA-1 (212/212 PASS), QA-2 (153 PASS/1 Android pendiente) y journeys (5/5 PASS previos).
-- [x] No repetir QA-1, QA-2, 343 tests API ni los cinco journeys.
-- [x] Empaquetador de allowlist y verificación automática del tar.gz; ejemplos sólo con placeholders.
-- [x] Excluir runtimes E2E, owner.json, credenciales, claves, DB/dumps, dependencias, builds, caches y sesiones.
-- [x] Política selectiva de docs y listado revisable; sin git add -f ni staging masivo.
-- [x] Preservar último éxito completo; bloqueos y nuevas ejecuciones en archivos independientes.
-- [x] Comprobar tres unidades disponibles antes de journeys; sin modificar reservas manualmente.
-- [x] Validación dirigida: 4 pruebas del runner/reporter, typecheck E2E y 3 pruebas del empaquetador PASS.
-- [x] Inspeccionar proyectos Vercel existentes y probar lectura de la publicación anterior.
-- [ ] Publicar el RC actual con autorización inequívoca.
-- [ ] Resolver API publicada HTTP 500 y comprobar su configuración efectiva.
-- [ ] Smoke autenticado de siete áreas administrativas y producto/fotografía.
-- [ ] Android runtime: no hay dispositivo ni AVD.
-- [x] Capítulos de tesis conservados sin modificación.
+- [x] Raíz local, rama master, identidad Git y origin IngenieroCui/Home_Fashion verificados.
+- [x] Consolidar sprints, pruebas, journeys y evidencias seguras en commit local; conservar cambios legítimos.
+- [x] Auditar archivos e índice: sin .env reales, runtime E2E, credenciales, claves, tokens, cookies ni bases locales.
+- [x] Preservar QA-1 212/212 PASS, QA-2 153 PASS y journeys 5/5 PASS sin reejecutarlos.
+- [x] Build de shared/API/web y lint API/web PASS.
+- [x] Typecheck E2E, 4 pruebas sintéticas de release y 3 pruebas de empaquetado PASS.
+- [x] Aiven ONLINE mediante SELECT con TLS verificado; 13/13 migraciones aplicadas, 0 pendientes.
+- [x] Columnas image_url_snapshot presentes en quote_items, sale_items y order_items; no aplicar migraciones.
+- [x] API productiva /api/health y /api/catalog/products responden 200 con estructura válida.
+- [x] Proyectos Vercel existentes, raíces apps/api y apps/web, master y deployments actuales verificados.
+- [x] Sin cambios de variables productivas, Aiven o Cloudinary; no crear infraestructura.
+- [x] Actualizar informe RC, validación e inventario; registrar SHA de código y deployments actuales.
+- [ ] Autorización expresa del usuario para push master y publicación de API/web.
+- [ ] Confirmar SHA completo del nuevo deployment de cada proyecto contra el HEAD autorizado.
+- [ ] Smoke del RC desplegado: máximo 12 comprobaciones, fotografías y errores; sin nuevo proceso comercial.
+- [ ] Android runtime: PENDIENTE hasta prueba real en dispositivo/AVD.
+- [ ] HOME_FASHION_CODE_FREEZE = READY sólo después de publicación y smoke satisfactorios.
 
-Detalle, evidencia y pasos exactos: [release-candidate-2026-10-10.md](release-candidate-2026-10-10.md).
-Inventario Git: [release-documentation-inventory.md](release-documentation-inventory.md).
+El HTTP 500 anterior no se reprodujo; dejó de ser un bloqueo y no se reinvestigó.
+Los GET actuales son prepublicación de la versión anterior, no certifican todavía el RC desplegado.
+
+Detalle: [release-candidate-2026-10-10.md](release-candidate-2026-10-10.md).
+Inventario: [release-git-inventory.md](release-git-inventory.md).

@@ -1,154 +1,121 @@
 # Release Candidate — Home Fashion — 2026-10-10
 
-Revisión: 2026-10-10T21:19:14.332526+00:00 (UTC); fecha de trabajo 2026-10-10, America/Bogota.
+Revisión UTC: 2026-10-10T22:15:42.606196+00:00. Zona de trabajo: America/Bogota.
+Estado: RC LOCAL COMMITADO Y VALIDADO; PUBLICACIÓN PENDIENTE DE AUTORIZACIÓN EXPRESA.
 
-## Estado verificable
+## Identidad y alcance
 
-RC LOCAL CONSERVADO Y EMPAQUETABLE. PUBLICACIÓN DEL RC BLOQUEADA.
-Último commit verificable: `ff3fbb867812617e34752d5e1cd1e0f99c211e2f`, rama `master`; versión package.json `0.1.0`.
-El worktree incluye numerosos cambios previos sin commit y archivos nuevos de QA-1,
-QA-2 y journeys. El commit por sí solo no identifica este RC: el tar.gz seguro y su
-manifest SHA-256 identifican el contenido entregado. No se creó commit ni se hizo push/deploy.
+- Rama: master. Remote: https://github.com/IngenieroCui/Home_Fashion.git.
+- Commit de código validado: `293dcc0db0f4867b4f2fe122bfbc8872d4756932`.
+- Base publicada y origin/master comprobados: `ff3fbb867812617e34752d5e1cd1e0f99c211e2f`.
+- La actualización posterior de este informe, checklist, inventarios y JSON de validación es sólo documental.
+  El SHA de ese HEAD final se registra en el manifiesto de entrega y en la solicitud de autorización.
+  Al publicar se debe comparar ese HEAD completo, y no sólo el commit anterior de código, con ambos deployments.
+- Incluye los cambios locales de catálogo y fotografías, UI pública/panel, clientes, cotizaciones,
+  ventas/pagos, pedidos, taller/avances, entregas, inventario y resumen operativo; cambios Flutter
+  existentes; pruebas, journeys y evidencia académica. No se implementaron funciones nuevas durante este cierre.
+- Las eliminaciones previas corresponden al servicio Cloudinary reemplazado por media compartido y
+  la pantalla Flutter anterior sustituida por la navegación actual; no se borraron archivos adicionales.
 
-## Resultados anteriores conservados (no reejecutados)
+## Validación dirigida de esta revisión
 
-| Evidencia | Resultado documentado |
+| Comprobación | Resultado |
 | --- | --- |
-| qa-1-2026-09-29.md | 212/212 escenarios PASS; 13 bugs corregidos; API 340, web 37, Flutter 50 |
-| qa-2-2026-09-30.md + qa-2-summary.json | 154 escenarios: 153 PASS, 0 FAIL finales, 1 Android pendiente; 10 bugs corregidos; API 343, web 39, Flutter 50 |
-| automated-business-journeys.md + results.json | 5/5 PASS; catálogo/run 20261010204640-afd3702f; 2026-10-10T20:51:33.466Z; Chromium, Next.js, NestJS, MySQL dedicado y Cloudinary reales |
+| pnpm build (shared, API, web) | PASS; Next.js compiló y verificó tipos/rutas |
+| pnpm lint (API, web) | PASS |
+| pnpm test:e2e:typecheck | PASS |
+| pnpm test:release | 4/4 PASS; casos sintéticos sin servicios ni journeys reales |
+| pnpm test:source-package | 3/3 PASS |
+| Auditoría de contenido e índice Git | PASS; allowlist, comparación con secretos locales y patrones de credenciales |
+| git diff --cached --check | PASS; respetando finales de línea Windows |
 
-Se mantuvieron los seis PNG originales de journeys, sus resultados y el informe.
-El último éxito queda identificado en `automated-business-journeys-last-success.json`.
-Se añadió únicamente una copia pequeña del Markdown en la carpeta original; no se
-duplicaron las capturas. WORKSHOP por API no demuestra ejecución Android.
+No se repitieron QA-1 (212/212 PASS), QA-2 (153 ejecutados/PASS, 1 Android pendiente),
+ni los cinco journeys (5/5 PASS, ejecución 20261010204640-afd3702f,
+2026-10-10T20:51:33.466Z). Sus reportes y capturas se conservaron byte a byte;
+la verificación de hashes queda en release-validation-2026-10-10.json.
 
-## Publicación y configuración
+## Seguridad de distribución
 
-El conector Vercel no mostró equipos/proyectos; consultas explícitas al equipo
-`team_WdljsMja3hCQebqtqFBdigPe` devolvieron 403 por acceso al scope
-`ingenierocuis-projects`. La CLI local ya instalada (39.3.0) sí permitió leer los
-proyectos y despliegues existentes, sin extraer credenciales.
+Se revisaron todos los archivos candidatos y los blobs staged. Los ejemplos contienen placeholders.
+Se mantienen excluidos .env reales, .e2e-local/.e2e-results, owner.json, certificados/claves,
+credenciales, tokens, cookies, sesiones/storageState, trazas HTTP/HAR, bases/dumps, dependencias,
+builds y caches. qa-2-network-console.json permanece local e ignorado.
+Se revisaron visualmente las 36 capturas QA/journeys mediante hojas de contacto; sin credenciales visibles.
+El escaneo no sustituye revisión de futuras capturas. Los reportes y diagramas académicos seguros se incluyen.
 
-| Proyecto | Alias público comprobado | Deployment | Estado / fecha |
-| --- | --- | --- | --- |
-| home-fashion-web | https://home-fashion-web-five.vercel.app | dpl_J2WfMUcXRXnCQyRTmzDZoixqhQee | Ready, producción, 2026-09-28 18:43:29 -05 |
-| home-fashion-api | https://home-fashion-api.vercel.app | dpl_EQKFZkndvNQHZKXZzLvWAVx26xu5 | Ready, producción, 2026-09-28 18:43:29 -05 |
+Se corrigieron dos falsos positivos exactos de la política de nombres del empaquetador:
+apps/web/src/app/tokens.css y la captura permissions-session-06-permiso-denegado.png.
+Las pruebas comprueban que otros nombres de sesión/secretos permanecen excluidos.
+.vercelignore también excluye explícitamente runtime E2E, bases y sesiones locales.
+No se ejecutó git add -f ni se modificó historia. El archivo antiguo
+Tesis/home-fashion-source.tar.gz permanece intacto y no es el paquete seguro de este RC.
 
-`vercel inspect <alias> --logs` permitió extraer sólo el commit `ff3fbb8` para ambos
-builds; no se persistieron logs crudos. Coincide con HEAD, pero no contiene los cambios
-locales posteriores. Estos despliegues son anteriores a QA-1, QA-2 y journeys:
-**el RC actual no está publicado/verificado**. Ready no implica API saludable.
+## Aiven y API (sólo lectura)
 
-`vercel env ls production` confirmó los nombres `API_SERVER_URL` y
-`NEXT_PUBLIC_API_URL` en el proyecto web, Production/Preview, valores cifrados.
-No se descargaron valores ni archivos de secretos: la dirección efectiva configurada
-y la causa del HTTP 500 permanecen sin verificar. El alias API descubierto respondió
-500 en `/api/health` y `/api/catalog/products`. No se alteró Aiven ni secretos productivos.
+Hora de consulta: 2026-10-10T22:11:05.223Z.
+Aiven ONLINE: conexión a host Aiven local configurado, certificado CA y TLS verificados,
+SELECT 1 satisfactorio, 13 migraciones ejecutadas / 13 locales / 0 pendientes.
+La migración 20260928110000-add-commerce-image-snapshots ya está registrada;
+las columnas image_url_snapshot existen en order_items, quote_items y sale_items.
+No se ejecutó Umzug status (su storage puede sincronizar tablas), migrate, seed,
+UPDATE, INSERT o DDL. No se cambió Aiven.
 
-## Smoke corto READ-ONLY de la publicación anterior
+GET https://home-fashion-api.vercel.app/api/health → 200, status=ok/service correcto.
+GET https://home-fashion-api.vercel.app/api/catalog/products → 200, data/pagination válidos.
+El HTTP 500 anterior no volvió a reproducirse; no se investigó nuevamente.
 
-No hubo login, POST, nueva operación comercial ni escritura DB/Cloudinary. Se hicieron
-GET públicos y navegación anónima en navegador; los escenarios bloqueados no se cuentan PASS.
+## Vercel actual y destino autorizado pendiente
 
-| # | Escenario | Estado | Evidencia / límite |
-| --- | --- | --- | --- |
-| 1 | API health | FAIL | GET https://home-fashion-api.vercel.app/api/health → 500 |
-| 2 | Home | FAIL funcional | GET web → 200; interfaz visible, sin categorías/muebles; mensajes de indisponibilidad |
-| 3 | Catálogo y fotografía | FAIL funcional | GET /catalogo → 200; “No pudimos cargar el catálogo”; GET API catálogo → 500; fotografía no verificable |
-| 4 | Producto/variante | BLOQUEADO | Catálogo no entrega productos; sin enlace de producto para inspección |
-| 5 | Login | PASS parcial | GET /iniciar-sesion → 200; formulario visible; autenticación no ejecutada |
-| 6 | Dashboard | BLOQUEADO | Sin sesión productiva verificada y API no saludable |
-| 7 | Clientes | BLOQUEADO | Sin sesión productiva verificada y API no saludable |
-| 8 | Cotizaciones | BLOQUEADO | Sin sesión productiva verificada y API no saludable |
-| 9 | Ventas | BLOQUEADO | Sin sesión productiva verificada y API no saludable |
-| 10 | Pedidos | BLOQUEADO | Sin sesión productiva verificada y API no saludable |
-| 11 | Taller/revisión | BLOQUEADO | Sin sesión productiva verificada y API no saludable |
-| 12 | Entregas | BLOQUEADO | Sin sesión productiva verificada y API no saludable |
+| Proyecto existente | ID | Raíz / framework | Deployment actual | Commit actual |
+| --- | --- | --- | --- | --- |
+| home-fashion-api | prj_tdbYXXR52PidgJ0AIiAwwcfEtL5b | apps/api / NestJS | dpl_EQKFZkndvNQHZKXZzLvWAVx26xu5 | ff3fbb867812617e34752d5e1cd1e0f99c211e2f |
+| home-fashion-web | prj_HKG4VCXuG26AKbQkwtGHClXtNRg0 | apps/web / Next.js | dpl_J2WfMUcXRXnCQyRTmzDZoixqhQee | ff3fbb867812617e34752d5e1cd1e0f99c211e2f |
 
-Consola del navegador: 0 mensajes warn/error capturados en Home, catálogo y login.
-Esto no elimina los fallos HTTP de la API ni certifica consola de módulos bloqueados.
-Balance: 1 PASS parcial de interfaz, 3 FAIL funcionales, 8 BLOQUEADOS. No es smoke del RC.
+Ambos READY, producción, Node 22.x, rama productiva master; equipo ingenierocuis-projects
+(team_WdljsMja3hCQebqtqFBdigPe). Aliases:
+https://home-fashion-api.vercel.app y https://home-fashion-web-five.vercel.app.
+El conector devolvió 403 del scope; se verificó por la CLI instalada/caché usando sus propias
+credenciales, sin extraerlas. Se guardaron sólo metadatos filtrados.
+Los nombres de variables productivas incluyen DB/TLS/JWT/Cloudinary en API y
+API_SERVER_URL/NEXT_PUBLIC_API_URL en web. No se imprimieron, descargaron ni cambiaron valores.
+CLOUDINARY_ROOT_FOLDER nuevo tiene default home-fashion; no exige una nueva variable.
 
-## Correcciones y comprobaciones dirigidas
+Tras autorización: push normal de master al origin verificado para activar la integración Git
+de ambos proyectos existentes; sin force-push, proyectos nuevos, migraciones ni cambios de entorno.
+Verificar los IDs y meta.githubCommitSha de los dos deployments y que los aliases los señalen.
+No publicar desde un directorio local con cambios adicionales. Si cambia código o HEAD,
+revisar diferencia y pedir autorización del nuevo SHA antes de producción.
 
-1. `scripts/package-source.py`: exportación por allowlist, sin seguir symlinks/junctions,
-   con rechazo de secretos conocidos locales, JWT, claves privadas y credenciales en URLs;
-   ejemplos con credenciales no ficticias bloquean el empaquetado. Rechaza sobrescribir
-   archivos existentes y verifica cada miembro del tar antes de entregar el resultado.
-2. `.gitignore`: permite Markdown, Mermaid, DBML, diagramas exportados y reportes/PNG
-   QA enumerados; mantiene fuera JSON arbitrario, trazas HTTP, HAR, sesiones, dumps,
-   tokens y credenciales. `qa-2-network-console.json` permanece local/ignorado.
-3. Runner/reporter: cada intento tiene ID independiente del catálogo reutilizable.
-   Preflight bloqueado escribe status separado; cada ejecución conserva resultados,
-   informe y capturas en `runs/<execution-id>`. Fallos y selecciones parciales no
-   reemplazan el informe completo anterior; sólo cinco PASS actualizan último éxito.
-4. Stock: SELECT de variante activa del catálogo E2E comprueba disponibles >= 3
-   (venta directa, mixto, recuperación: 1 cada uno). Dos escenarios usan fabricación.
-   El chequeo ocurre dentro de la transacción de fixtures, antes de servicios/journeys;
-   insuficiencia hace rollback, sin reset de reservas/ventas/pedidos.
+## Smoke productivo del RC
 
-Pruebas ejecutadas: `pnpm test:release` 4/4 PASS (resultados sintéticos, sin servicios),
-`pnpm test:e2e:typecheck` PASS, `pnpm test:source-package` 3/3 PASS,
-auditoría de selección: ningún archivo fuente Git existente omitido; escaneo de los
-documentos versionables sin secretos detectados; `git diff --check` PASS.
-La inspección automática del comprimido verifica tipos, rutas, contenido y ausencia de
-enlaces. El manifest adjunto enumera cada archivo e incluye SHA-256 del tar.gz final.
+PENDIENTE: el RC no se ha publicado. Los dos GET anteriores sólo acreditan la versión actual.
+Plan máximo de 12 comprobaciones, con lecturas y login ADMIN autorizado:
 
-Una consulta adicional de stock real E2E quedó BLOQUEADA: “MySQL E2E no está disponible;
-no se ejecutaron mutaciones”. No se reinició, reprovisionó, borró ni cambió a otra base.
-El stock actual no se afirma. El guard del chequeo permanece obligatorio para la próxima
-ejecución. El procedimiento exacto de detener/conservar configuración/provisionar otra
-instancia está en `tests/e2e/README.md`; no fue ejecutado durante este cierre.
+1. API health y catálogo (una comprobación agrupada).
+2. Home y sus fotografías.
+3. Ficha de producto, variantes y fotografías.
+4. Cotización: abrir formulario y validar disponibilidad, sin enviar una nueva solicitud.
+5. Login ADMIN.
+6. Dashboard.
+7. Clientes.
+8. Cotizaciones.
+9. Ventas.
+10. Pedidos.
+11. Taller.
+12. Entregas.
 
-## Android (inspección menor a cinco minutos)
+Registrar por comprobación estado, fecha, deployment y errores inesperados; observar consola/red.
+No crear ventas, pedidos, pagos, entregas ni un proceso comercial nuevo. No persistir cookies,
+tokens o datos privados en las evidencias. Si falta sesión ADMIN autorizada, solicitar acceso
+seguro y dejar esos resultados pendientes, sin inventar PASS.
 
-`adb devices`: lista vacía (adb existente usado por ruta absoluta).
-`flutter devices`: Windows, Chrome y Edge; 0 Android.
-`emulator -list-avds`: sin AVD existentes (emulator usado por ruta absoluta).
-**ANDROID_RUNTIME=PENDIENTE**. No SDK, emulador ni APK nuevos instalados/construidos.
+## Pendientes y Code Freeze
 
-## Política de evidencias y distribución
+1. Autorización expresa del usuario para push/publicación del HEAD final comunicado.
+2. Publicar y confirmar ambos deployments contra ese SHA; completar smoke anterior.
+3. Android runtime PENDIENTE hasta ejecutar en Android real/AVD; WORKSHOP por API no lo demuestra.
 
-Usar desde la raíz:
+HOME_FASHION_CODE_FREEZE = PENDING_PUBLICATION_AND_SMOKE
 
-```powershell
-pnpm source:package --output <ruta-nueva>/home-fashion-source-2026-10-10-rc.tar.gz
-pnpm source:package --verify <ruta-nueva>/home-fashion-source-2026-10-10-rc.tar.gz
-```
-
-Se conservan `*.example` revisados, código y evidencias sintéticas permitidas. Quedan
-excluidos `.e2e-local`, owner.json, `.env` reales, certs/claves, node_modules, .git,
-.next, dist/build, caches, temporales, DB/dumps, HAR/storageState, trazas y sesiones.
-Los binarios de evidencias admitidos tienen carpetas explícitas; cualquier nueva captura
-requiere revisión visual/sanitización antes de incluirla. Las capturas previas de journeys
-constaban revisadas; se inspeccionaron también tracking final y login QA-2 sin secretos
-visibles. Un escáner de texto no certifica por sí solo el contenido visual de futuros PNG/PDF.
-
-El archivo anterior `Tesis/home-fashion-source.tar.gz` sigue siendo inseguro y no debe
-compartirse. Se conservó sin modificar; compartir exclusivamente el nuevo tar.gz seguro
-y su manifest. Los datos E2E locales permanecen en su lugar y no forman parte del paquete.
-
-El listado completo que queda disponible para Git está en `release-documentation-inventory.md`.
-No se ejecutó git add, commit, push ni despliegue. Permitir una extensión no sustituye
-la revisión de secretos: mantener deny por defecto para exportaciones nuevas y revisar
-capturas/reportes antes de staging selectivo.
-
-## Pasos exactos pendientes (sin ejecutarlos aquí)
-
-1. Revisar el inventario y el diff local, hacer staging selectivo de fuentes/evidencias
-   sanitizadas y crear el commit RC para obtener un SHA que identifique QA-1/QA-2/journeys.
-2. En los proyectos existentes de Vercel, inspeccionar el error de runtime de API 500 y
-   comprobar en el panel los endpoints API configurados. Registrar causa y corrección;
-   cualquier cambio productivo requiere autorización expresa. No crear proyectos ni alterar Aiven.
-3. Cuando se autorice publicar ese SHA, usar los proyectos existentes `home-fashion-api`
-   y `home-fashion-web`; comprobar los commits de ambos deployments y los aliases;
-   repetir sólo smoke READ-ONLY de hasta 12 escenarios con una sesión autorizada.
-4. Conectar un Android real o un AVD ya disponible y completar la validación runtime
-   pendiente, sin repetir por rutina el build APK o los journeys web/API.
-5. Usar la matriz de trazabilidad, diagramas, instrumentos y registros conservados para
-   redactar metodología/resultados/limitaciones y revisión académica. Los capítulos no se
-   modifican en este cierre; distinguir validación técnica local de despliegue y de prueba con usuarios.
-
-La publicación queda bloqueada por RC aún sin commit/autorización de deploy y API pública
-no saludable. El cierre de preservación técnica está realizado; no se certifica release productivo.
+Declarar READY sólo al completar publicación y smoke; Android debe seguir indicado como pendiente
+si todavía no se ejecuta. Los capítulos académicos no se editaron durante este cierre.
