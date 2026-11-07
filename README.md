@@ -120,3 +120,12 @@ cd apps/mobile && flutter analyze && flutter test
 - Web: `http://localhost:3000`
 - API: `http://localhost:3001/api`
 - API health: `http://localhost:3001/api/health`
+# Preparación de una demo aislada
+
+La demo requiere una base MySQL **independiente**, vacía, llamada `home_fashion_demo` y un usuario MySQL limitado exclusivamente a esa base. Crear la base y verificar sus permisos en Aiven antes de ejecutar cualquier comando; el nombre o la variable de confirmación no demuestran por sí solos el aislamiento. No utilizar las credenciales de producción. No ejecutar migraciones ni seeders hasta comprobar el servidor, la base y los privilegios del usuario demo.
+
+Configurar las variables `DB_*`, certificado CA y secretos JWT de la API para la base demo, siguiendo `.env.example`. Con esa configuración aislada, ejecutar `pnpm db:migrate` y `pnpm db:seed` desde la raíz; el catálogo ficticio y las imágenes locales autorizadas existentes forman parte de estos seeders. Establecer `CATALOG_ASSET_BASE_URL` con el origen HTTPS de la web demo antes de sembrar el catálogo.
+
+Definir de forma privada `DEMO_CONFIRM_DATABASE=home_fashion_demo` y tres contraseñas distintas de al menos 12 caracteres en `DEMO_ADMIN_PASSWORD`, `DEMO_EMPLOYEE_PASSWORD` y `DEMO_WORKSHOP_PASSWORD`; ejecutar `pnpm --filter @home-fashion/api demo:seed`. Las cuentas son `admin@demo.home-fashion.invalid`, `empleado@demo.home-fashion.invalid` y `taller@demo.home-fashion.invalid`. El comando no cambia contraseñas existentes: para rotarlas, usar un procedimiento administrativo seguro. Guardar los valores en un gestor de secretos y compartirlos por un canal privado; no subirlos al repositorio.
+
+Usar proyectos Vercel separados para web y API, con variables y JWT independientes y la web apuntando exclusivamente a la API demo. Mantener desactivadas las credenciales Cloudinary en la API demo: las imágenes ilustrativas se sirven desde la web, y así la demo no puede subir ni borrar recursos del Cloudinary empresarial. No usar los proyectos o variables de producción como entorno de demostración. Verificar los tres inicios de sesión y el recorrido antes de compartir la URL.

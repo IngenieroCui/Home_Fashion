@@ -17,6 +17,7 @@
     "db:seed:status": "tsx src/database/cli.ts seed:status",
     "db:seed:undo": "tsx src/database/cli.ts seed:undo",
     "db:seed:undo:all": "tsx src/database/cli.ts seed:undo:all",
+    "demo:seed": "tsx src/database/demo-seed.ts",
     "admin:create": "tsx src/admin-create.ts",
     "user:create": "tsx src/user-create.ts",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\""
