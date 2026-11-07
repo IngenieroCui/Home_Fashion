@@ -1,122 +1,56 @@
 # Home Fashion
 
-Home Fashion es un monorepo para digitalizar la venta, fabricación, seguimiento y entrega de muebles de una mueblería familiar de Ibagué.
+**Gestión comercial y de fabricación para una mueblería familiar de Ibagué.**
 
-## Tecnologías
+## Problema y solución
 
-- NestJS con TypeScript para la API.
-- Next.js App Router con TypeScript y Tailwind CSS para la web.
-- Flutter con Material 3 para Android.
-- MySQL administrado en Aiven con TLS.
-- pnpm workspaces para los proyectos TypeScript.
+La venta de muebles requiere coordinar catálogo, cotizaciones, pagos, fabricación y entrega. Home Fashion reúne ese recorrido en una web comercial, una API y una aplicación Android para talleres, como proyecto de tesis y apoyo a la modernización de la MiPyme.
 
-## Requisitos Previos
+## Funcionalidades
 
-- Git
-- Node.js
-- pnpm
-- Flutter
-- Dart
-- Servicio MySQL en Aiven
+- Catálogo público y administración de productos, variantes e imágenes.
+- Solicitudes públicas, clientes, cotizaciones y conversión del proceso comercial a ventas y pedidos.
+- Registro de pagos, asignación de trabajos a talleres, avances, revisión y entregas.
+- Seguimiento privado de pedidos mediante accesos controlados.
+- Roles **ADMIN**, **EMPLOYEE** y **WORKSHOP**, con permisos comprobados en la API.
+- Flutter para consultar trabajos y reportar avances con URLs de evidencia opcionales.
 
-## Estructura
+## Tecnologías y arquitectura
 
-```text
-home-fashion/
-  apps/
-    api/
-    web/
-    mobile/
-  packages/
-    shared/
-  docs/
-    index.md
-    architecture.md
-    traceability.md
-    api.md
-    web.md
-    mobile.md
-    development.md
-```
+| Capa | Implementación |
+| --- | --- |
+| Web | Next.js, React, TypeScript y Tailwind CSS |
+| API | NestJS, Sequelize, validación de DTO y JWT |
+| Datos | MySQL en Aiven con TLS; migraciones con Umzug |
+| Taller | Flutter/Dart para Android; almacenamiento seguro de sesión |
+| Imágenes | Cloudinary desde la API |
+| Organización | Monorepo pnpm; contratos en `packages/shared` |
 
-## Documentación
+`Web / Flutter → API NestJS → MySQL`; la API concentra permisos, transacciones y servicios externos.
 
-Empieza en [`docs/index.md`](docs/index.md). Allí se separan el contexto académico, la arquitectura, las rutas y operación de API/web/móvil, el desarrollo local y la prueba manual integral.
+## Desarrollo local
 
-## Variables De Entorno
-
-Copia `.env.example` a `.env` en la raíz. La API, los comandos de migración y la web leen ese archivo. No subas `.env` a Git.
-
-Completa `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` y `DB_PASSWORD` con los datos de conexión de Aiven. Descarga el certificado CA desde **Overview → Connection information → CA Certificate**, guárdalo como `certs/aiven-ca.pem` y deja `DB_SSL_MODE=REQUIRED` y `DB_SSL_CA_PATH=./certs/aiven-ca.pem` en `.env`. Si usas otra ubicación, indica su ruta absoluta o una ruta relativa a la raíz del proyecto. En Vercel, configura `DB_SSL_CA_BASE64` con el contenido Base64 del certificado en lugar de subir el archivo. La API y las migraciones exigirán TLS y verificarán el servidor con esa CA; fallarán al iniciar si el certificado falta. Para subir imágenes desde el panel, completa `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` y `CLOUDINARY_API_SECRET` desde tu cuenta de Cloudinary. `CLOUDINARY_FOLDER` define la carpeta remota. Las claves JWT deben ser secretas y tener al menos 32 caracteres. El navegador nunca recibe la clave secreta de Cloudinary.
-
-## MySQL en Aiven
-
-Configura las credenciales de Aiven y el certificado CA en `.env`; luego aplica `pnpm db:migrate` y `pnpm db:seed`. El esquema no usa sincronización automática.
-
-## API
+Requiere Node.js, pnpm y una base MySQL autorizada. Copia `.env.example` a `.env` en la raíz y configura credenciales privadas. Consulta las [migraciones](apps/api/src/database/migrations/README.md) y los [seeders](apps/api/src/database/seeders/README.md) antes de preparar una base. No ejecutes esos comandos sobre una base compartida sin revisar su destino.
 
 ```bash
 pnpm install
-pnpm dev:api
+pnpm dev
 ```
 
-URL local: `http://localhost:3001/api`
+Web: `http://localhost:3000`; API: `http://localhost:3001/api`.
 
-Healthcheck: `http://localhost:3001/api/health`
+Para Android, consulta [apps/mobile/README.md](apps/mobile/README.md). El emulador accede a la API local con `http://10.0.2.2:3001/api`; una compilación release requiere HTTPS.
 
-## Web
+## Estado y limitaciones
 
-```bash
-pnpm install
-pnpm dev:web
-```
+La rama principal es `master`. Los cambios recientes de evaluación privada están en `feature/portfolio-demo-accounts` (`73af0a9`): no están fusionados automáticamente en `master`.
 
-URL local: `http://localhost:3000`
+La demo actual usa **cuentas privadas en una base existente**, sin aislamiento público completo. No se publican credenciales ni se ofrece acceso administrativo abierto. El seeder de demo exige una base independiente; su existencia no prueba que el entorno actual esté aislado.
 
-Para iniciar API y web en paralelo también puedes usar `pnpm dev` desde la raíz.
+Flutter cubre Android y el rol WORKSHOP. No incluye carga de evidencias binarias. La validación en dispositivo, operación pública, observabilidad y controles adicionales deben revisarse antes de una puesta en producción. Este sprint documental no ejecutó pruebas, builds ni operaciones de datos.
 
-## Flutter
+## Contribución
 
-```bash
-cd apps/mobile
-flutter pub get
-flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3001/api
-```
+Juan David Reyes Cure figura en el historial como autor del desarrollo y de la validación del flujo comercial; `a430764` registra la reparación de cotizaciones/pedidos y `ff3fbb8` el cierre de validación. Se conserva también un commit con autor `unknown`, sin reasignarlo. La rama de demo conserva su propio historial.
 
-El Android Emulator normalmente debe usar `http://10.0.2.2:3001/api` para llegar a la API del computador. Un dispositivo físico debe usar la IP local del computador en la misma red.
-
-HTTP se habilita solo para builds Android debug. Las builds release exigen una `API_BASE_URL` HTTPS y no incluyen la excepción de red local.
-
-La aplicación admite únicamente cuentas `WORKSHOP`, restaura la sesión desde almacenamiento seguro y permite consultar trabajos y reportar avances mediante URLs de evidencia opcionales. No existe upload de archivos en esta versión.
-
-## Estado Del MVP
-
-El código incluye catálogo público y administrativo, autenticación, clientes, solicitudes públicas y cotizaciones, ventas, pagos, pedidos, reservas, talleres, avances, revisión, seguimiento privado y entregas. La web incorpora los flujos públicos y el panel; Flutter incorpora el flujo operativo de talleres.
-
-Estos módulos están implementados y cuentan con validación automática. Al 23 de septiembre de 2026, API y web aprobaron lint/build, 276 pruebas de API y 26 de web; además se verificaron Aiven con TLS, las migraciones, el catálogo, el inicio de sesión y una carga y eliminación de imagen en Cloudinary. Falta repetir el flujo en el entorno desplegado y validar la app Android en un dispositivo.
-
-La aplicación móvil contiene únicamente Android. El panel web permite subir imágenes de catálogo a Cloudinary; la carga de evidencias desde móvil sigue pendiente. La firma release, rate limiting, observabilidad y validación con usuarios permanecen pendientes antes de una puesta en producción.
-
-## Despliegue en Vercel
-
-Crea dos proyectos desde este mismo repositorio: uno con **Root Directory** `apps/api` (NestJS) y otro con `apps/web` (Next.js). No configures un directorio de salida manual para ninguno. Ejecuta las migraciones y seeders desde una estación autorizada antes de probar la API desplegada.
-
-En el proyecto de la API configura `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_SSL_MODE=REQUIRED`, `DB_SSL_CA_BASE64`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` y `CLOUDINARY_FOLDER`. `DB_SSL_CA_BASE64` es la codificación Base64 del certificado CA de Aiven; el certificado y los secretos permanecen fuera de Git. En el proyecto web configura `API_SERVER_URL` y `NEXT_PUBLIC_API_URL` con la URL HTTPS de la API seguida de `/api`. Las variables secretas se guardan en la configuración del proyecto Vercel, nunca en el repositorio.
-
-## Validación
-
-```bash
-pnpm --filter @home-fashion/shared build
-pnpm --filter @home-fashion/api lint
-pnpm --filter @home-fashion/api test
-pnpm --filter @home-fashion/api build
-pnpm --filter @home-fashion/web lint
-pnpm --filter @home-fashion/web build
-cd apps/mobile && flutter analyze && flutter test
-```
-
-## URLs Locales
-
-- Web: `http://localhost:3000`
-- API: `http://localhost:3001/api`
-- API health: `http://localhost:3001/api/health`
+Consulta [arquitectura, decisiones y operación](docs/ARCHITECTURE.md). Los créditos de imágenes permanecen en [CATALOG_DEMO_IMAGES.md](CATALOG_DEMO_IMAGES.md) y la evidencia histórica en [VALIDACION_TESIS_2026-09-28.md](VALIDACION_TESIS_2026-09-28.md).
