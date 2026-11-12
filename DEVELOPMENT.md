@@ -51,7 +51,7 @@ Completa `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` y `DB_PASSWORD` con los dato
 
 ## MySQL en Aiven
 
-El esquema contiene **19 migraciones** y no usa sincronización automática. Las dos adiciones de H05/Wompi son `20261028000000-payment-intentions.ts` y `20261028001000-payment-attempts.ts`; H03/H04 no añaden migraciones. En Aiven, aplicar migraciones/seeders requiere autorización y revisión del estado remoto; este cierre no ejecuta ninguna operación allí. Para regresión usa exclusivamente MySQL descartable (instrucciones en el cierre técnico).
+El esquema contiene **21 migraciones** y no usa sincronización automática. Las dos adiciones de H05/Wompi son `20261028000000-payment-intentions.ts` y `20261028001000-payment-attempts.ts`; H03/H04 no añaden migraciones. En Aiven, aplicar migraciones/seeders requiere autorización y revisión del estado remoto; este cierre no ejecuta ninguna operación allí. Para regresión usa exclusivamente MySQL descartable (instrucciones en el cierre técnico).
 
 ## API
 
@@ -101,7 +101,7 @@ La aplicación móvil contiene únicamente Android. Panel y móvil usan upload d
 
 Crea dos proyectos desde este mismo repositorio: uno con **Root Directory** `apps/api` (NestJS) y otro con `apps/web` (Next.js). No configures un directorio de salida manual para ninguno. Ejecuta las migraciones y seeders desde una estación autorizada antes de probar la API desplegada.
 
-En el proyecto de la API configura `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_SSL_MODE=REQUIRED`, `DB_SSL_CA_BASE64`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` y `CLOUDINARY_FOLDER`. `DB_SSL_CA_BASE64` es la codificación Base64 del certificado CA de Aiven; el certificado y los secretos permanecen fuera de Git. En el proyecto web configura `API_SERVER_URL` y `NEXT_PUBLIC_API_URL` con la URL HTTPS de la API seguida de `/api`. Las variables secretas se guardan en la configuración del proyecto Vercel, nunca en el repositorio.
+En el proyecto de la API configura `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_SSL_MODE=REQUIRED`, `DB_SSL_CA_BASE64`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` y `CLOUDINARY_FOLDER`. `DB_SSL_CA_BASE64` es la codificación Base64 del certificado CA de Aiven; el certificado y los secretos permanecen fuera de Git. En el proyecto web configura `API_SERVER_URL` y `NEXT_PUBLIC_API_URL` con la URL HTTPS de la API seguida de `/api`. Las variables secretas se guardan en la configuración del proyecto Vercel. Define el mismo `HF_PROXY_SECRET` aleatorio de al menos 32 caracteres en web y API. La rama de endurecimiento tiene deshabilitado el despliegue automático por Git en ambos proyectos. El [procedimiento de operación y reversión](docs/release/operations-2026-11-12.md) detalla el orden del cambio.
 
 ## Wompi Sandbox
 

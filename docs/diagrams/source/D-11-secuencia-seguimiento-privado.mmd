@@ -13,13 +13,13 @@ sequenceDiagram
   A->>DB: Guarda solo SHA-256 + expiración/revocación
   A-->>P: Devuelve token completo una sola vez
   P-->>C: Comparte enlace privado
-  C->>W: Abre /tracking/{token}
+  C->>W: Abre /seguimiento/{token}
   W->>A: GET seguimiento con token
   A->>DB: Busca hash, vigencia y no revocado
   A->>DB: Lee pedido + avances APPROVED
   A->>A: Construye proyección minimizada
   A-->>W: Estado, líneas y avances públicos
-  W-->>C: Seguimiento sin precios, costos ni datos internos
+  W-->>C: Estado y avances aprobados sin fotos privadas
   opt rotar o revocar
     P->>A: Rota/revoca acceso
     A->>DB: Invalida token anterior

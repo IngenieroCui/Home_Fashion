@@ -2,7 +2,7 @@
 
 Fecha de corte: 6 de septiembre de 2026.
 
-**Revisión puntual:** el 22 de septiembre se actualizó la fuente de D-19 y se publicó una versión visual nueva en Drive. Los otros diagramas mantienen la fecha de corte original.
+**Revisión puntual:** el 22 de septiembre se actualizó la fuente de D-19 y se publicó una versión visual nueva en Drive. El candidato de endurecimiento actualiza D-10, D-11 y D-12 para reflejar evidencias multipart, reenvíos y seguimiento.
 
 Este paquete contiene las fuentes editables Mermaid, el modelo físico completo en DBML y exportaciones SVG/PDF listas para incorporar en el trabajo de grado. Las figuras representan el código y la documentación verificados en el repositorio `home-fashion`; D-03 se etiqueta expresamente como despliegue propuesto porque aún no existe evidencia de producción.
 

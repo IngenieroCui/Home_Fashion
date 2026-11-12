@@ -47,4 +47,10 @@ No hay upload binario de evidencias en Flutter, ni una validación Android en di
 
 Se sustituyeron las referencias rotas a `docs/index.md`, `docs/architecture.md` y otros documentos ausentes por los dos documentos principales actuales. Se conservan créditos, guías operativas y evidencia de tesis. La autoría se apoya en los commits y no se reasigna el historial `unknown`.
 
-La aplicación Android permite adjuntar hasta cinco fotos por avance mediante multipart. El estado de las migraciones, las pruebas actuales y el tratamiento de evidencias se documentan en el [registro de cierre](release/backlog-2026-11-12.md).
+## Candidato de endurecimiento
+
+Flutter adjunta hasta cinco fotos por avance mediante multipart. La API carga evidencias de taller, entrega y abonos en carpetas Cloudinary autenticadas por recurso. Valida que el identificador de la respuesta coincida con la carpeta y la URL de entrega. Los registros guardan la referencia del proveedor. Al consultar un recurso autorizado, la API genera enlaces temporales y envía `Cache-Control: private, no-store`. El seguimiento conserva estados y avances aprobados sin incluir evidencia fotográfica.
+
+El pedido se bloquea antes de sus líneas y trabajos al cancelar, gestionar una entrega o registrar o revisar avances. Flutter reutiliza un identificador al reenviar un formulario sin cambios. MySQL serializa la operación y conserva el identificador junto al reporte. Los documentos comerciales mantienen las imágenes seleccionadas en su snapshot y la cola verifica esas referencias antes de destruir un recurso.
+
+Consulta la [auditoría de la base](release/final-hardening-audit.md), el [cierre y evidencias](release/final-hardening-validation.md) y las [instrucciones operativas](release/operations-2026-11-12.md).

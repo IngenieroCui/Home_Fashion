@@ -276,7 +276,8 @@ Ejemplo de asignación:
 | --- | --- | --- | --- |
 | GET | `/api/workshop/jobs` | `WORKSHOP_JOB_VIEW` | Solo trabajos del JWT; `q`, `status`, paginación |
 | GET | `/api/workshop/jobs/:id` | `WORKSHOP_JOB_VIEW` | Detalle propio sin cliente ni finanzas |
-| POST | `/api/workshop/jobs/:id/progress` | `WORKSHOP_PROGRESS_SUBMIT` | Reporte append-only |
+| POST | `/api/workshop/jobs/:id/progress` | `WORKSHOP_PROGRESS_SUBMIT` | Reporte de texto |
+| POST | `/api/workshop/jobs/:id/progress-media` | `WORKSHOP_PROGRESS_SUBMIT` | Reporte multipart con hasta cinco fotografías `files` |
 
 Ejemplo de avance:
 
@@ -284,12 +285,11 @@ Ejemplo de avance:
 {
   "type": "PROGRESS",
   "message": "Estructura terminada y lista para tapizado",
-  "progressPercent": 60,
-  "evidenceUrls": ["https://example.com/evidencias/avance-1.jpg"]
+  "progressPercent": 60
 }
 ```
 
-Tipos: `STARTED`, `PROGRESS`, `READY_FOR_REVIEW`. `PROGRESS` usa 1–99 en la regla de negocio; `READY_FOR_REVIEW` fuerza 100. Se aceptan máximo cinco URLs.
+Tipos: `STARTED`, `PROGRESS`, `READY_FOR_REVIEW`. `PROGRESS` usa 1–99 en la regla de negocio; `READY_FOR_REVIEW` fuerza 100. Para adjuntar fotografías, usa `progress-media` y los campos del mismo reporte. `requestId` es opcional y admite 32 caracteres hexadecimales en minúscula. Al reenviar la misma solicitud devuelve el reporte original. Cambiar el contenido con el mismo identificador devuelve 409.
 
 ## 11. Entregas
 
@@ -302,7 +302,7 @@ Todas requieren `ORDER_MANAGE`.
 | POST | `/api/admin/deliveries` | Programar o reprogramar entrega cancelada |
 | GET | `/api/admin/deliveries/:id` | Detalle administrativo |
 | POST | `/api/admin/deliveries/:id/start` | Pasar a `OUT_FOR_DELIVERY` |
-| POST | `/api/admin/deliveries/:id/complete` | Registrar receptor/evidencia y entregar elementos |
+| POST | `/api/admin/deliveries/:id/complete-media` | Registrar receptor y archivos de evidencia y entregar elementos |
 | POST | `/api/admin/deliveries/:id/cancel` | Cancelar y recalcular pedido |
 
 Ejemplo de programación interna:
@@ -321,7 +321,7 @@ Ejemplo de programación interna:
 }
 ```
 
-Tipos: `OWNER`, `EMPLOYEE`, `EXTERNAL_DRIVER`. Un conductor externo usa `externalDriverName` y no `assignedUserId`. La interfaz completa la entrega mediante `POST /api/admin/deliveries/:id/complete-media`, con `receiverName` y de una a cinco imágenes JPG/PNG/WebP (`files`, hasta 10 MB cada una). El endpoint JSON con `evidenceUrls` se conserva por compatibilidad.
+Tipos: `OWNER`, `EMPLOYEE`, `EXTERNAL_DRIVER`. Un conductor externo usa `externalDriverName` y no `assignedUserId`. La interfaz completa la entrega mediante `POST /api/admin/deliveries/:id/complete-media`, con `receiverName` y de una a cinco imágenes JPG/PNG/WebP (`files`, hasta 10 MB cada una). El endpoint JSON histórico `/complete` devuelve 400 con instrucciones para adjuntar los archivos.
 
 ## 12. Roles y permisos
 
@@ -407,4 +407,4 @@ Antes de producción faltan, como mínimo: rate limiting, estrategia de logs/ale
 - GET /admin/operations/inventory: CATALOG_MANAGE, filtros q/categoryId/status/alert y paginación; alertas solo de variantes activas (bajo stock: 1–2 disponibles).
 - GET /admin/operations/customers/:id: CUSTOMER_MANAGE, secciones comerciales/financieras/logísticas según permisos adicionales.
 - GET /admin/operations/sales/:id/order-preparation: ORDER_MANAGE, datos mínimos y disponibilidad real para preparar pedidos.
-- POST /admin/sales/:id/payments-media: FINANCIAL_PAYMENT_REGISTER; multipart type/method/amount/paidAt/reference?/notes?/adjustmentEffect?/file?. Una imagen JPG/PNG/WebP opcional de hasta 10 MB; Cloudinary payments/{sale-code}, WebP hasta 1600×1600; elimina la nueva evidencia si falla el registro. El endpoint JSON permanece compatible.
+- POST /admin/sales/:id/payments-media: FINANCIAL_PAYMENT_REGISTER; multipart type/method/amount/paidAt/reference?/notes?/adjustmentEffect?/file?. Una imagen JPG/PNG/WebP opcional de hasta 10 MB; Cloudinary payments/{sale-code}, WebP hasta 1600×1600; elimina la nueva evidencia si falla el registro. El endpoint JSON sigue registrando movimientos sin evidencia. La API rechaza campos de URL aportados por el cliente.

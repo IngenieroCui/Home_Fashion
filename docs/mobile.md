@@ -128,7 +128,7 @@ Disponible en `IN_PROGRESS`. Requiere mensaje y permite porcentaje 1–99. No ca
 
 Disponible en `IN_PROGRESS`. El backend fuerza 100 y deja el trabajo esperando decisión. Un rechazo permite enviar un nuevo avance; una aprobación completa el trabajo.
 
-La app selecciona fotografías con `image_picker`, muestra su vista previa y envía archivos multipart a `progress-media`. La API valida tipo/tamaño y sube a Cloudinary. Las URLs devueltas quedan en el reporte; el cliente no necesita claves de Cloudinary. El endpoint JSON `/progress` se conserva para consumidores compatibles, pero Flutter usa `progress-media`.
+La app selecciona fotografías con `image_picker`, muestra su vista previa y envía archivos multipart a `progress-media`. La API valida tipo/tamaño y sube a Cloudinary. El reporte muestra enlaces de lectura firmados con cinco minutos de validez. Flutter conserva el `requestId` al reenviar el mismo formulario abierto y cambia el identificador al editar el contenido. `/progress` admite reportes de texto para integraciones JSON.
 
 ## 8. Ejecución y pruebas
 
