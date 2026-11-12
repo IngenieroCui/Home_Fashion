@@ -122,4 +122,4 @@ Cada evidencia usa `EV-HF-XXXX`. Un registro `verificado` requiere observación 
 - Ubicación: `outputs/evidencias_tesis/verificaciones/despliegue-2026-09-28/README.md`.
 - Estado: verificado para despliegue y validador decimal; no equivale a compras o pagos reales.
 
-Para el corte del 12 de noviembre, consulta el [protocolo OE4](evidence/oe4-session-protocol.md) y el [registro de cierre](../release/backlog-2026-11-12.md). Las cifras previas corresponden a los cortes históricos indicados.
+Para el corte del 12 de noviembre, consulta el [protocolo OE4](evidence/oe4-evaluation-protocol.md) y el [registro de cierre](../release/backlog-2026-11-12.md). Las cifras previas corresponden a los cortes históricos indicados.

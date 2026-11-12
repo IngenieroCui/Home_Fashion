@@ -40,4 +40,4 @@ Fecha de corte: 6 de septiembre de 2026.
 - Hay una matriz detallada de RF-01 a RF-15, RNF-01 a RNF-10 y prioridades siguientes en `VALIDACION_TESIS_2026-09-28.md`.
 - Continúan pendientes Android en dispositivo (no había emulador conectado), pedido mixto con stock, recorrido visual exhaustivo del panel, accesibilidad, concurrencia, restauración de backup y evaluación con usuarios. La integración se hizo sobre Aiven existente; no se recreó una base limpia descartable.
 
-Para el corte del 12 de noviembre, consulta el [protocolo OE4](evidence/oe4-session-protocol.md) y el [registro de cierre](../release/backlog-2026-11-12.md). Las cifras previas corresponden a los cortes históricos indicados.
+Para el corte del 12 de noviembre, consulta el [protocolo OE4](evidence/oe4-evaluation-protocol.md) y el [registro de cierre](../release/backlog-2026-11-12.md). Las cifras previas corresponden a los cortes históricos indicados.
