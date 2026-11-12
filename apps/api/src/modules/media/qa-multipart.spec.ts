@@ -20,7 +20,7 @@ describe('QA real HTTP multipart limits with controlled domain/media', () => {
     const module = await Test.createTestingModule({
       controllers: [WorkshopOwnJobsController, DeliveriesController, SalesController],
       providers: [
-        { provide: WorkshopProgressService, useValue: { validateMediaSubmission: async () => 'QA', submit: async () => ({ ok: true }) } },
+        { provide: WorkshopProgressService, useValue: { validateMediaSubmission: async () => ({ code: 'QA', replay: null }), submit: async (_user: string, _job: string, _dto: unknown, evidenceUrls: string[]) => ({ evidenceUrls }) } },
         { provide: DeliveriesService, useValue: { detail: async () => ({ code: 'QA' }), complete: async () => ({ ok: true }) } },
         { provide: SalesService, useValue: { preparePaymentMedia: async () => ({ code: 'QA' }), registerPayment: async (_saleId: string, dto: { evidenceUrl?: string }) => ({ payment: { id: 'QA', evidenceUrl: dto.evidenceUrl } }) } },
         { provide: CloudinaryMediaService, useValue: media },
@@ -44,6 +44,22 @@ describe('QA real HTTP multipart limits with controlled domain/media', () => {
     for (const [key, value] of Object.entries(endpoint.fields)) call = call.field(key, value!);
     return call;
   }
+  it.each([
+    ['workshop', '/workshop/jobs/1/progress', { type: 'PROGRESS', message: 'QA', evidenceUrls: ['https://fixture.invalid/photo.png'] }],
+    ['delivery', '/admin/deliveries/1/complete', { receiverName: 'QA', evidenceUrls: ['https://fixture.invalid/photo.png'] }],
+    ['payment', '/admin/sales/1/payments', { ...endpoints[2].fields, evidenceUrl: 'https://fixture.invalid/photo.png' }]
+  ] as const)('%s rejects client-supplied evidence references', async (_area, route, data) => {
+    await request(app.getHttpServer()).post(route).send(data).expect(400);
+    expect(media.uploadImage).not.toHaveBeenCalled();
+  });
+
+  it.each(endpoints)('$area rejects evidence URLs in multipart fields', async endpoint => {
+    const key = endpoint.area === 'payment' ? 'evidenceUrl' : 'evidenceUrls';
+    await post(endpoint).field(key, 'https://fixture.invalid/photo.png')
+      .attach(endpoint.field, png, { filename: 'QA.png', contentType: 'image/png' }).expect(400);
+    expect(media.uploadImage).not.toHaveBeenCalled();
+  });
+
   it.each(endpoints.flatMap(endpoint => [0, 1, 5, 6].map(count => ({ ...endpoint, count }))))('$area handles $count files through Multer and the real ValidationPipe', async (endpoint) => {
     let call = post(endpoint);
     for (let n = 0; n < endpoint.count; n++) call = call.attach(endpoint.field, png, { filename: 'QA.png', contentType: 'image/png' });

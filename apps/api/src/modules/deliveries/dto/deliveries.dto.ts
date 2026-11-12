@@ -1,8 +1,5 @@
 import { Transform } from 'class-transformer';
 import {
-  ArrayMaxSize,
-  ArrayMinSize,
-  IsArray,
   IsDateString,
   IsEnum,
   IsIn,
@@ -10,7 +7,6 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  IsUrl,
   Max,
   MaxLength,
   Min,
@@ -79,6 +75,4 @@ export class CreateDeliveryDto {
 
 export class CompleteDeliveryDto {
   @Transform(({ value }) => trim(value)) @IsString() @IsNotEmpty() @MaxLength(160) receiverName!: string;
-  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(5)
-  @IsString({ each: true }) @IsNotEmpty({ each: true }) @IsUrl({}, { each: true }) evidenceUrls!: string[];
 }

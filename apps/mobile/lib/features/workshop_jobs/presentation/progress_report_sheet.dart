@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
@@ -21,6 +23,8 @@ class _ProgressReportSheetState extends State<ProgressReportSheet> {
   final List<XFile> _photos = [];
   bool _picking = false;
   String? _pickerError;
+  String? _requestId;
+  String? _lastPayload;
 
   @override
   void initState() {
@@ -197,18 +201,29 @@ class _ProgressReportSheetState extends State<ProgressReportSheet> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    final success = await context
-        .read<WorkshopJobDetailCubit>()
-        .submit(SubmitProgressCommand(
-          type: widget.type,
-          message: _message.text,
-          progressPercent: widget.type == ProgressReportType.progress &&
-                  _percent.text.trim().isNotEmpty
-              ? int.parse(_percent.text.trim())
-              : null,
-          imagePaths:
-              _photos.map((photo) => photo.path).toList(growable: false),
-        ));
+    final percent = widget.type == ProgressReportType.progress
+        ? int.tryParse(_percent.text.trim())
+        : null;
+    final imagePaths =
+        _photos.map((photo) => photo.path).toList(growable: false);
+    final payload = jsonEncode(
+        [widget.type.apiValue, _message.text.trim(), percent, imagePaths]);
+    if (_lastPayload != payload) {
+      final random = Random.secure();
+      _requestId = List.generate(
+              16, (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0'))
+          .join();
+      _lastPayload = payload;
+    }
+    final success = await context.read<WorkshopJobDetailCubit>().submit(
+          SubmitProgressCommand(
+            type: widget.type,
+            message: _message.text,
+            progressPercent: percent,
+            imagePaths: imagePaths,
+            requestId: _requestId,
+          ),
+        );
     if (success && mounted) Navigator.pop(context, true);
   }
 }

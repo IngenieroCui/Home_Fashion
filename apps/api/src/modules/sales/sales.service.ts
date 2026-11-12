@@ -51,6 +51,8 @@ type UserContext = { id: string; permissions: string[] };
 type Plain = Record<string, unknown>;
 const plain = <T>(model: { get(options: { plain: true }): T }) => model.get({ plain: true });
 
+type PaymentWithEvidence = RegisterSalePaymentDto & { evidenceUrl?: string };
+
 @Injectable()
 export class SalesService {
   constructor(
@@ -291,7 +293,7 @@ export class SalesService {
       throw new BadRequestException('Payment cannot exceed the current balance');
   }
 
-  private paymentFingerprint(saleId: string, dto: RegisterSalePaymentDto, userId: string, evidenceIdentity?: string) {
+  private paymentFingerprint(saleId: string, dto: PaymentWithEvidence, userId: string, evidenceIdentity?: string) {
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(dto.intentId ?? ''))
       throw new BadRequestException('A stable UUID v4 intentId is required');
     return createHash('sha256').update(JSON.stringify([
@@ -301,7 +303,7 @@ export class SalesService {
     ])).digest('hex');
   }
 
-  private async existingPayment(saleId: string, dto: RegisterSalePaymentDto, userId: string, evidenceIdentity?: string, transaction?: Transaction) {
+  private async existingPayment(saleId: string, dto: PaymentWithEvidence, userId: string, evidenceIdentity?: string, transaction?: Transaction) {
     const fingerprint = this.paymentFingerprint(saleId, dto, userId, evidenceIdentity);
     // Sale lock serializes this sale. A non-locking first read avoids absent-key gap locks
     // across unrelated sales; the global unique index is the final cross-sale arbiter.
@@ -311,7 +313,7 @@ export class SalesService {
     return { payment, fingerprint };
   }
 
-  async preparePaymentMedia(saleId: string, dto: RegisterSalePaymentDto, userId: string, evidenceIdentity?: string) {
+  async preparePaymentMedia(saleId: string, dto: PaymentWithEvidence, userId: string, evidenceIdentity?: string) {
     if (dto.reference && dto.reference.length > 160) throw new BadRequestException('La referencia admite hasta 160 caracteres');
     if (dto.notes && Buffer.byteLength(dto.notes, 'utf8') > 65535) throw new BadRequestException('Las notas son demasiado extensas');
     const user = await this.user(userId);
@@ -325,7 +327,7 @@ export class SalesService {
     return { code: sale.code, replay: undefined };
   }
 
-  async registerPayment(saleId: string, dto: RegisterSalePaymentDto, userId: string, evidenceIdentity?: string) {
+  async registerPayment(saleId: string, dto: PaymentWithEvidence, userId: string, evidenceIdentity?: string) {
     const user = await this.user(userId);
     this.require(user, PAYMENT_REGISTER_PERMISSION);
     try { return await this.sales.sequelize!.transaction(async (transaction) => {
@@ -341,7 +343,7 @@ export class SalesService {
 
   // Internal entry point: caller holds the Sale UPDATE lock in this same transaction.
   // Provider verification must complete before entering here; no HTTP route exposes it.
-  async recordPaymentInTransaction(sale: Sale, dto: RegisterSalePaymentDto, userId: string, transaction: Transaction, evidenceIdentity?: string) {
+  async recordPaymentInTransaction(sale: Sale, dto: PaymentWithEvidence, userId: string, transaction: Transaction, evidenceIdentity?: string) {
       const { payment: existing, fingerprint } = await this.existingPayment(sale.id, dto, userId, evidenceIdentity, transaction);
       if (existing) return { payment: plain<Plain>(existing), ...await this.paymentSummary(sale, transaction) };
       if (sale.status !== SaleStatus.CONFIRMED)

@@ -64,7 +64,7 @@ export class CatalogAdminController {
     return this.catalog.adjustInventory(params.id, body, user.id);
   }
 
-  @Post('products/:productId/images') createImage(@Param() params: ProductIdParamDto, @Body() body: CreateImageDto) { if (body.publicId !== undefined) throw new BadRequestException('El identificador lo asigna la carga de imágenes');
+  @Post('products/:productId/images') createImage(@Param() params: ProductIdParamDto, @Body() body: CreateImageDto) { if (body.publicId !== undefined || this.cloudinary.isManagedCatalogUrl(body.url)) throw new BadRequestException('El identificador lo asigna la carga de imágenes');
     return this.catalog.createImage(params.productId, body); }
   @Post('products/:productId/images/upload')
   @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } }))

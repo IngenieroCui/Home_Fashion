@@ -155,7 +155,7 @@ export class DeliveriesService {
     });
   }
 
-  async complete(id: string, dto: CompleteDeliveryDto, userId: string) {
+  async complete(id: string, dto: CompleteDeliveryDto & { evidenceUrls: string[] }, userId: string) {
     await this.requireManage(userId);
     return this.deliveries.sequelize!.transaction(async (transaction) => {
       const { delivery, order, items } = await this.lockAggregate(id, transaction);

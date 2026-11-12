@@ -9,10 +9,11 @@ export function loadEnvironment() {
   catch { throw new Error('BLOQUEADO: falta .env.e2e; ejecuta pnpm test:e2e:provision o configura una instancia descartable.'); }
   // Never inherit the application's production credentials or service endpoints.
   for (const key of Object.keys(process.env)) {
-    if (/^(DB_|CLOUDINARY_|JWT_|API_SERVER_URL$|NEXT_PUBLIC_API_URL$|E2E_)/.test(key)) delete process.env[key];
+    if (/^(DB_|CLOUDINARY_|JWT_|WOMPI_|API_SERVER_URL$|NEXT_PUBLIC_API_URL$|E2E_)/.test(key)) delete process.env[key];
   }
   Object.assign(process.env, values);
   process.env.NODE_ENV = 'test';
+  process.env.WOMPI_ENABLED = 'false';
   process.env.DB_LOGGING = 'false';
   process.env.DB_SSL_MODE = 'DISABLED';
   process.env.DB_SSL_CA_PATH = './unused-e2e-ca.pem';

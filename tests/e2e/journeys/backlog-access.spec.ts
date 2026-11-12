@@ -6,6 +6,10 @@ import { catalog } from '../fixtures/catalog';
 import { rows } from '../fixtures/database';
 
 test('06 · Permisos financieros, ajuste auditable y revocación efectiva', async ({ request }) => {
+  const health = await request.get(apiURL + '/health', { headers: { origin: 'https://isolated-client.invalid' } });
+  expect(health.status()).toBe(200);
+  expect(health.headers()['x-request-id']).toMatch(/^[a-f0-9-]{36}$/);
+  expect(health.headers()['access-control-allow-origin']).toBeUndefined();
   const post = (path: string, data: unknown, token?: string) => request.post(apiURL + path, {
     data, ...(token ? { headers: { authorization: 'Bearer ' + token } } : {})
   });
@@ -45,9 +49,19 @@ test('06 · Permisos financieros, ajuste auditable y revocación efectiva', asyn
   expect(created.status()).toBe(201);
   const account = await created.json();
   expect(account).not.toHaveProperty('passwordHash');
-  const session = await login(email, password);
+  const oldSession = await login(email, password);
+  const resetPassword = randomUUID();
+  const reset = await patch('/admin/users/' + account.id, { password: resetPassword }, admin);
+  expect(reset.status()).toBe(200);
+  expect(await reset.json()).not.toHaveProperty('passwordHash');
+  const verifyRevoked = async (session: { accessToken: string; refreshToken: string }) => {
+    expect((await request.get(apiURL + '/auth/me', { headers: { authorization: 'Bearer ' + session.accessToken } })).status()).toBe(401);
+    expect((await post('/auth/refresh', { refreshToken: session.refreshToken })).status()).toBe(401);
+  };
+  await verifyRevoked(oldSession);
+  expect((await post('/auth/login', { email, password })).status()).toBe(401);
+  const session = await login(email, resetPassword);
   expect((await patch('/admin/users/' + account.id, { active: false }, admin)).status()).toBe(200);
-  expect((await request.get(apiURL + '/auth/me', { headers: { authorization: 'Bearer ' + session.accessToken } })).status()).toBe(401);
-  expect((await post('/auth/refresh', { refreshToken: session.refreshToken })).status()).toBe(401);
-  expect((await rows('SELECT action FROM user_admin_events WHERE target_id = ? ORDER BY id', [account.id])).map(row => row.action)).toEqual(['CREATE', 'UPDATE_REVOKE']);
+  await verifyRevoked(session);
+  expect((await rows('SELECT action FROM user_admin_events WHERE target_id = ? ORDER BY id', [account.id])).map(row => row.action)).toEqual(['CREATE', 'PASSWORD_RESET', 'UPDATE_REVOKE']);
 });

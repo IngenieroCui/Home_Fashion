@@ -72,7 +72,6 @@ export class RegisterSalePaymentDto {
   @IsDateString() paidAt!: string;
   @IsOptional() @IsString() reference?: string;
   @IsOptional() @IsString() notes?: string;
-  @IsOptional() @IsString() evidenceUrl?: string;
   @IsOptional() @IsEnum(SalePaymentAdjustmentEffect)
   adjustmentEffect?: SalePaymentAdjustmentEffect;
 }

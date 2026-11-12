@@ -25,12 +25,11 @@ export class DeliveriesController {
   @Post('deliveries/:id/start') @HttpCode(HttpStatus.OK)
   start(@Param() params: DeliveryParamDto, @CurrentUser() user: { id: string }) { return this.deliveries.start(params.id, user.id); }
   @Post('deliveries/:id/complete') @HttpCode(HttpStatus.OK)
-  complete(@Param() params: DeliveryParamDto, @Body() body: CompleteDeliveryDto, @CurrentUser() user: { id: string }) { this.media.assertExternalEvidence(body.evidenceUrls); return this.deliveries.complete(params.id, body, user.id); }
+  complete() { throw new BadRequestException('Adjunta la fotografía mediante la carga de archivos para completar la entrega'); }
   @Post('deliveries/:id/complete-media') @HttpCode(HttpStatus.OK)
   @UseInterceptors(FilesInterceptor('files', 5, { limits: { fileSize: 10 * 1024 * 1024, files: 5 } }))
-  async completeMedia(@Param() params: DeliveryParamDto, @Body() body: { receiverName: string }, @UploadedFiles() input: ImageFile[], @CurrentUser() user: { id: string }) {
+  async completeMedia(@Param() params: DeliveryParamDto, @Body() body: CompleteDeliveryDto, @UploadedFiles() input: ImageFile[], @CurrentUser() user: { id: string }) {
     const files = validateMediaFiles(input, 1);
-    if (typeof body.receiverName !== 'string' || !body.receiverName.trim() || body.receiverName.trim().length > 160) throw new BadRequestException('Ingresa el nombre de quien recibe');
     const delivery = await this.deliveries.detail(params.id, user.id);
     const uploads: string[] = [];
     const urls: string[] = [];

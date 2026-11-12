@@ -8,6 +8,11 @@ module.exports = async function closure({ app, query, adminId, customerId }) {
   const sales = service('sales', 'sales.service', 'SalesService');
   const orders = service('orders', 'orders.service', 'OrdersService');
   const deliveries = service('deliveries', 'deliveries.service', 'DeliveriesService');
+  const catalog = service('catalog', 'catalog-admin.service', 'CatalogAdminService');
+  const cleanup = service('media', 'media-cleanup.service', 'MediaCleanupService');
+  const cloud = service('media', 'cloudinary-media.service', 'CloudinaryMediaService');
+  const workshopJobs = service('workshop-jobs', 'workshop-jobs.service', 'WorkshopJobsService');
+  const workshopProgress = service('workshop-jobs', 'workshop-progress.service', 'WorkshopProgressService');
   const { Quote } = require('../../apps/api/dist/modules/quotes/entities/quote.model');
   const { OrderItem } = require('../../apps/api/dist/modules/orders/entities/order-item.model');
   const results = [];
@@ -21,12 +26,19 @@ module.exports = async function closure({ app, query, adminId, customerId }) {
   const newQuote = () => quotes.createQuote({ customerId, items: [line()] }, adminId);
   const status = (id, value) => quotes.changeStatus(id, value, adminId);
   const stock = () => query('SELECT id, quantity_on_hand h, quantity_reserved r FROM product_variants WHERE product_id = ? ORDER BY id', [productId]);
-  async function deliveryFixture(lines) {
+  async function orderFixture(lines) {
     const sale = await sales.createDirect({ customerId, items: lines.map(x => line(x.variant, x.quantity)) }, adminId);
-    const order = await orders.createFromSale(String(sale.id), { items: sale.items.map((x, i) => ({ saleItemId: String(x.id), supplyType: lines[i].type })) }, adminId);
+    return orders.createFromSale(String(sale.id), { items: sale.items.map((x, i) => ({ saleItemId: String(x.id), supplyType: lines[i].type })) }, adminId);
+  }
+  const schedule = id => deliveries.create({
+    orderId: id, address: 'Synthetic', contactName: 'Test', contactPhone: '000',
+    scheduledDate: '2026-10-29', deliveryType: 'EXTERNAL_DRIVER', externalDriverName: 'Test'
+  }, adminId);
+  async function deliveryFixture(lines) {
+    const order = await orderFixture(lines);
     // Workshop READY is a fixture; workshop flow is outside this directed regression.
     await query("UPDATE order_items SET status = 'READY' WHERE order_id = ? AND supply_type = 'MADE_TO_ORDER'", [order.id]);
-    const delivery = await deliveries.create({ orderId: order.id, address: 'Synthetic', contactName: 'Test', contactPhone: '000', scheduledDate: '2026-10-29', deliveryType: 'EXTERNAL_DRIVER', externalDriverName: 'Test' }, adminId);
+    const delivery = await schedule(order.id);
     await deliveries.start(delivery.id, adminId);
     return { delivery, order };
   }
@@ -173,6 +185,208 @@ module.exports = async function closure({ app, query, adminId, customerId }) {
     const q = await newQuote(); const before = await quotes.getQuote(q.id);
     await assert.rejects(() => quotes.updateItem(q.id, before.items[0].id, { productId: '999999999', quantity: 1 }, adminId), /Product not found/);
     const after = await quotes.getQuote(q.id); assert.deepEqual(after.items, before.items); assert.equal(after.total, before.total);
+  });
+
+  const stockLine = { variant: variantIds[0], quantity: 2, type: 'IN_STOCK' };
+  const makeLine = { variant: variantIds[1], quantity: 1, type: 'MADE_TO_ORDER' };
+  const cancel = id => orders.cancel(id, 'Cancelación sintética', adminId);
+  const cancellationCount = async id =>
+    Number((await query('SELECT COUNT(*) AS n FROM order_cancellations WHERE order_id = ?', [id]))[0].n);
+
+  await test('Cancelación concurrente con inicio de taller mantiene pedido, trabajo y reservas coherentes', async () => {
+    const before = await stock();
+    const order = await orderFixture([stockLine, makeLine]);
+    const [actor] = await query("SELECT id FROM users WHERE email = 'workshop@e2e.invalid'");
+    const item = order.items.find(entry => entry.supplyType === 'MADE_TO_ORDER');
+    const job = await workshopJobs.create({ orderItemId: String(item.id), workshopUserId: String(actor.id) }, adminId);
+    const [cancelled, started] = await Promise.allSettled([
+      cancel(order.id),
+      workshopProgress.submit(String(actor.id), String(job.id), { type: 'STARTED', message: 'Inicio sintético' })
+    ]);
+    assert.equal(cancelled.status, 'fulfilled');
+    if (started.status === 'rejected') assert.equal(started.reason.getStatus?.(), 400);
+    assert.equal((await workshopJobs.detail(job.id)).status, 'CANCELLED');
+    assert.equal((await orders.detail(order.id)).status, 'CANCELLED');
+    assert.equal(await cancellationCount(order.id), 1);
+    assert.deepEqual(await stock(), before);
+  });
+
+  await test('Programación concurrente con cancelación deja la entrega cancelada o ausente', async () => {
+    const order = await orderFixture([stockLine]);
+    const [cancelled, scheduled] = await Promise.allSettled([cancel(order.id), schedule(order.id)]);
+    assert.equal(cancelled.status, 'fulfilled');
+    if (scheduled.status === 'rejected') assert.equal(scheduled.reason.getStatus?.(), 400);
+    const records = await query('SELECT status FROM deliveries WHERE order_id = ?', [order.id]);
+    assert.deepEqual(records.map(row => row.status), scheduled.status === 'fulfilled' ? ['CANCELLED'] : []);
+  });
+
+  await test('Cierre concurrente de entrega en reparto impide cancelar y consume una sola reserva', async () => {
+    const before = await stock();
+    const { order, delivery } = await deliveryFixture([stockLine]);
+    const [cancelled, delivered] = await Promise.allSettled([cancel(order.id), complete(delivery.id)]);
+    assert.equal(cancelled.status, 'rejected');
+    assert.equal(cancelled.reason.getStatus?.(), 409);
+    assert.equal(delivered.status, 'fulfilled');
+    assert.equal((await orders.detail(order.id)).status, 'COMPLETED');
+    assert.equal(await cancellationCount(order.id), 0);
+    assert.deepEqual((await stock())[0], { ...before[0], h: before[0].h - stockLine.quantity });
+  });
+
+  await test('Ajuste y dos cancelaciones simultáneas conservan existencias, reserva y un evento', async () => {
+    const before = await stock();
+    const order = await orderFixture([stockLine]);
+    const requestId = randomUUID();
+    await Promise.all([
+      cancel(order.id), cancel(order.id),
+      catalog.adjustInventory(variantIds[0], {
+        expectedQuantity: before[0].h, quantityOnHand: before[0].h + 1, reason: 'Recuento sintético', requestId
+      }, adminId)
+    ]);
+    assert.deepEqual((await stock())[0], { ...before[0], h: before[0].h + 1 });
+    assert.equal(await cancellationCount(order.id), 1);
+    assert.equal((await query('SELECT delta FROM inventory_movements WHERE reference = ?', [requestId]))[0].delta, 1);
+  });
+
+  await test('Reenvío concurrente de avance devuelve el mismo reporte y una huella distinta da conflicto', async () => {
+    const order = await orderFixture([makeLine]);
+    const [actor] = await query("SELECT id FROM users WHERE email = 'workshop@e2e.invalid'");
+    const userId = String(actor.id);
+    const job = await workshopJobs.create({ orderItemId: String(order.items[0].id), workshopUserId: userId }, adminId);
+    await workshopProgress.submit(userId, job.id, { type: 'STARTED', message: 'Inicio sintético' });
+    const dto = { requestId: randomUUID().replaceAll('-', ''), type: 'PROGRESS', message: 'Avance sintético', progressPercent: 50 };
+    const [first, second] = await Promise.all([
+      workshopProgress.submit(userId, job.id, dto),
+      workshopProgress.submit(userId, job.id, dto)
+    ]);
+    assert.equal(first.id, second.id);
+    await assert.rejects(() => workshopProgress.submit(userId, job.id, { ...dto, progressPercent: 60 }), /otro reporte/);
+    assert.equal(Number((await query('SELECT COUNT(*) AS n FROM workshop_progress_reports WHERE request_id = ?', [dto.requestId]))[0].n), 1);
+  });
+
+  await test('Dos instancias comparten cuotas MySQL y aíslan los contadores por cliente', async () => {
+    const { requestRateLimit } = require('../../apps/api/dist/config/request-rate-limit');
+    const key = randomUUID();
+    const config = { getOrThrow: () => key, get: () => undefined };
+    const first = requestRateLimit(OrderItem.sequelize, config);
+    const second = requestRateLimit(OrderItem.sequelize, config);
+    const time = Date.now;
+    const minute = Math.floor(time() / 60_000) * 60_000;
+    Date.now = () => minute + 1000;
+    try {
+      for (const [path, limit] of [['/api/auth/login', 8], ['/api/auth/refresh', 90], ['/api/public/quote-requests', 12]]) {
+        const run = (limiter, address) => new Promise((resolve, reject) => {
+          const headers = {};
+          const res = {
+            setHeader: (name, value) => { headers[name] = value; },
+            status: status => ({ json: () => resolve({ status, headers }) })
+          };
+          limiter({ method: 'POST', path, headers: {}, socket: { remoteAddress: address }, body: { email: 'qa@e2e.invalid' } },
+            res, () => resolve({ status: 200, headers })).catch(reject);
+        });
+        const results = await Promise.all(Array.from({ length: limit + 1 }, (_, index) =>
+          run(index % 2 ? first : second, '192.0.2.10')
+        ));
+        assert.equal(results.filter(result => result.status === 200).length, limit);
+        const denied = results.filter(result => result.status === 429);
+        assert.equal(denied.length, 1);
+        assert.equal(denied[0].headers['Retry-After'], '59');
+        assert.equal((await run(second, '192.0.2.11')).status, 200);
+      }
+    } finally { Date.now = time; }
+  });
+
+  for (const table of [null, 'quote_items', 'sale_items', 'order_items']) {
+    await test(table ? `Retención conserva la foto referenciada en ${table}` : 'Limpieza borra una imagen libre una sola vez', async () => {
+      const asset = `home-fashion/products/${run}/${randomUUID()}`;
+      const url = `https://res.cloudinary.com/qa/image/upload/v1/${asset}.webp`;
+      const image = await catalog.createImage(productId, { url, publicId: asset, isPrimary: true });
+      if (table) {
+        const record = table === 'quote_items' ? await newQuote()
+          : table === 'sale_items' ? await sales.createDirect({ customerId, items: [line()] }, adminId)
+          : await orderFixture([makeLine]);
+        assert.equal(record.items[0].imageUrlSnapshot, url);
+        if (table === 'order_items') {
+          await query('UPDATE sale_items SET image_url_snapshot = NULL WHERE sale_id = ?', [record.saleId]);
+          await query('UPDATE order_items SET image_url_snapshot = ? WHERE order_id = ?', [
+            url.replace('/v1/', '/v2/').replace('.webp', '.png'), record.id
+          ]);
+        }
+      }
+      await catalog.deleteImage(String(image.id));
+      if (table === 'order_items') await query('UPDATE media_cleanup SET source_url = NULL WHERE public_id = ?', [asset]);
+      const destroy = cloud.destroy;
+      const removed = [];
+      cloud.destroy = async id => { removed.push(id); };
+      try {
+        await cleanup.drain();
+        await cleanup.drain();
+      } finally { cloud.destroy = destroy; }
+      assert.equal(removed.filter(id => id === asset).length, table ? 0 : 1);
+      assert.ok((await query('SELECT completed_at FROM media_cleanup WHERE public_id = ?', [asset]))[0].completed_at);
+    });
+  }
+  await test('Fallo de proveedor deja la tarea pendiente y permite completar el mismo borrado', async () => {
+    const asset = `home-fashion/products/${run}/${randomUUID()}`;
+    await cleanup.enqueue('products', asset);
+    const destroy = cloud.destroy;
+    let attempts = 0;
+    cloud.destroy = async id => { if (id === asset && ++attempts === 1) throw Error('Proveedor controlado'); };
+    try {
+      await cleanup.drain();
+      const [pending] = await query('SELECT attempts, completed_at FROM media_cleanup WHERE public_id = ?', [asset]);
+      assert.deepEqual(pending, { attempts: 1, completed_at: null });
+      await query('UPDATE media_cleanup SET due_at = NOW() WHERE public_id = ?', [asset]);
+      await cleanup.drain();
+      assert.equal(attempts, 2);
+      assert.ok((await query('SELECT completed_at FROM media_cleanup WHERE public_id = ?', [asset]))[0].completed_at);
+    } finally { cloud.destroy = destroy; }
+  });
+
+  await test('Una cotización concurrente al retiro conserva la imagen que acaba de registrar', async () => {
+    const { ProductImage } = require('../../apps/api/dist/modules/catalog/entities/product-image.model');
+    const asset = `home-fashion/products/${run}/${randomUUID()}`;
+    const url = `https://res.cloudinary.com/qa/image/upload/v1/${asset}.webp`;
+    const image = await catalog.createImage(productId, { url, publicId: asset, isPrimary: true });
+    const lookup = ProductImage.findOne;
+    const lookupById = ProductImage.findByPk;
+    let signal;
+    let signalDeletion;
+    let release;
+    const locked = new Promise(resolve => { signal = resolve; });
+    const deletionStarted = new Promise(resolve => { signalDeletion = resolve; });
+    const gate = new Promise(resolve => { release = resolve; });
+    ProductImage.findOne = async function(options) {
+      const result = await lookup.call(this, options);
+      if (String(result?.id) === String(image.id) && options?.lock) {
+        signal();
+        await gate;
+      }
+      return result;
+    };
+    ProductImage.findByPk = function(id, options) {
+      const pending = lookupById.call(this, id, options);
+      if (String(id) === String(image.id) && options?.lock) signalDeletion();
+      return pending;
+    };
+    const timeout = AbortSignal.timeout(5000);
+    const quote = newQuote();
+    try {
+      await Promise.race([
+        locked, quote.then(() => { throw Error('Cotización sin bloqueo de imagen'); }),
+        new Promise((_, reject) => timeout.addEventListener('abort', () => reject(Error('Tiempo de bloqueo agotado')), { once: true }))
+      ]);
+      const deletion = catalog.deleteImage(String(image.id));
+      await Promise.race([deletionStarted, deletion.then(() => { throw Error('Retiro sin bloqueo de imagen'); })]);
+      release();
+      const [saved] = await Promise.all([quote, deletion]);
+      assert.equal(saved.items[0].imageUrlSnapshot, url);
+    } finally { release(); ProductImage.findOne = lookup; ProductImage.findByPk = lookupById; }
+    const destroy = cloud.destroy;
+    const removed = [];
+    cloud.destroy = async id => { removed.push(id); };
+    try { await cleanup.drain(); } finally { cloud.destroy = destroy; }
+    assert.ok(!removed.includes(asset));
+    assert.ok((await query('SELECT completed_at FROM media_cleanup WHERE public_id = ?', [asset]))[0].completed_at);
   });
   return results;
 };

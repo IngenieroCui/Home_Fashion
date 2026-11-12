@@ -40,18 +40,13 @@ describe('Delivery DTOs', () => {
     await expect(validate(plainToInstance(CreateDeliveryDto, { ...createInput(), fee: '00000000001.25' }))).resolves.toHaveLength(0);
   });
 
-  it('accepts one to five valid evidence URLs and trims the receiver', async () => {
-    const dto = plainToInstance(CompleteDeliveryDto, { receiverName: ' Ana ', evidenceUrls: ['https://example.com/evidence.jpg'] });
+  it('trims the receiver name in the multipart payload', async () => {
+    const dto = plainToInstance(CompleteDeliveryDto, { receiverName: ' Ana ' });
     await expect(validate(dto)).resolves.toHaveLength(0);
     expect(dto.receiverName).toBe('Ana');
   });
 
-  it.each([
-    [{ receiverName: 'Ana', evidenceUrls: [] }],
-    [{ receiverName: 'Ana', evidenceUrls: Array.from({ length: 6 }, (_, index) => `https://example.com/${index}`) }],
-    [{ receiverName: 'Ana', evidenceUrls: ['local/file.jpg'] }],
-    [{ receiverName: ' ', evidenceUrls: ['https://example.com/a.jpg'] }]
-  ])('rejects invalid completion evidence %#', async (input) => {
+  it.each([{}, { receiverName: ' ' }, { receiverName: 'a'.repeat(161) }])('rejects an invalid receiver %#', async (input) => {
     await expect(validate(plainToInstance(CompleteDeliveryDto, input))).resolves.not.toHaveLength(0);
   });
 

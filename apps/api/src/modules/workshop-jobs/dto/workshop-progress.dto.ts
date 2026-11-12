@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { ArrayMaxSize, IsArray, IsDateString, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, IsUrl, Max, MaxLength, Min, ValidateIf } from 'class-validator';
+import { IsDateString, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Matches, Max, MaxLength, Min, ValidateIf } from 'class-validator';
 import { WorkshopJobStatus, WorkshopProgressReportType, WorkshopProgressReviewStatus } from '../workshop-jobs.types';
 
 const number = (value: unknown) => typeof value === 'string' ? Number(value) : value;
@@ -14,10 +14,10 @@ export class WorkshopProgressJobParamDto { @IsString() @IsNotEmpty() id!: string
 
 export class SubmitWorkshopProgressDto {
   @IsEnum(WorkshopProgressReportType) type!: WorkshopProgressReportType;
+  @IsOptional() @IsString() @Matches(/^[a-f0-9]{32}$/) requestId?: string;
   @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
   @IsString() @IsNotEmpty() @MaxLength(4000) message!: string;
   @Transform(({ value }) => number(value)) @IsOptional() @IsInt() @Min(0) @Max(100) progressPercent?: number;
-  @IsOptional() @IsArray() @ArrayMaxSize(5) @IsString({ each: true }) @IsNotEmpty({ each: true }) @IsUrl({}, { each: true }) evidenceUrls?: string[];
 }
 
 export class WorkshopOwnJobsQueryDto extends PaginationDto {

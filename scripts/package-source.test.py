@@ -1,6 +1,7 @@
 import importlib.util
 from pathlib import Path
 import io
+import subprocess
 import tarfile
 import tempfile
 import unittest
@@ -10,6 +11,29 @@ source = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(source)
 
 class SourceSafety(unittest.TestCase):
+    def test_commit_archive_is_reproducible_and_ignores_worktree_changes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / 'repo'
+            root.mkdir()
+            tracked = root / 'package.json'
+            tracked.write_bytes(b'{}\n')
+
+            def git(*args):
+                return subprocess.check_output(
+                    ['git', '-c', 'user.name=QA', '-c', 'user.email=qa@example.invalid', *args], cwd=root
+                )
+
+            git('init', '-q')
+            git('add', 'package.json')
+            git('commit', '-qm', 'Synthetic packaging fixture')
+            first, second = Path(tmp) / 'first.tar.gz', Path(tmp) / 'second.tar.gz'
+            result = source.package(root, first, 'HEAD')
+            tracked.write_bytes(b'{"worktreeOnly":true}\n')
+            source.package(root, second, 'HEAD')
+            self.assertEqual(first.read_bytes(), second.read_bytes())
+            self.assertEqual(result['commit'], git('rev-parse', 'HEAD').decode().strip())
+            self.assertEqual(source.verify(first, root, source.committed_files(root, 'HEAD')[1]), ['package.json'])
+
     def test_denied_categories_and_examples(self):
         for name in ['.e2e-local/owner.json', 'apps/api/.env.local', '.env.e2e', 'apps/web/.next/page.js',
                      'node_modules/pkg/a.js', '.git/config', 'certs/a.pem', 'docs/export.har',

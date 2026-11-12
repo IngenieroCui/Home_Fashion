@@ -35,7 +35,7 @@ describe('QA media validation and post-upload compensation', () => {
   }
   it('deletes workshop uploads when the domain changes between precheck and final write', async () => {
     const domainFailure = new BadRequestException('QA concurrent transition');
-    const progress = { validateMediaSubmission: jest.fn().mockResolvedValue('QA-job'), submit: jest.fn().mockRejectedValue(domainFailure) };
+    const progress = { validateMediaSubmission: jest.fn().mockResolvedValue({ code: 'QA-job', replay: null }), submit: jest.fn().mockRejectedValue(domainFailure) };
     const cloud = media(); const controller = new WorkshopOwnJobsController(progress as never, cloud as never, cloud as never);
     await expect(controller.submitMedia({ id: 'QA-user' }, { id: '1' }, { type: 'PROGRESS', message: 'QA' } as never, [png])).rejects.toBe(domainFailure);
     expect(cloud.scheduleRollback).toHaveBeenCalledWith('workshop-progress', ['QA-created-asset']);
@@ -55,7 +55,7 @@ describe('QA media validation and post-upload compensation', () => {
     expect(cloud.scheduleRollback).toHaveBeenCalledWith('payments', ['QA-created-asset']);
   });
   it('cleans successful uploads even if another upload fails in the parallel batch', async () => {
-    const progress = { validateMediaSubmission: jest.fn().mockResolvedValue('QA-job'), submit: jest.fn() };
+    const progress = { validateMediaSubmission: jest.fn().mockResolvedValue({ code: 'QA-job', replay: null }), submit: jest.fn() };
     const cloud = media(); cloud.uploadImage.mockRejectedValueOnce(new Error('QA upload failure'));
     const controller = new WorkshopOwnJobsController(progress as never, cloud as never, cloud as never);
     await expect(controller.submitMedia({ id: 'QA-user' }, { id: '1' }, {} as never, [png, png])).rejects.toThrow('QA upload failure');

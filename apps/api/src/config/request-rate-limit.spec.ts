@@ -14,11 +14,13 @@ describe('persistent public request quotas', () => {
         'x-hf-client-ip': ip, 'x-hf-client-time': timestamp, 'x-hf-client-signature': signature
       },
       socket: { remoteAddress: '127.0.0.1' }
-    } as never;
+    };
     expect(clientAddress(request, path, secret, +timestamp, false)).toBe(ip);
     expect(clientAddress(request, '/api/auth/refresh', secret, +timestamp, false)).toBe('127.0.0.1');
     expect(clientAddress(request, path, secret, +timestamp + 31, false)).toBe('127.0.0.1');
-    expect(clientAddress(request, path, undefined, +timestamp, true)).toBe('192.0.2.21');
+    expect(clientAddress(request, path, undefined, +timestamp, true)).toBeNull();
+    expect(clientAddress({ ...request, headers: { 'x-vercel-forwarded-for': '192.0.2.21' } }, path, undefined, +timestamp, true)).toBe('192.0.2.21');
+    expect(clientAddress({ ...request, headers: {} }, path, undefined, +timestamp, true)).toBeNull();
   });
 
   it('uses the same counter across instances, sends 429 and allows requests in the next minute', async () => {

@@ -66,14 +66,28 @@ test('01 · Solicitud pública → cotización → venta → taller → entrega 
     ids.startedId = String(started.id);
     const progress = await workshop.call('POST', `/workshop/jobs/${ids.jobId}/progress`, { type: 'PROGRESS', message: 'QA-HIDDEN-PROGRESS', progressPercent: 50 });
     ids.progressId = String(progress.id);
-    const ready = await workshop.call('POST', `/workshop/jobs/${ids.jobId}/progress-media`, undefined,
-      { type: 'READY_FOR_REVIEW', message: 'QA-PUBLIC-APPROVED', progressPercent: '100', ...(liveMedia ? { files: testImage } : {}) });
+    const submission = {
+      type: 'READY_FOR_REVIEW', message: 'QA-PUBLIC-APPROVED', progressPercent: '100',
+      requestId: ids.jobId.padStart(32, '0'), files: testImage
+    };
+    const mediaPath = `/workshop/jobs/${ids.jobId}/progress-media`;
+    const ready = await workshop.call('POST', mediaPath, undefined, submission);
+    const replay = await workshop.call('POST', mediaPath, undefined, submission);
+    expect(replay.id).toBe(ready.id);
+    expect((await workshop.response('POST', mediaPath, undefined, { ...submission, message: 'QA otro contenido' })).status()).toBe(409);
     ids.reportId = String(ready.id);
-    expect(ready.evidenceUrls).toHaveLength(liveMedia ? 1 : 0);
-    if (liveMedia) expect(new URL(ready.evidenceUrls[0]).searchParams.get('expires_at')).toBeTruthy();
+    const outsider = new ApiClient(request);
+    await outsider.login('otherWorkshop');
+    const jobPath = `/workshop/jobs/${ids.jobId}`;
+    expect((await new ApiClient(request).response('GET', jobPath)).status()).toBe(401);
+    expect((await outsider.response('GET', jobPath)).status()).toBe(404);
+    const ownedDetail = await workshop.call('GET', jobPath);
+    expect(ownedDetail.progressReports.find((entry: { id: string }) => String(entry.id) === ids.reportId).evidenceUrls).toHaveLength(1);
+    expect(ready.evidenceUrls).toHaveLength(1);
+    expect(new URL(ready.evidenceUrls[0]).searchParams.get('expires_at')).toBeTruthy();
     evidence.notes.push(liveMedia
       ? 'Imagen PNG multipart enviada al Cloudinary de prueba.'
-      : 'API y base reales de QA. Multipart sin archivo; Cloudinary externo deshabilitado.');
+      : 'Multipart real con respuesta de Cloudinary controlada localmente.');
   });
   await test.step('ADMIN aprueba reporte y publica enlace privado del mismo pedido', async () => {
     await page.goto(`/panel/talleres/avances/${ids.reportId}`);
@@ -102,25 +116,17 @@ test('01 · Solicitud pública → cotización → venta → taller → entrega 
       ids.deliveryId = String(delivery.id);
       await page.getByRole('link', { name: 'Ver y gestionar entrega', exact: true }).click();
       await uiMutation(page, `/api/admin/deliveries/${ids.deliveryId}/start`, () => page.getByRole('button', { name: 'Iniciar entrega', exact: true }).click());
-      if (liveMedia) {
-        await page.getByLabel('Nombre de quien recibe', { exact: true }).fill('Receptor QA');
-        await page.getByLabel('Seleccionar fotografías', { exact: true }).setInputFiles(testImage);
-        const completed = await uiMutation(page, '/api/admin/deliveries/' + ids.deliveryId + '/complete-media', () => page.getByRole('button', { name: 'Confirmar entrega recibida', exact: true }).click());
-        expect(completed.status).toBe('DELIVERED');
-        expect(completed.evidenceUrls).toHaveLength(1);
-      } else {
-        const admin = new ApiClient(request); await admin.login('admin');
-        const completed = await admin.call('POST', '/admin/deliveries/' + ids.deliveryId + '/complete', {
-          receiverName: 'Receptor QA', evidenceUrls: ['https://evidence.example.invalid/fixture.png']
-        });
-        expect(completed.status).toBe('DELIVERED');
-        expect(completed.evidenceUrls).toEqual([]);
-      }
+      await page.getByLabel('Nombre de quien recibe', { exact: true }).fill('Receptor QA');
+      await page.getByLabel('Seleccionar fotografías', { exact: true }).setInputFiles(testImage);
+      const completed = await uiMutation(page, '/api/admin/deliveries/' + ids.deliveryId + '/complete-media', () => page.getByRole('button', { name: 'Confirmar entrega recibida', exact: true }).click());
+      expect(completed.status).toBe('DELIVERED');
+      expect(completed.evidenceUrls).toHaveLength(1);
     });
     await test.step('Tracking actualizado y cadena persistida COMPLETED en MySQL', async () => {
       await publicPage.reload(); await expect(publicPage.getByText('Completado', { exact: true }).first()).toBeVisible();
       const final = await new ApiClient(request).call('GET', `/public/tracking/${tracking.token}`);
       expect(final.orderStatus).toBe('COMPLETED'); expect(final.delivery.status).toBe('DELIVERED');
+      expect(final.delivery.evidenceUrls).toBeNull();
       evidence.finalMySQL = await linkedChain(ids);
       await screenshot(publicPage, '03-pedido-completado');
     });

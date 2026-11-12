@@ -12,7 +12,7 @@ describe('persistent media cleanup', () => {
     const cleanup = new MediaCleanupService(database as never, cloud as never);
     await cleanup.scheduleRollback('deliveries', [job.public_id]);
     expect(database.query).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO media_cleanup'), expect.objectContaining({
-      replacements: ['deliveries', job.public_id]
+      replacements: ['deliveries', job.public_id, null, null]
     }));
     await expect(cleanup.drain()).resolves.toEqual({ checked: 1, completed: 0 });
     expect(database.query).toHaveBeenCalledWith(expect.stringContaining('attempts = attempts + 1'), {

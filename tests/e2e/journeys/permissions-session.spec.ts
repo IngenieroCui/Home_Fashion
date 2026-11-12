@@ -45,6 +45,8 @@ test('04 · EMPLOYEE limitado, WORKSHOP ajeno y tracking público protegen datos
     expect((await other.response('GET', `/workshop/jobs/${job.id}`)).status()).toBe(404);
     expect((await workshop.response('POST', `/workshop/jobs/${foreignJob.id}/progress`, { type: 'STARTED', message: 'Intento QA prohibido' })).status()).toBe(404);
     expect((await workshop.response('GET', `/admin/sales/${sale.id}`)).status()).toBe(403);
+    expect((await workshop.response('POST', `/admin/orders/${order.id}/cancel`, { reason: 'QA' })).status()).toBe(403);
+    expect((await workshop.response('POST', `/admin/catalog/variants/${make.id}/inventory-movements`, {})).status()).toBe(403);
     expect((await workshop.response('POST', `/admin/sales/${sale.id}/payments`, { type: 'DEPOSIT', method: 'CASH', amount: '1.00', paidAt: new Date().toISOString() })).status()).toBe(403);
     const listing = await workshop.call('GET', '/workshop/jobs?limit=50');
     expect(listing.data.map((item: Entity) => String(item.id))).not.toContain(String(foreignJob.id));

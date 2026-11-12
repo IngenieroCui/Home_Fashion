@@ -63,7 +63,7 @@ export default class JourneyReporter implements Reporter {
     const report = { executionId: this.executionId, runId: required('E2E_RUN_ID'), date: new Date().toISOString(), status: result.status,
       stack: { browser: 'Chromium real', api: 'NestJS real', database: 'MySQL aislado, UUID y privilegios verificados',
         cloudinary: cloudinaryVerified ? 'REAL: multipart de taller y entrega en carpeta E2E; URLs persistidas en MySQL'
-          : process.env.CLOUDINARY_API_SECRET ? 'NO VERIFICADO: credenciales configuradas; journey asistido no completado' : 'BLOQUEADO: sin credenciales; no simulado',
+          : process.env.CLOUDINARY_API_SECRET ? 'NO VERIFICADO: credenciales configuradas; journey asistido no completado' : 'CONTROLADO: respuestas del proveedor simuladas en el proceso de pruebas; sin acceso externo',
         android: 'PENDIENTE: no ejecutado en dispositivo' }, results: this.results };
     writeFileSync(resolve(this.folder, 'results.json'), JSON.stringify(report, null, 2));
     const lines = ['# Automated business journeys', '', `Ejecución: ${report.executionId}. Catálogo: ${report.runId}. Fecha UTC: ${report.date}. Resultado: ${result.status}.`, '',

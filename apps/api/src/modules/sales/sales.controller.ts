@@ -51,7 +51,6 @@ export class SalesController {
     @Body() body: RegisterSalePaymentDto,
     @CurrentUser() user: { id: string }
   ) {
-    if (body.evidenceUrl) this.media.assertExternalEvidence([body.evidenceUrl]);
     return this.sales.registerPayment(params.id, body, user.id);
   }
   @Post(':id/payments-media') @RequirePermissions(PAYMENT_REGISTER_PERMISSION)
@@ -59,13 +58,12 @@ export class SalesController {
   async registerPaymentMedia(@Param() params: IdParamDto, @Body() body: RegisterSalePaymentDto,
     @UploadedFile() file: ImageFile | undefined, @CurrentUser() user: { id: string }) {
     validateMediaFiles(file ? [file] : [], 0);
-    const dto = { ...body, evidenceUrl: undefined };
     const evidenceIdentity = file ? createHash('sha256').update(file.buffer).digest('hex') : '';
-    const sale = await this.sales.preparePaymentMedia(params.id, dto, user.id, evidenceIdentity);
+    const sale = await this.sales.preparePaymentMedia(params.id, body, user.id, evidenceIdentity);
     if (sale.replay) return sale.replay;
     const uploaded = file ? await this.media.uploadImage(file, 'payments', sale.code) : undefined;
     try {
-      const result = await this.sales.registerPayment(params.id, { ...dto, evidenceUrl: uploaded?.secureUrl }, user.id, evidenceIdentity);
+      const result = await this.sales.registerPayment(params.id, { ...body, evidenceUrl: uploaded?.secureUrl }, user.id, evidenceIdentity);
       if (uploaded && result.payment.evidenceUrl !== uploaded.secureUrl) await this.cleanup.scheduleRollback('payments', [uploaded.publicId]);
       return result;
     } catch (error) {

@@ -1,13 +1,17 @@
 """Fail-closed, dependency-free source exporter. Never follows links or reads runtimes.
 Usage: python scripts/package-source.py --output <new.tar.gz>
        python scripts/package-source.py --verify <archive.tar.gz>
+       Append --commit HEAD to package or verify committed bytes.
 """
 import argparse
+import gzip
 import hashlib
+import io
 import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import subprocess
 import tarfile
 import tempfile
 
@@ -105,7 +109,20 @@ def selected_files(root):
             if allowed(name):
                 yield name, path
 
-def verify(archive, root=ROOT):
+def committed_files(root, revision):
+    commit = subprocess.check_output(
+        ['git', 'rev-parse', '--verify', '--end-of-options', revision + '^{commit}'], cwd=root
+    ).decode('ascii').strip()
+    contents = subprocess.check_output(['git', 'archive', '--format=tar', commit], cwd=root)
+    files = {}
+    with tarfile.open(fileobj=io.BytesIO(contents)) as source:
+        for member in source:
+            if member.isfile() and allowed(member.name):
+                files[member.name] = (member.mode, source.extractfile(member).read())
+    return commit, files
+
+
+def verify(archive, root=ROOT, expected=None):
     secrets = local_secrets(root)
     entries = []
     with tarfile.open(archive, 'r:gz') as tar:
@@ -116,35 +133,46 @@ def verify(archive, root=ROOT):
                 raise ValueError('Unsafe archive member: ' + member.name)
             data = tar.extractfile(member).read()
             check_content(name, data, secrets)
+            if expected is not None and (name not in expected or data != expected[name][1]):
+                raise ValueError('Archive differs from the Git commit: ' + name)
             entries.append(name)
     if not entries or 'package.json' not in entries:
         raise ValueError('Incomplete source archive')
+    if expected is not None and set(entries) != expected.keys():
+        raise ValueError('Archive is missing allowlisted committed files')
     return entries
 
-def package(root, output):
+
+def package(root, output, revision=None):
     output = Path(output).resolve()
     if output.exists():
         raise ValueError('Refusing to overwrite existing archive: ' + str(output))
     output.parent.mkdir(parents=True, exist_ok=True)
     secrets = local_secrets(root)
-    paths = list(selected_files(root))
+    if revision is None:
+        commit = None
+        files = {name: (path.stat().st_mode, path.read_bytes()) for name, path in selected_files(root)}
+    else:
+        commit, files = committed_files(root, revision)
     # Check ALL content before creating an archive, so failed scans publish nothing.
-    for name, path in paths:
-        check_content(name, path.read_bytes(), secrets)
+    for name, (_, data) in files.items():
+        check_content(name, data, secrets)
     with tempfile.TemporaryDirectory(prefix='hf-source-', dir=output.parent) as tmp:
         staged = Path(tmp) / 'source.tar.gz'
-        with tarfile.open(staged, 'w:gz') as tar:
-            for name, path in paths:
-                info = tar.gettarinfo(str(path), arcname='home-fashion/' + name)
-                info.uid = info.gid = 0
-                info.uname = info.gname = ''
-                with path.open('rb') as stream:
-                    tar.addfile(info, stream)
-        entries = verify(staged, root)
+        with staged.open('wb') as output_stream, gzip.GzipFile(filename='', mode='wb', fileobj=output_stream, mtime=0) as compressed:
+            with tarfile.open(mode='w', fileobj=compressed) as tar:
+                for name, (mode, data) in sorted(files.items()):
+                    info = tarfile.TarInfo('home-fashion/' + name)
+                    info.size = len(data)
+                    info.mode = 0o755 if mode & 0o100 else 0o644
+                    tar.addfile(info, io.BytesIO(data))
+        entries = verify(staged, root, files if commit else None)
         staged.rename(output)
     digest = hashlib.sha256(output.read_bytes()).hexdigest()
     manifest = {'archive': output.name, 'sha256': digest, 'fileCount': len(entries),
                 'inspection': 'PASS: regular allowlisted files; no credentials, runtime, links, DB, build or private keys', 'files': entries}
+    if commit:
+        manifest['commit'] = commit
     output.with_name(output.name + '.manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
     return manifest
 
@@ -153,14 +181,16 @@ if __name__ == '__main__':
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument('--output', type=Path)
     action.add_argument('--verify', type=Path)
+    parser.add_argument('--commit', help='Read and verify Git blobs from this commit or ref')
     args = parser.parse_args()
     try:
         if args.verify:
-            print(json.dumps({'inspection': 'PASS', 'fileCount': len(verify(args.verify))}))
+            commit, expected = committed_files(ROOT, args.commit) if args.commit else (None, None)
+            print(json.dumps({'inspection': 'PASS', 'fileCount': len(verify(args.verify, ROOT, expected)), 'commit': commit}))
         else:
-            result = package(ROOT, args.output)
+            result = package(ROOT, args.output, args.commit)
             print(json.dumps({key: value for key, value in result.items() if key != 'files'}))
-    except (OSError, ValueError, tarfile.TarError):
+    except (OSError, ValueError, tarfile.TarError, subprocess.CalledProcessError):
         # Do not echo exception payloads: third-party parsers can embed secret data.
         print('BLOQUEADO: source packaging/inspection failed; no credential content printed. Review policy or run directed tests.')
         raise SystemExit(1)

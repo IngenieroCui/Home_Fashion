@@ -204,7 +204,7 @@ export class CatalogAdminService {
     await this.images.sequelize!.transaction(async transaction => {
       const image = await this.images.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE });
       if (!image) throw new NotFoundException('Product image not found');
-      if (image.publicId) await this.cleanup.enqueue('products', image.publicId, transaction);
+      if (image.publicId) await this.cleanup.enqueue('products', image.publicId, transaction, image.url);
       await image.destroy({ transaction });
     });
   }

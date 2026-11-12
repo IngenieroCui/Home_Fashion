@@ -23,7 +23,7 @@ export class CloudinaryMediaService {
     try {
       const response = await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(cloudName)}/image/${action}`, {
         method: 'POST', headers: { authorization: `Basic ${Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')}` },
-        body: form, signal: AbortSignal.timeout(action === 'destroy' ? 5000 : 55000)
+        body: form, redirect: 'error', signal: AbortSignal.timeout(action === 'destroy' ? 5000 : 55000)
       });
       if (!response.ok) {
         throw new Error('Cloudinary returned an error');
@@ -40,13 +40,21 @@ export class CloudinaryMediaService {
     form.set('file', source);
     form.set('folder', this.folder(kind, code));
     if (publicId) { form.set('public_id', publicId); form.set('overwrite', String(overwrite)); }
-    if (kind !== 'products') form.set('type', 'authenticated');
+    if (kind !== 'products') {
+      form.set('type', 'authenticated');
+      form.set('overwrite', 'false');
+    }
     form.set('format', 'webp');
     form.set('transformation', `c_limit,w_${kind === 'products' ? 2000 : 1600},h_${kind === 'products' ? 2000 : 1600},q_auto:good`);
     const result = await this.request('upload', form);
     if (typeof result.secure_url !== 'string' || typeof result.public_id !== 'string') throw new BadGatewayException('Cloudinary devolvió una respuesta incompleta');
-    if (kind !== 'products' && !this.evidenceReference(result.secure_url))
-      throw new BadGatewayException('Cloudinary no confirmó el modo privado de la imagen');
+    if (kind !== 'products') {
+      const reference = this.evidenceReference(result.secure_url);
+      const expectedFolder = this.folder(kind, code);
+      if (!code || reference?.publicId !== result.public_id || reference.publicId.slice(0, reference.publicId.lastIndexOf('/')) !== expectedFolder) {
+        throw new BadGatewayException('Cloudinary no confirmó la imagen privada para este recurso');
+      }
+    }
     return { secureUrl: result.secure_url, publicId: result.public_id, width: result.width as number | undefined, height: result.height as number | undefined, bytes: result.bytes as number | undefined, format: result.format as string | undefined };
   }
 
@@ -54,9 +62,20 @@ export class CloudinaryMediaService {
     if (file.buffer.length > 10 * 1024 * 1024 || !hasMatchingImageSignature(file)) throw new BadRequestException('La imagen no coincide con el formato declarado o excede 10 MB');
     return this.uploadSource(new Blob([new Uint8Array(file.buffer)], { type: file.mimetype }), kind, code, publicId, overwrite);
   }
-  uploadRemoteImage(url: string, kind: MediaKind, code?: string, publicId?: string, overwrite = false) {
+  uploadRemoteImage(url: string, kind: 'products', code?: string, publicId?: string, overwrite = false) {
     if (!/^https:\/\//i.test(url)) throw new BadGatewayException('La fuente de imagen debe usar HTTPS');
     return this.uploadSource(url, kind, code, publicId, overwrite);
+  }
+
+  isManagedCatalogUrl(value: string) {
+    try {
+      const url = new URL(value);
+      const prefix = `/${this.config.get<string>('CLOUDINARY_CLOUD_NAME')}/image/`;
+      return url.hostname === 'res.cloudinary.com' && url.pathname.startsWith(prefix)
+        && decodeURIComponent(url.pathname).includes(`/${this.folder('products')}/`);
+    } catch {
+      return false;
+    }
   }
 
   private evidenceReference(value: string) {
@@ -72,12 +91,6 @@ export class CloudinaryMediaService {
       return { cloudName, publicId: match[1], format: match[2] };
     } catch {
       return null;
-    }
-  }
-
-  assertExternalEvidence(values: readonly string[]) {
-    if (values.some(value => this.evidenceReference(value))) {
-      throw new BadRequestException('Usa la carga de archivos para adjuntar evidencias privadas');
     }
   }
 

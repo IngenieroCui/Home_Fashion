@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { isIP } from 'node:net';
+import { isIP, SocketAddress } from 'node:net';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
 import type { Request, Response, NextFunction } from 'express';
@@ -19,6 +19,11 @@ function address(value: unknown) {
   return isIP(ip) ? ip : null;
 }
 
+function canonicalAddress(ip: string | null) {
+  if (!ip || isIP(ip) !== 6) return ip;
+  return new SocketAddress({ address: ip, family: 'ipv6' }).address.replace(/^::ffff:/, '');
+}
+
 export function clientAddress(request: Pick<Request, 'headers' | 'socket'>, path: string, secret: string | undefined, now: number, vercel: boolean) {
   const ip = address(request.headers['x-hf-client-ip']);
   const timestamp = request.headers['x-hf-client-time'];
@@ -26,10 +31,10 @@ export function clientAddress(request: Pick<Request, 'headers' | 'socket'>, path
   if (secret && ip && typeof timestamp === 'string' && /^\d{10}$/.test(timestamp) &&
     Math.abs(now - Number(timestamp)) <= 30 && typeof signature === 'string' && /^[a-f0-9]{64}$/.test(signature)) {
     const expected = createHmac('sha256', secret).update([path, ip, timestamp].join('\n')).digest();
-    if (timingSafeEqual(expected, Buffer.from(signature, 'hex'))) return ip;
+    if (timingSafeEqual(expected, Buffer.from(signature, 'hex'))) return canonicalAddress(ip);
   }
-  if (vercel) return address(request.headers['x-vercel-forwarded-for']) ?? 'unknown';
-  return address(request.socket.remoteAddress) ?? 'unknown';
+  if (vercel && request.headers['x-hf-client-ip'] !== undefined) return null;
+  return canonicalAddress(address(vercel ? request.headers['x-vercel-forwarded-for'] : request.socket.remoteAddress));
 }
 
 export function requestRateLimit(database: Sequelize, config: ConfigService) {
@@ -45,6 +50,10 @@ export function requestRateLimit(database: Sequelize, config: ConfigService) {
     const now = Math.floor(Date.now() / 1000);
     const windowStart = now - now % minute;
     const ip = clientAddress(req, path, proxySecret, now, vercel);
+    if (!ip) {
+      logger.warn('rate_limit_client_address_unavailable');
+      return res.status(503).json({ statusCode: 503, message: 'Servicio temporalmente no disponible' });
+    }
     const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase().slice(0, 254) : '';
     const counters = [{ key: 'ip:' + ip, limit: rule.ip }];
     if (rule.identity && email) counters.push({ key: 'login:' + ip + ':' + email, limit: rule.identity });

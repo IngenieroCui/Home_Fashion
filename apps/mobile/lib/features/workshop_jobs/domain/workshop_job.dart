@@ -300,14 +300,17 @@ class SubmitProgressCommand {
     required this.message,
     this.progressPercent,
     this.imagePaths = const [],
+    this.requestId,
   });
 
   final ProgressReportType type;
   final String message;
   final int? progressPercent;
   final List<String> imagePaths;
+  final String? requestId;
 
   Map<String, dynamic> toJson() => {
+        if (requestId != null) 'requestId': requestId,
         'type': type.apiValue,
         'message': message.trim(),
         if (type == ProgressReportType.progress && progressPercent != null)

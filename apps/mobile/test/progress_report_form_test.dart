@@ -85,6 +85,7 @@ void main() {
     expect(repository.submitCalls, 1);
     expect(repository.submittedCommand?.progressPercent, isNull);
     expect(repository.submittedCommand?.toJson(), {
+      'requestId': matches(r'^[a-f0-9]{32}$'),
       'type': 'PROGRESS',
       'message': 'Avance sin cifra',
     });
