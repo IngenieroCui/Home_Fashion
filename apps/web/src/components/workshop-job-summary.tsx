@@ -4,7 +4,7 @@ import { WorkshopJobStatusBadge } from './workshop-job-status-badge';
 
 export function WorkshopJobSummary({ job }: { job: WorkshopJobSummary }) {
   return (
-    <section className="mt-4 rounded-lg border border-[#ddcfbc] bg-[#fffdf8] p-4">
+    <section className="mt-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
       <p className="eyebrow">Asignación a taller</p>
       <p>
         <strong>{job.code}</strong>

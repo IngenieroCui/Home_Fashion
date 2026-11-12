@@ -1,5 +1,7 @@
 'use client';
 
+import { Button } from './ui/button';
+import { FormField } from './ui/form-field';
 import { clientFetch } from '@/lib/client-fetch';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -44,21 +46,34 @@ export function LoginForm({ unavailable = false }: { unavailable?: boolean }) {
   }
   return (
     <main className="login-page">
+      <aside className="login-editorial" aria-label="Bienvenido al espacio de trabajo">
+        <div>
+          <p className="eyebrow">Home Fashion · Equipo</p>
+          <h2 className="font-serif">Cada detalle, desde la idea hasta la entrega.</h2>
+          <p>
+            Un espacio para acompañar a cada cliente, coordinar pedidos y cuidar el trabajo de
+            nuestros talleres.
+          </p>
+        </div>
+        <span>01 — Atención &nbsp; / &nbsp; 02 — Producción &nbsp; / &nbsp; 03 — Entrega</span>
+      </aside>
       <section className="login-card" aria-labelledby="login-title">
         <p className="eyebrow">Home Fashion</p>
-        <h1 id="login-title" className="font-serif text-4xl text-[#3d291e]">
+        <h1 id="login-title" className="font-serif text-4xl text-[var(--color-text)]">
           Acceso al equipo de Home Fashion
         </h1>
-        <p className="mt-3 text-[#67574d]">Ingresa con tu correo y contraseña de trabajo.</p>
+        <p className="mt-3 text-[var(--color-text-muted)]">
+          Ingresa con tu correo y contraseña de trabajo.
+        </p>
         <form className="mt-8 grid gap-5" onSubmit={submit}>
-          <label className="form-field">
-            Correo electrónico
-            <input autoComplete="email" name="email" required type="email" />
-          </label>
-          <label className="form-field">
-            Contraseña
+          <FormField label="Correo electrónico" required>
+            <input className="form-field-input" autoComplete="username" name="email" type="email" />
+          </FormField>
+          <div className="form-field">
+            <label htmlFor="login-password">Contraseña (obligatorio)</label>
             <div className="password-field">
               <input
+                id="login-password"
                 autoComplete="current-password"
                 name="password"
                 required
@@ -75,18 +90,18 @@ export function LoginForm({ unavailable = false }: { unavailable?: boolean }) {
                 {showPassword ? 'Ocultar' : 'Mostrar'}
               </button>
             </div>
-          </label>
+          </div>
           {error ? (
             <p className="form-error" role="alert">
               {error}
             </p>
           ) : null}
-          <button className="button-link" disabled={loading} type="submit">
+          <Button loading={loading} type="submit">
             {loading ? 'Ingresando…' : 'Iniciar sesión'}
-          </button>
+          </Button>
         </form>
         <Link
-          className="mt-6 inline-block text-sm font-semibold text-[#a64b32] underline underline-offset-4"
+          className="mt-6 inline-block text-sm font-semibold text-[var(--color-primary)] underline underline-offset-4"
           href="/catalogo"
         >
           Volver al catálogo

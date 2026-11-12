@@ -1,14 +1,10 @@
 'use client';
 
+import { formatDateTime as formatDate } from '@/lib/formatters';
+import { EvidenceLinks } from './evidence-links';
 import { clientFetch } from '@/lib/client-fetch';
 import { useState } from 'react';
 import { money, paymentMethodLabel, paymentTypeLabel, type SalePayment } from '@/lib/sales';
-
-function formatDate(value: string | null | undefined) {
-  if (!value) return '—';
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('es-CO');
-}
 
 export function PaymentsHistory({
   saleId,
@@ -96,18 +92,7 @@ export function PaymentsHistory({
               )}
               {payment.reference && <p>Referencia: {payment.reference}</p>}
               {payment.notes && <p>Notas: {payment.notes}</p>}
-              {payment.evidenceUrl && (
-                <p>
-                  <a
-                    className="text-link"
-                    href={payment.evidenceUrl}
-                    rel="noreferrer noopener"
-                    target="_blank"
-                  >
-                    Ver evidencia
-                  </a>
-                </p>
-              )}
+              {payment.evidenceUrl && <EvidenceLinks urls={[payment.evidenceUrl]} />}
               {payment.createdBy && <p>Registró: {payment.createdBy.fullName}</p>}
               {payment.status === 'VOIDED' && (
                 <div className="payment-void-detail">

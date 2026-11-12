@@ -6,9 +6,10 @@ import {
   NotFoundException
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, createHmac, randomBytes } from 'node:crypto';
 import { Transaction } from 'sequelize';
 import { AuthService } from '../auth/auth.service';
+import { Delivery } from '../deliveries/entities/delivery.model';
 import { OrderItem } from '../orders/entities/order-item.model';
 import { Order } from '../orders/entities/order.model';
 import { ORDER_MANAGE_PERMISSION } from '../orders/orders.types';
@@ -27,6 +28,7 @@ export class OrderTrackingService {
   constructor(
     @InjectModel(OrderTrackingAccess) private readonly accesses: typeof OrderTrackingAccess,
     @InjectModel(Order) private readonly orders: typeof Order,
+    @InjectModel(Delivery) private readonly deliveries: typeof Delivery,
     private readonly auth: AuthService
   ) {}
 
@@ -123,6 +125,7 @@ export class OrderTrackingService {
               attributes: [
                 'id',
                 'productNameSnapshot',
+                'imageUrlSnapshot',
                 'variantNameSnapshot',
                 'skuSnapshot',
                 'customization',
@@ -161,7 +164,46 @@ export class OrderTrackingService {
     });
     if (!access || (access.expiresAt && access.expiresAt.getTime() <= Date.now()))
       throw new NotFoundException('Tracking resource not found');
-    return this.serializePublicOrder(access);
+    const delivery = await this.deliveries.findOne({
+      where: { orderId: access.orderId },
+      attributes: [
+        'status',
+        'scheduledDate',
+        'timeWindow',
+        'deliveredAt',
+        'evidenceUrls',
+        ['created_at', 'createdAt'],
+        ['updated_at', 'updatedAt']
+      ]
+    });
+    const safeDelivery =
+      delivery && delivery.status !== 'CANCELLED'
+        ? {
+            status: delivery.status,
+            scheduledDate: delivery.scheduledDate,
+            timeWindow: delivery.timeWindow,
+            deliveredAt: delivery.deliveredAt,
+            evidenceUrls: null
+          }
+        : null;
+    const projection = this.serializePublicOrder(access);
+    const order = asPlain<Plain & { order?: Plain }>(access).order;
+    const dates = [
+      order?.createdAt,
+      ...projection.items.flatMap((item) => item.timeline.map((entry) => entry.approvedAt)),
+      // Delivery writes are public scheduling/status events, including cancellation.
+      // General order.updatedAt is intentionally excluded for internal-only edits.
+      delivery?.getDataValue('updatedAt') ?? delivery?.getDataValue('updated_at'),
+      delivery?.getDataValue('createdAt') ?? delivery?.getDataValue('created_at'),
+      safeDelivery?.deliveredAt
+    ]
+      .filter((date) => date != null)
+      .map((date) => new Date(String(date)).getTime())
+      .filter(Number.isFinite);
+    const lastPublicUpdateAt = dates.length
+      ? new Date(Math.max(...dates)).toISOString()
+      : undefined;
+    return { ...projection, delivery: safeDelivery, lastPublicUpdateAt };
   }
 
   private async requireManage(userId: string) {
@@ -224,11 +266,11 @@ export class OrderTrackingService {
       orderStatus: order.status,
       promisedDate: order.promisedDate,
       createdAt: order.createdAt,
-      items: (order.items ?? []).map((item) => this.serializePublicItem(item))
+      items: (order.items ?? []).map((item) => this.serializePublicItem(item, access))
     };
   }
 
-  private serializePublicItem(item: Plain) {
+  private serializePublicItem(item: Plain, access: OrderTrackingAccess) {
     const job = item.workshopJob as Plain | null | undefined;
     const reports = ((job?.progressReports as Plain[] | undefined) ?? [])
       .sort((left, right) => this.reportOrder(left, right))
@@ -236,13 +278,17 @@ export class OrderTrackingService {
         type: report.type,
         message: report.message,
         progressPercent: report.progressPercent,
-        evidenceUrls: report.evidenceUrls,
+        evidenceUrls: [],
         submittedAt: report.submittedAt,
         approvedAt: report.reviewedAt ?? null
       }));
     return {
-      publicItemId: item.id,
+      publicItemKey: createHmac('sha256', access.tokenHash)
+        .update(String(access.orderId) + ':' + String(item.id))
+        .digest('base64url')
+        .slice(0, 22),
       productNameSnapshot: item.productNameSnapshot,
+      imageUrlSnapshot: item.imageUrlSnapshot ?? null,
       variantNameSnapshot: item.variantNameSnapshot ?? null,
       skuSnapshot: item.skuSnapshot ?? null,
       customization: this.cleanCustomization(item.customization),

@@ -101,7 +101,10 @@ class TokenRefreshCoordinator {
         throw const FormatException('Missing refresh user');
       }
       final user = WorkshopUser.fromJson(userData);
-      if (!user.isWorkshop) throw const FormatException('Invalid mobile role');
+      if (!user.isWorkshop) {
+        await _expireSession(snapshot.epoch);
+        return null;
+      }
       final nextTokens = AuthTokens.fromJson(data);
       final stored = await _tokenStorage.writeIfCurrent(
         nextTokens,
@@ -110,7 +113,8 @@ class TokenRefreshCoordinator {
       return stored
           ? RefreshResult(nextTokens.accessToken, snapshot.epoch)
           : null;
-    } catch (_) {
+    } on DioException catch (error) {
+      if (error.response?.statusCode != 401) rethrow;
       await _expireSession(snapshot.epoch);
       return null;
     }
@@ -186,9 +190,26 @@ class AuthInterceptor extends Interceptor {
     }
 
     final failedAccessToken = _bearerToken(request.headers['Authorization']);
-    final refresh = await _refreshCoordinator.refreshAccessToken(
-      failedAccessToken: failedAccessToken,
-    );
+    final RefreshResult? refresh;
+    try {
+      refresh = await _refreshCoordinator.refreshAccessToken(
+        failedAccessToken: failedAccessToken,
+      );
+    } on DioException catch (error) {
+      handler.next(DioException(
+        requestOptions: request,
+        type: error.type,
+        response: error.response,
+        message: 'No fue posible renovar la sesión. Intenta nuevamente.',
+      ));
+      return;
+    } catch (_) {
+      handler.next(DioException(
+        requestOptions: request,
+        message: 'La respuesta al renovar la sesión no es válida.',
+      ));
+      return;
+    }
     if (refresh == null) {
       handler.next(err);
       return;

@@ -38,6 +38,13 @@ describe('OrdersService', () => {
     return { service, orders, orderItems, sales, saleItems, variants, variantRows, createdOrders };
   }
 
+  it.each(['ER_LOCK_DEADLOCK', 'ER_LOCK_WAIT_TIMEOUT'])('returns a controlled conflict after a rolled-back %s', async (code) => {
+    const { service, orders } = setup();
+    orders.sequelize.transaction.mockRejectedValueOnce({ name: 'SequelizeDatabaseError', parent: { code } });
+    await expect(service.createFromSale('1', dto([stock('10'), made('11')]), 'user-1')).rejects.toBeInstanceOf(ConflictException);
+    expect(orders.create).not.toHaveBeenCalled();
+  });
+
   it('creates an OPEN order from a confirmed sale, preserves snapshots and generates its code from the id', async () => {
     const { service, orders, orderItems, variantRows, createdOrders } = setup();
     await service.createFromSale('1', dto([stock('10'), made('11')], { promisedDate: '2026-09-15', notes: 'Todo junto' }), 'user-1');

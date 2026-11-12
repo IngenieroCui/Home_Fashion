@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
-import { Op, type FindAndCountOptions, type WhereOptions } from 'sequelize';
+import { Op, type FindAndCountOptions, type Order, type WhereOptions } from 'sequelize';
 import { CatalogQueryDto } from './dto/catalog-query.dto';
 import { Category } from './entities/category.model';
 import { ProductImage } from './entities/product-image.model';
@@ -54,6 +54,33 @@ export class CatalogService {
     }
     if (query.allowsCustomization !== undefined)
       where.allowsCustomization = query.allowsCustomization;
+    // A correlated minimum keeps filtering and pagination at product level.
+    const priceExpression =
+      "(SELECT MIN(pv.sale_price) FROM product_variants pv WHERE pv.product_id = `Product`.`id` AND pv.status = 'ACTIVE')";
+    if (query.minPrice !== undefined || query.maxPrice !== undefined) {
+      const conditions: string[] = [];
+      if (query.minPrice !== undefined) conditions.push(`${priceExpression} >= ${query.minPrice}`);
+      if (query.maxPrice !== undefined) conditions.push(`${priceExpression} <= ${query.maxPrice}`);
+      (where as Record<PropertyKey, unknown>)[Op.and] = [
+        this.productModel.sequelize!.literal(conditions.join(' AND '))
+      ];
+    }
+    const sortOrder: Order =
+      query.sort === 'newest'
+        ? [
+            ['created_at', 'DESC'],
+            ['id', 'DESC']
+          ]
+        : query.sort === 'price-asc' || query.sort === 'price-desc'
+          ? [
+              [this.productModel.sequelize!.literal(`${priceExpression} IS NULL`), 'ASC'],
+              [
+                this.productModel.sequelize!.literal(priceExpression),
+                query.sort === 'price-asc' ? 'ASC' : 'DESC'
+              ],
+              ['name', 'ASC']
+            ]
+          : [['name', 'ASC']];
 
     const variantInclude = {
       model: ProductVariant,
@@ -73,7 +100,7 @@ export class CatalogService {
     }
 
     const options: FindAndCountOptions = {
-      attributes: publicProductAttributes,
+      attributes: [...publicProductAttributes, ...(query.sort === 'newest' ? ['created_at'] : [])],
       where: where as WhereOptions,
       include: [
         {
@@ -91,16 +118,14 @@ export class CatalogService {
         }
       ],
       distinct: true,
-      order: [
-        ['name', 'ASC'],
-        [{ model: ProductImage, as: 'images' }, 'position', 'ASC']
-      ],
+      order: [...sortOrder, [{ model: ProductImage, as: 'images' }, 'position', 'ASC']],
       limit: query.limit,
       offset: (query.page - 1) * query.limit
     };
     const result = await this.productModel.findAndCountAll(options);
     const data = result.rows.map((product) => {
       const plain = product.get({ plain: true }) as Record<string, unknown>;
+      delete plain.created_at;
       const variants = (plain.variants as Array<Record<string, unknown>> | undefined) ?? [];
       plain.variants = variants.map(({ quantityOnHand, quantityReserved, ...variant }) => ({
         ...variant,

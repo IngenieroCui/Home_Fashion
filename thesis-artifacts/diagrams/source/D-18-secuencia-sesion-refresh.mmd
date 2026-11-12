@@ -1,0 +1,26 @@
+%% D-18 — Sesión y refresh en web y móvil
+%% Fuentes: auth API; helpers web; cliente Dio Flutter
+sequenceDiagram
+  autonumber
+  actor U as Usuario
+  participant X as Cliente (Web BFF / Flutter)
+  participant A as API Auth
+  participant DB as refresh_sessions
+
+  U->>X: Inicia sesión
+  X->>A: POST /auth/login
+  A->>DB: Crea sesión con hash del refresh
+  A-->>X: Access breve + refresh
+  Note over X: Web: cookies HttpOnly<br/>Flutter: almacenamiento seguro
+  X->>A: Petición protegida con access
+  A-->>X: 401 access expirado
+  X->>A: POST /auth/refresh
+  A->>DB: Bloquea sesión, valida hash y vigencia
+  A->>DB: Revoca sesión previa y crea reemplazo
+  A-->>X: Nuevos access + refresh rotado
+  X->>A: Reintenta petición una sola vez
+  A-->>X: Respuesta autorizada
+  U->>X: Cierra sesión
+  X->>A: POST /auth/logout
+  A->>DB: Revoca sesión
+  X->>X: Elimina credenciales locales

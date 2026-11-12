@@ -1,3 +1,4 @@
+import type { OrderItemStatus } from './orders';
 import type { WorkshopJobStatus, WorkshopUserReference } from './workshop-jobs';
 
 export type WorkshopProgressType = 'STARTED' | 'PROGRESS' | 'READY_FOR_REVIEW';
@@ -45,12 +46,13 @@ export type WorkshopProgressReport = {
   orderItem: {
     id: string;
     productNameSnapshot: string;
+    imageUrlSnapshot: string | null;
     variantNameSnapshot: string | null;
     skuSnapshot: string | null;
     customization: Record<string, unknown> | null;
     quantity: number;
     notes: string | null;
-    status: string;
+    status: OrderItemStatus;
   };
 };
 

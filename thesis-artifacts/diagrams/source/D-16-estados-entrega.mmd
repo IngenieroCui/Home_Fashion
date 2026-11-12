@@ -1,0 +1,15 @@
+%% D-16 — Estados de Delivery
+%% Fuente: deliveries.service.ts; deliveries.types.ts
+stateDiagram-v2
+  [*] --> SCHEDULED: programar
+  SCHEDULED --> OUT_FOR_DELIVERY: iniciar
+  OUT_FOR_DELIVERY --> DELIVERED: receptor + 1–5 evidencias URL
+  SCHEDULED --> CANCELLED: cancelar
+  OUT_FOR_DELIVERY --> CANCELLED: cancelar y recalcular pedido
+  CANCELLED --> SCHEDULED: crear/reprogramar entrega
+  DELIVERED --> [*]
+
+  note right of OUT_FOR_DELIVERY
+    Solo inicia si todas las líneas activas
+    están RESERVED o READY.
+  end note

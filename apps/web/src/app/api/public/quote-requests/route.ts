@@ -1,3 +1,4 @@
+import { apiClientAddress } from '@/lib/auth/api-client-address';
 import { apiServerUrl } from '@/lib/auth/server';
 import { PublicBodyTooLargeError, readPublicJsonBody } from '@/lib/public-json-body';
 import { publicQuoteRequestMessage } from '@/lib/public-quote-requests';
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       cache: 'no-store',
       signal: AbortSignal.timeout(15000),
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...apiClientAddress('/public/quote-requests', request.headers) },
       body: JSON.stringify(body)
     });
   } catch {
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
   if (!response.ok) {
     return NextResponse.json(
       { message: publicQuoteRequestMessage(response.status) },
-      { status: response.status }
+      { status: response.status, headers: response.headers.has('retry-after') ? { 'retry-after': response.headers.get('retry-after')! } : {} }
     );
   }
   const result = responseBody as { received?: unknown; requestCode?: unknown; status?: unknown };

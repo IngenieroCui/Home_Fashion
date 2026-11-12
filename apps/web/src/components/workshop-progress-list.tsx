@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { AdminRecordCard } from './admin-record-card';
 import { type FormEvent } from 'react';
 import { usePageData } from '@/lib/use-page-data';
 import { ListError } from './page-state';
@@ -106,7 +107,9 @@ export function WorkshopProgressList() {
       )}
       {page &&
         (page.data.length ? (
-          <div className="admin-table-wrap">
+          <>
+          <div className="admin-mobile-records">{page.data.map((report) => <AdminRecordCard key={report.id} title={report.workshopJob.code} subtitle={report.product.name} badge={<ReviewStatusBadge status={report.reviewStatus} />} actions={<Link className="button-link button-link-secondary" href={`/panel/talleres/avances/${report.id}`}>Revisar</Link>}><p>{workshopProgressTypeLabel[report.type]}{report.progressPercent !== null ? ` · ${report.progressPercent}%` : ''}</p><p>Taller: {report.workshop?.fullName ?? '—'}</p><p>{formatDateTime(report.submittedAt)}</p></AdminRecordCard>)}</div>
+          <div className="admin-table-wrap sprint-desktop-table">
             <table className="admin-table">
               <thead>
                 <tr>
@@ -166,6 +169,7 @@ export function WorkshopProgressList() {
               </tbody>
             </table>
           </div>
+          </>
         ) : (
           <p className="notice">No hay avances que coincidan con los filtros.</p>
         ))}

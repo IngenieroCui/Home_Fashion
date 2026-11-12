@@ -21,6 +21,10 @@ export async function POST(request: Request) {
     return invalidCredentials();
 
   const result = await loginWithApi(body.email, body.password);
+  if (!result.data && result.status === 429)
+    return NextResponse.json({ message: 'Demasiados intentos. Espera un momento y vuelve a intentarlo.' }, {
+      status: 429, ...(result.retryAfter ? { headers: { 'retry-after': result.retryAfter } } : {})
+    });
   if (!result.data)
     return result.status === 0 || result.status >= 500
       ? NextResponse.json(

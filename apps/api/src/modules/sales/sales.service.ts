@@ -6,9 +6,10 @@ import {
   NotFoundException
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { Op, Transaction } from 'sequelize';
 import { AuthService } from '../auth/auth.service';
+import { CatalogImageResolverService } from '../catalog/catalog-image-resolver.service';
 import { User } from '../auth/entities/user.model';
 import { Product } from '../catalog/entities/product.model';
 import { ProductVariant } from '../catalog/entities/product-variant.model';
@@ -25,6 +26,7 @@ import {
 import { SaleItem } from './entities/sale-item.model';
 import { SalePayment } from './entities/sale-payment.model';
 import { Sale } from './entities/sale.model';
+import { Order } from '../orders/entities/order.model';
 import {
   calculatePaymentSummary,
   calculateSaleItem,
@@ -49,6 +51,8 @@ type UserContext = { id: string; permissions: string[] };
 type Plain = Record<string, unknown>;
 const plain = <T>(model: { get(options: { plain: true }): T }) => model.get({ plain: true });
 
+type PaymentWithEvidence = RegisterSalePaymentDto & { evidenceUrl?: string };
+
 @Injectable()
 export class SalesService {
   constructor(
@@ -60,6 +64,7 @@ export class SalesService {
     @InjectModel(QuoteItem) private readonly quoteItems: typeof QuoteItem,
     @InjectModel(Product) private readonly products: typeof Product,
     @InjectModel(ProductVariant) private readonly variants: typeof ProductVariant,
+    private readonly images: CatalogImageResolverService,
     private readonly auth: AuthService
   ) {}
 
@@ -85,6 +90,7 @@ export class SalesService {
             { model: Quote },
             { model: User, as: 'createdByUser', attributes: ['id', 'fullName', 'email'] },
             { model: SaleItem },
+            { model: Order, attributes: ['id', 'code', 'status'], required: false },
             {
               model: SalePayment,
               include: [
@@ -180,12 +186,14 @@ export class SalesService {
       throw new ForbiddenException('A sale below cost requires SALE_PRICE_OVERRIDE');
 
     const amounts = calculateSaleItem(listPrice, unitSalePrice, input.quantity);
+    if (cents(amounts.subtotal) > 999_999_999_999n || cents(amounts.discountAmount) > 999_999_999_999n) throw new BadRequestException('Sale item exceeds the monetary limit');
     return this.saleItems.create(
       {
         saleId: sale.id,
         productId: product.id,
         productVariantId: variant?.id ?? null,
         productNameSnapshot: product.name,
+        imageUrlSnapshot: await this.images.resolvePrimaryImageUrl(product.id, variant?.id, transaction),
         variantNameSnapshot: variant?.name ?? null,
         skuSnapshot: variant?.sku ?? null,
         customization: input.customization ?? null,
@@ -225,6 +233,7 @@ export class SalesService {
         productId: item.productId,
         productVariantId: item.productVariantId,
         productNameSnapshot: item.productNameSnapshot,
+        imageUrlSnapshot: item.imageUrlSnapshot,
         variantNameSnapshot: item.variantNameSnapshot,
         skuSnapshot: item.skuSnapshot,
         customization: item.customization,
@@ -246,13 +255,15 @@ export class SalesService {
   private async recalculate(sale: Sale, transaction: Transaction) {
     const items = await this.saleItems.findAll({ where: { saleId: sale.id }, transaction });
     const values = calculateSaleTotals(items, sale.deliveryFee);
+    if (cents(values.total) > 999_999_999_999n || cents(values.discountTotal) > 999_999_999_999n) throw new BadRequestException('Sale total exceeds the monetary limit');
     await sale.update(values, { transaction });
   }
 
-  private async paymentSummary(sale: Sale, transaction?: Transaction) {
+  async paymentSummary(sale: Sale, transaction?: Transaction) {
     const payments = await this.salePayments.findAll({
       where: { saleId: sale.id, status: SalePaymentStatus.REGISTERED },
-      transaction
+      transaction,
+      ...(transaction ? { lock: transaction.LOCK.UPDATE } : {})
     });
     return calculatePaymentSummary(payments, sale.total);
   }
@@ -282,12 +293,59 @@ export class SalesService {
       throw new BadRequestException('Payment cannot exceed the current balance');
   }
 
-  async registerPayment(saleId: string, dto: RegisterSalePaymentDto, userId: string) {
+  private paymentFingerprint(saleId: string, dto: PaymentWithEvidence, userId: string, evidenceIdentity?: string) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(dto.intentId ?? ''))
+      throw new BadRequestException('A stable UUID v4 intentId is required');
+    return createHash('sha256').update(JSON.stringify([
+      String(saleId), userId, dto.type, dto.method, money(cents(dto.amount)),
+      new Date(dto.paidAt).toISOString(), dto.reference ?? null, dto.notes ?? null,
+      dto.adjustmentEffect ?? null, evidenceIdentity ?? dto.evidenceUrl ?? null
+    ])).digest('hex');
+  }
+
+  private async existingPayment(saleId: string, dto: PaymentWithEvidence, userId: string, evidenceIdentity?: string, transaction?: Transaction) {
+    const fingerprint = this.paymentFingerprint(saleId, dto, userId, evidenceIdentity);
+    // Sale lock serializes this sale. A non-locking first read avoids absent-key gap locks
+    // across unrelated sales; the global unique index is the final cross-sale arbiter.
+    const payment = await this.salePayments.findOne({ where: { intentId: dto.intentId }, transaction });
+    if (payment && (String(payment.saleId) !== String(saleId) || payment.intentFingerprint !== fingerprint))
+      throw new ConflictException('Payment intent already used with different content');
+    return { payment, fingerprint };
+  }
+
+  async preparePaymentMedia(saleId: string, dto: PaymentWithEvidence, userId: string, evidenceIdentity?: string) {
+    if (dto.reference && dto.reference.length > 160) throw new BadRequestException('La referencia admite hasta 160 caracteres');
+    if (dto.notes && Buffer.byteLength(dto.notes, 'utf8') > 65535) throw new BadRequestException('Las notas son demasiado extensas');
     const user = await this.user(userId);
     this.require(user, PAYMENT_REGISTER_PERMISSION);
-    return this.sales.sequelize!.transaction(async (transaction) => {
+    const sale = await this.sales.findByPk(saleId);
+    if (!sale) throw new NotFoundException('Sale not found');
+    const { payment } = await this.existingPayment(saleId, dto, userId, evidenceIdentity);
+    if (payment) return { code: sale.code, replay: { payment: plain<Plain>(payment), ...await this.paymentSummary(sale) } };
+    if (sale.status !== SaleStatus.CONFIRMED) throw new BadRequestException('Payments can only be registered for confirmed sales');
+    this.validatePayment(dto, await this.paymentSummary(sale));
+    return { code: sale.code, replay: undefined };
+  }
+
+  async registerPayment(saleId: string, dto: PaymentWithEvidence, userId: string, evidenceIdentity?: string) {
+    const user = await this.user(userId);
+    this.require(user, PAYMENT_REGISTER_PERMISSION);
+    try { return await this.sales.sequelize!.transaction(async (transaction) => {
       const sale = await this.sales.findByPk(saleId, { transaction, lock: transaction.LOCK.UPDATE });
       if (!sale) throw new NotFoundException('Sale not found');
+      return this.recordPaymentInTransaction(sale, dto, userId, transaction, evidenceIdentity);
+    }); } catch (error) {
+      if ((error as { name?: string }).name === 'SequelizeUniqueConstraintError')
+        throw new ConflictException('Payment intent already used with different content');
+      throw error;
+    }
+  }
+
+  // Internal entry point: caller holds the Sale UPDATE lock in this same transaction.
+  // Provider verification must complete before entering here; no HTTP route exposes it.
+  async recordPaymentInTransaction(sale: Sale, dto: PaymentWithEvidence, userId: string, transaction: Transaction, evidenceIdentity?: string) {
+      const { payment: existing, fingerprint } = await this.existingPayment(sale.id, dto, userId, evidenceIdentity, transaction);
+      if (existing) return { payment: plain<Plain>(existing), ...await this.paymentSummary(sale, transaction) };
       if (sale.status !== SaleStatus.CONFIRMED)
         throw new BadRequestException('Payments can only be registered for confirmed sales');
       const summary = await this.paymentSummary(sale, transaction);
@@ -295,6 +353,8 @@ export class SalesService {
       const payment = await this.salePayments.create(
         {
           saleId: sale.id,
+          intentId: dto.intentId,
+          intentFingerprint: fingerprint,
           customerId: sale.customerId,
           type: dto.type,
           method: dto.method,
@@ -314,7 +374,6 @@ export class SalesService {
       );
       const updated = await this.paymentSummary(sale, transaction);
       return { payment: plain<Plain>(payment), ...updated };
-    });
   }
 
   async voidPayment(saleId: string, paymentId: string, reason: string, userId: string) {
@@ -329,7 +388,7 @@ export class SalesService {
       });
       if (!payment || payment.saleId !== sale.id) throw new NotFoundException('Sale payment not found');
       if (payment.status === SalePaymentStatus.VOIDED) {
-        return { payment: plain<Plain>(payment), ...(await this.paymentSummary(sale, transaction)) };
+        throw new ConflictException('Sale payment has already been voided');
       }
       const registered = await this.salePayments.findAll({
         where: { saleId: sale.id, status: SalePaymentStatus.REGISTERED },
@@ -373,13 +432,16 @@ export class SalesService {
     try {
       return await this.sales.sequelize!.transaction(async (transaction) => {
         const quote = await this.quotes.findByPk(quoteId, {
-          include: [QuoteItem],
           transaction,
           lock: transaction.LOCK.UPDATE
         });
         if (!quote) throw new NotFoundException('Quote not found');
         if (quote.status !== QuoteStatus.ACCEPTED)
           throw new BadRequestException('Only accepted quotes can become sales');
+        // Header -> quote items -> sale, shared with every quote mutation.
+        const items = await this.quoteItems.findAll({
+          where: { quoteId }, transaction, lock: transaction.LOCK.UPDATE, order: [['id', 'ASC']]
+        });
         if (
           await this.sales.findOne({
             where: { quoteId },
@@ -388,7 +450,6 @@ export class SalesService {
           })
         )
           throw new ConflictException('Quote already converted to sale');
-        const items = quote.items ?? [];
         if (!items.length) throw new BadRequestException('Accepted quote has no items');
         const sale = await this.createSaleRecord(
           quote.customerId,
@@ -410,6 +471,7 @@ export class SalesService {
   }
 
   private presentDetail(raw: Plain, user: UserContext) {
+    if (!user.permissions.includes('ORDER_MANAGE')) delete raw.order;
     const sourceItems = (raw.items as Plain[] | undefined) ?? [];
     const missingCost = sourceItems.some((item) => item.unitCostSnapshot === null);
     const items = sourceItems.map((item) => {
@@ -481,6 +543,7 @@ export class SalesService {
     this.require(user, SALE_MANAGE_PERMISSION);
     const where: Record<PropertyKey, unknown> = {};
     if (query.customerId) where.customerId = query.customerId;
+    if (query.quoteId) where.quoteId = query.quoteId;
     if (query.status) where.status = query.status;
     if (query.dateFrom || query.dateTo) {
       where.created_at = {

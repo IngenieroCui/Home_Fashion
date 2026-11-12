@@ -1,0 +1,23 @@
+%% D-13 — Estados de Quote
+%% Fuente: quotes.service.ts::changeStatus
+stateDiagram-v2
+  [*] --> REQUESTED: solicitud pública
+  [*] --> DRAFT: creación interna
+  REQUESTED --> DRAFT: tomar solicitud
+  REQUESTED --> QUOTED: valorar directamente
+  REQUESTED --> CANCELLED: cancelar
+  DRAFT --> QUOTED: ítems con precio válido
+  DRAFT --> CANCELLED: cancelar
+  QUOTED --> ACCEPTED: cliente acepta
+  QUOTED --> REJECTED: cliente rechaza
+  QUOTED --> EXPIRED: vence vigencia
+  QUOTED --> CANCELLED: cancelar
+  ACCEPTED --> [*]
+  REJECTED --> [*]
+  EXPIRED --> [*]
+  CANCELLED --> [*]
+
+  note right of QUOTED
+    Requiere al menos un ítem
+    y precio cotizado positivo.
+  end note

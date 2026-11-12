@@ -55,7 +55,6 @@ temp/
 *.tmp
 .dart-appdata/
 
-docs/
 
 ./.pnpm-store/
 certs/
@@ -63,3 +62,58 @@ certs/
 *.key
 *.p12
 *.pfx
+
+# Isolated journey runtime and secrets
+.env.e2e
+.e2e-local/
+.e2e-results/
+!.env.e2e.example
+!.env.wompi.example
+
+# Generated QA evidence and reviewed academic artifacts
+/.e2e-evidence/
+/docs/*
+!/docs/PROJECT.md
+/thesis-artifacts/**
+!/thesis-artifacts/**/
+!/thesis-artifacts/diagrams/source/D-*.mmd
+!/thesis-artifacts/diagrams/export/D-*.pdf
+!/thesis-artifacts/diagrams/wompi/*.mmd
+!/thesis-artifacts/diagrams/wompi/*.dbml
+!/thesis-artifacts/evidence/oe4-evaluation-protocol.md
+!/thesis-artifacts/evidence/qa-resumen-publico.md
+!/thesis-artifacts/evidence/public-catalog/public-catalog-390.png
+!/thesis-artifacts/evidence/public-catalog/public-product-1440.png
+
+# Sensitive artifacts remain ignored even within academic directories.
+.tmp/
+__pycache__/
+*.pyc
+*.crt
+*.cer
+*.jks
+*.db
+*.sqlite*
+*.ibd
+*.sdi
+*.har
+*.zip
+*.tar.gz
+**/owner.json
+**/*storageState*
+**/*storage-state*
+**/*auth-state*
+**/*network-console*
+**/*http-trace*
+**/*failure-trace*
+**/credentials/
+**/secrets/
+**/sessions/
+thesis-artifacts/**/*token*
+thesis-artifacts/**/*cookie*
+thesis-artifacts/**/*credential*
+thesis-artifacts/**/*secret*
+thesis-artifacts/**/*dump*
+thesis-artifacts/**/*backup*
+
+.next-e2e/

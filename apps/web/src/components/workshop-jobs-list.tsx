@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { AdminRecordCard } from './admin-record-card';
+import { CommerceItemVisual } from './commerce-item-visual';
 import { type FormEvent } from 'react';
 import { usePageData } from '@/lib/use-page-data';
 import { ListError } from './page-state';
@@ -102,7 +104,9 @@ export function WorkshopJobsList() {
       )}
       {page &&
         (page.data.length ? (
-          <div className="admin-table-wrap">
+          <>
+          <div className="admin-mobile-records">{page.data.map((job) => <AdminRecordCard key={job.id} title={job.code} subtitle={job.workshopUser.fullName} badge={<WorkshopJobStatusBadge status={job.status} />} actions={<Link className="button-link button-link-secondary" href={`/panel/talleres/trabajos/${job.id}`}>Ver trabajo</Link>}><CommerceItemVisual imageUrl={job.imageUrlSnapshot} name={job.productNameSnapshot} variant={job.variantNameSnapshot} quantity={job.quantity} /><p>Pedido: {job.orderCode}</p><p>Fecha esperada: {formatDate(job.expectedCompletionDate)}</p></AdminRecordCard>)}</div>
+          <div className="admin-table-wrap sprint-desktop-table">
             <table className="admin-table">
               <thead>
                 <tr>
@@ -145,6 +149,7 @@ export function WorkshopJobsList() {
               </tbody>
             </table>
           </div>
+          </>
         ) : (
           <p className="notice">No hay trabajos que coincidan con los filtros.</p>
         ))}

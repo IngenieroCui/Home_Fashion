@@ -1,5 +1,9 @@
 'use client';
 
+import { orderItemStatusLabel } from '@/lib/orders';
+import { CommerceItemVisual } from './commerce-item-visual';
+
+
 import { clientFetch } from '@/lib/client-fetch';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
@@ -13,6 +17,7 @@ import { type WorkshopProgressReport } from '@/lib/workshop-progress';
 import { EvidenceLinks } from './evidence-links';
 import { ReviewProgressForm } from './review-progress-form';
 import { ReviewStatusBadge, WorkshopProgressTypeBadge } from './workshop-progress-badges';
+import { ListError } from './page-state';
 
 async function loadReport(id: string) {
   const response = await clientFetch(`/api/admin/workshop-progress/${encodeURIComponent(id)}`);
@@ -38,9 +43,7 @@ export function WorkshopProgressDetail({ id }: { id: string }) {
   }, [refresh]);
   if (error)
     return (
-      <p className="form-error" role="alert">
-        {error}
-      </p>
+      <ListError message={error} retry={() => void refresh()} />
     );
   if (!report) return <p className="notice">Cargando reporte…</p>;
   const customization = formatCustomization(report.orderItem.customization);
@@ -107,11 +110,11 @@ export function WorkshopProgressDetail({ id }: { id: string }) {
       </section>
       <section className="admin-section">
         <h2 className="font-serif text-2xl">Elemento fabricado</h2>
-        <p>Producto: {report.orderItem.productNameSnapshot}</p>
+        <CommerceItemVisual imageUrl={report.orderItem.imageUrlSnapshot} name={report.orderItem.productNameSnapshot} variant={report.orderItem.variantNameSnapshot} quantity={report.orderItem.quantity} />
         <p>Variante: {report.orderItem.variantNameSnapshot ?? '—'}</p>
         <p>SKU: {report.orderItem.skuSnapshot ?? '—'}</p>
         <p>Cantidad: {report.orderItem.quantity}</p>
-        <p>Estado actual: {report.orderItem.status}</p>
+        <p>Estado actual: {orderItemStatusLabel[report.orderItem.status]}</p>
         <p>Notas: {report.orderItem.notes ?? '—'}</p>
         {customization.length > 0 && (
           <div>

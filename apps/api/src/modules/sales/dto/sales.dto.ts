@@ -8,6 +8,7 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   Max,
   Min,
@@ -34,7 +35,7 @@ export class SaleItemInputDto {
   @Transform(({ value }) => decimal(value))
   @IsOptional()
   @IsString()
-  @Matches(/^\d+(\.\d{1,2})?$/)
+  @Matches(/^\d{1,10}(\.\d{1,2})?$/)
   unitSalePrice?: string;
   @IsOptional() @IsObject() customization?: Record<string, unknown>;
   @IsOptional() @IsString() negotiationReason?: string;
@@ -50,7 +51,7 @@ export class CreateSaleDto {
   @Transform(({ value }) => decimal(value))
   @IsOptional()
   @IsString()
-  @Matches(/^\d+(\.\d{1,2})?$/)
+  @Matches(/^\d{1,10}(\.\d{1,2})?$/)
   deliveryFee?: string;
   @IsOptional() @IsString() notes?: string;
 }
@@ -61,16 +62,16 @@ export class QuoteParamDto {
   @IsString() @IsNotEmpty() quoteId!: string;
 }
 export class RegisterSalePaymentDto {
+  @IsUUID('4') intentId!: string;
   @IsEnum(SalePaymentType) type!: SalePaymentType;
   @IsEnum(SalePaymentMethod) method!: SalePaymentMethod;
   @Transform(({ value }) => decimal(value))
   @IsString()
-  @Matches(/^\d+(\.\d{1,2})?$/)
+  @Matches(/^\d{1,10}(\.\d{1,2})?$/)
   amount!: string;
   @IsDateString() paidAt!: string;
   @IsOptional() @IsString() reference?: string;
   @IsOptional() @IsString() notes?: string;
-  @IsOptional() @IsString() evidenceUrl?: string;
   @IsOptional() @IsEnum(SalePaymentAdjustmentEffect)
   adjustmentEffect?: SalePaymentAdjustmentEffect;
 }
@@ -83,6 +84,7 @@ export class VoidSalePaymentDto {
 }
 export class SaleQueryDto extends PaginationDto {
   @IsOptional() @IsString() q?: string;
+  @Transform(({ value }) => identifier(value)) @IsOptional() @IsString() @Matches(/^\d+$/) quoteId?: string;
   @Transform(({ value }) => identifier(value)) @IsOptional() @IsString() customerId?: string;
   @IsOptional() @IsEnum(SaleStatus) status?: SaleStatus;
   @IsOptional() @IsDateString() dateFrom?: string;

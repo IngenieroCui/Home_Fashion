@@ -12,6 +12,8 @@ export class WorkshopProgressReport extends Model {
   @Column({ type: DataType.TEXT, allowNull: false }) declare message: string;
   @Column({ type: DataType.INTEGER.UNSIGNED, field: 'progress_percent' }) declare progressPercent: number | null;
   @Column({ type: DataType.JSON, field: 'evidence_urls' }) declare evidenceUrls: string[] | null;
+  @Column({ type: DataType.CHAR(32), field: 'request_id' }) declare requestId: string | null;
+  @Column({ type: DataType.CHAR(64), field: 'request_fingerprint' }) declare requestFingerprint: string | null;
   @Column({ type: DataType.ENUM(...Object.values(WorkshopProgressReviewStatus)), allowNull: false, defaultValue: WorkshopProgressReviewStatus.PENDING_REVIEW, field: 'review_status' }) declare reviewStatus: WorkshopProgressReviewStatus;
   @ForeignKey(() => User)
   @Column({ type: DataType.BIGINT.UNSIGNED, allowNull: false, field: 'submitted_by_user_id' }) declare submittedByUserId: string;

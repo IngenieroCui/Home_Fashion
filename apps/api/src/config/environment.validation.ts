@@ -16,6 +16,7 @@ export interface ValidatedEnvironment {
   CLOUDINARY_API_KEY?: string;
   CLOUDINARY_API_SECRET?: string;
   CLOUDINARY_FOLDER: string;
+  CLOUDINARY_ROOT_FOLDER: string;
   JWT_ACCESS_SECRET: string;
   JWT_ACCESS_EXPIRES_IN: string;
   JWT_REFRESH_SECRET: string;
@@ -26,6 +27,7 @@ export const environmentValidationSchema = Joi.object({
   NODE_ENV: Joi.string()
     .valid('development', 'test', 'production')
     .default('development'),
+  HF_PROXY_SECRET: Joi.string().min(32).optional(),
   PORT: Joi.number().port().default(3001),
   DB_HOST: Joi.string().required(),
   DB_PORT: Joi.number().port().default(3306),
@@ -40,6 +42,7 @@ export const environmentValidationSchema = Joi.object({
   CLOUDINARY_API_KEY: Joi.string().allow('').optional(),
   CLOUDINARY_API_SECRET: Joi.string().allow('').optional(),
   CLOUDINARY_FOLDER: Joi.string().default('home-fashion/products'),
+  CLOUDINARY_ROOT_FOLDER: Joi.string().default('home-fashion'),
   JWT_ACCESS_SECRET: Joi.string().min(32).required(),
   JWT_ACCESS_EXPIRES_IN: Joi.string().default('15m'),
   JWT_REFRESH_SECRET: Joi.string().min(32).required(),

@@ -1,4 +1,5 @@
 'use client';
+import { useActionFeedback } from './ui/action-feedback';
 
 import { clientFetch } from '@/lib/client-fetch';
 import { useState, type FormEvent } from 'react';
@@ -36,6 +37,7 @@ export function AssignWorkshopJobForm({
   onAssigned: () => void;
   onConflict: () => void;
 }) {
+  const notify = useActionFeedback();
   const [workshopUser, setWorkshopUser] = useState<WorkshopUser | null>(null);
   const [instructions, setInstructions] = useState('');
   const [expectedCompletionDate, setExpectedCompletionDate] = useState('');
@@ -72,6 +74,7 @@ export function AssignWorkshopJobForm({
         } else setError(body?.message ?? 'No fue posible crear la asignación.');
         return;
       }
+      notify('Trabajo asignado');
       onAssigned();
     } catch {
       setError('No fue posible crear la asignación. Inténtalo de nuevo.');
@@ -81,7 +84,10 @@ export function AssignWorkshopJobForm({
   }
 
   return (
-    <form className="mt-4 rounded-lg border border-[#ddcfbc] bg-[#fffdf8] p-4" onSubmit={submit}>
+    <form
+      className="mt-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4"
+      onSubmit={submit}
+    >
       <h3 className="font-serif text-xl">Asignar a taller</h3>
       <p className="mt-2 text-sm">
         <strong>{item.productNameSnapshot}</strong>

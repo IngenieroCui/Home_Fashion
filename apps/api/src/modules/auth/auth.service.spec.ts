@@ -13,15 +13,18 @@ describe('AuthService', () => {
     create: jest.fn(), findOne: jest.fn(), update: jest.fn(),
     sequelize: { query: jest.fn(), transaction: jest.fn(), LOCK: { UPDATE: 'UPDATE' } },
   };
+  const usersWithDb = { ...users, sequelize: sessions.sequelize };
+  const roles = { findByPk: jest.fn() };
   const permissions = { sequelize: { query: jest.fn() } };
   const config = {
     getOrThrow: jest.fn((key: string) => key.includes('ACCESS') ? 'a'.repeat(32) : 'b'.repeat(32)),
     get: jest.fn((_: string, fallback: string) => fallback),
   };
-  const service = new AuthService(users as never, {} as never, permissions as never, {} as never, sessions as never, config as never);
+  const service = new AuthService(usersWithDb as never, roles as never, permissions as never, {} as never, sessions as never, config as never);
 
   beforeEach(() => {
     jest.clearAllMocks();
+    roles.findByPk.mockResolvedValue({ code: RoleCode.ADMIN });
     sessions.sequelize.transaction.mockImplementation(async (callback: (transaction: unknown) => unknown) => callback(sessions.sequelize));
   });
 
@@ -92,6 +95,15 @@ describe('AuthService', () => {
     sessions.findOne.mockResolvedValue({ revokedAt: new Date(), expiresAt: new Date(Date.now() + 60_000), userId: user.id });
 
     await expect(service.refresh(initial.refreshToken)).rejects.toMatchObject({ message: 'Invalid credentials' });
+  });
+
+  it('invalidates prior access tokens after revocation or inactivation', async () => {
+    const user = { ...createUser(), authVersion: 2 };
+    users.findByPk.mockResolvedValue(user);
+    await expect(service.validateAccessSession({ sub: '1', role: RoleCode.ADMIN, type: 'access', version: 1 })).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(service.validateAccessSession({ sub: '1', role: RoleCode.ADMIN, type: 'access', version: 2 })).resolves.toBeUndefined();
+    user.isActive = false;
+    await expect(service.validateAccessSession({ sub: '1', role: RoleCode.ADMIN, type: 'access', version: 2 })).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it('allows logout to be called more than once', async () => {

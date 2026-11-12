@@ -1,0 +1,60 @@
+%% D-05 — ERD físico completo (22 tablas; campos clave)
+%% Corte histórico del modelo físico. Para el esquema vigente, consultar docs/PROJECT.md.
+erDiagram
+  categories { bigint id PK string slug UK string name boolean is_active }
+  products { bigint id PK bigint category_id FK string slug UK string status }
+  product_variants { bigint id PK bigint product_id FK string sku UK decimal sale_price int quantity_on_hand int quantity_reserved }
+  product_images { bigint id PK bigint product_id FK bigint product_variant_id FK string url int position }
+  roles { bigint id PK string code UK string name }
+  permissions { bigint id PK string code UK string description }
+  role_permissions { bigint role_id PK,FK bigint permission_id PK,FK }
+  users { bigint id PK bigint role_id FK string email UK string password_hash boolean is_active }
+  user_permission_overrides { bigint user_id PK,FK bigint permission_id PK,FK string effect }
+  refresh_sessions { bigint id PK bigint user_id FK string token_hash UK datetime expires_at datetime revoked_at bigint replaced_by_session_id FK }
+  customers { bigint id PK string full_name string document_number UK string phone string email }
+  quotes { bigint id PK string code UK bigint customer_id FK string status string public_request_key UK decimal total }
+  quote_items { bigint id PK bigint quote_id FK bigint product_id FK bigint product_variant_id FK int quantity decimal unit_quoted_price decimal subtotal }
+  sales { bigint id PK string code UK bigint customer_id FK bigint quote_id FK string status decimal total }
+  sale_items { bigint id PK bigint sale_id FK bigint product_id FK bigint product_variant_id FK int quantity decimal unit_sale_price decimal subtotal }
+  sale_payments { bigint id PK bigint sale_id FK bigint customer_id FK string type string method decimal amount string status }
+  orders { bigint id PK string code UK bigint sale_id FK bigint customer_id FK string status }
+  order_items { bigint id PK bigint order_id FK bigint sale_item_id FK bigint product_id FK bigint product_variant_id FK string supply_type string status }
+  workshop_jobs { bigint id PK bigint order_item_id FK bigint workshop_user_id FK bigint assigned_by_user_id FK string status }
+  workshop_progress_reports { bigint id PK bigint workshop_job_id FK bigint submitted_by_user_id FK bigint reviewed_by_user_id FK string type string review_status }
+  order_tracking_accesses { bigint id PK bigint order_id FK string token_hash UK datetime expires_at datetime revoked_at }
+  deliveries { bigint id PK string code UK bigint order_id FK bigint assigned_user_id FK string status string delivery_type }
+
+  categories ||--o{ products : category_id
+  products ||--o{ product_variants : product_id
+  products ||--o{ product_images : product_id
+  product_variants o|--o{ product_images : product_variant_id
+  roles ||--o{ users : role_id
+  roles ||--o{ role_permissions : role_id
+  permissions ||--o{ role_permissions : permission_id
+  users ||--o{ user_permission_overrides : user_id
+  permissions ||--o{ user_permission_overrides : permission_id
+  users ||--o{ refresh_sessions : user_id
+  refresh_sessions o|--o{ refresh_sessions : replaced_by_session_id
+  customers ||--o{ quotes : customer_id
+  quotes ||--o{ quote_items : quote_id
+  products ||--o{ quote_items : product_id
+  product_variants o|--o{ quote_items : product_variant_id
+  customers ||--o{ sales : customer_id
+  quotes o|--o| sales : quote_id
+  sales ||--o{ sale_items : sale_id
+  products ||--o{ sale_items : product_id
+  product_variants o|--o{ sale_items : product_variant_id
+  sales ||--o{ sale_payments : sale_id
+  customers ||--o{ sale_payments : customer_id
+  sales ||--o| orders : sale_id
+  customers ||--o{ orders : customer_id
+  orders ||--o{ order_items : order_id
+  sale_items ||--|| order_items : sale_item_id
+  products ||--o{ order_items : product_id
+  product_variants o|--o{ order_items : product_variant_id
+  order_items ||--o| workshop_jobs : order_item_id
+  users ||--o{ workshop_jobs : workshop_user_id
+  workshop_jobs ||--o{ workshop_progress_reports : workshop_job_id
+  users ||--o{ workshop_progress_reports : submitted_by_user_id
+  orders ||--o| order_tracking_accesses : order_id
+  orders ||--o| deliveries : order_id

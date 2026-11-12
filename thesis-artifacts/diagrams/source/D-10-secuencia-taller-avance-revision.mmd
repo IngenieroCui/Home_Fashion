@@ -1,0 +1,34 @@
+%% D-10 — Secuencia: taller, avance y revisión
+%% Fuentes: workshop-progress.service.ts; Flutter workshop_jobs
+sequenceDiagram
+  autonumber
+  actor T as Taller
+  participant M as App Flutter
+  participant A as API NestJS
+  participant DB as MySQL
+  participant C as Cloudinary
+  actor P as Personal revisor
+
+  T->>M: Abre trabajo asignado
+  M->>A: GET /workshop/jobs/:id
+  A->>DB: Filtra por workshop_user_id del JWT
+  A-->>M: Especificaciones sin datos comerciales sensibles
+  T->>M: Reporta STARTED
+  M->>A: POST progress-media
+  A->>DB: Job IN_PROGRESS + item IN_PRODUCTION<br/>reporte PENDING_REVIEW
+  T->>M: Reporta PROGRESS (1–99) con fotos
+  M->>A: POST progress-media con archivos y requestId
+  A->>C: Carga autenticada en carpeta del trabajo
+  A->>DB: Bloquea pedido y guarda reporte y referencias
+  A-->>M: Reporte con enlaces de cinco minutos
+  Note over M,A: Reenvío idéntico recupera el mismo reporte
+  T->>M: Reporta READY_FOR_REVIEW
+  M->>A: POST progress-media
+  A->>DB: Job READY_FOR_REVIEW + 100%
+  P->>A: Revisa reporte pendiente
+  alt aprueba
+    A->>DB: Reporte APPROVED + job COMPLETED + item READY
+  else rechaza con comentario
+    A->>DB: Reporte REJECTED + job IN_PROGRESS + item IN_PRODUCTION
+    T->>M: Corrige y reenvía nuevo reporte
+  end

@@ -1,0 +1,44 @@
+%% D-06 — Casos de uso por actor
+%% Fuentes: docs/thesis/requirements.md; user-stories.md; rutas y permisos
+flowchart LR
+  C([Cliente])
+  P([ADMIN / EMPLOYEE])
+  T([WORKSHOP])
+
+  subgraph PUBLICO[Experiencia del cliente]
+    UC1([Explorar catálogo])
+    UC2([Solicitar cotización])
+    UC3([Consultar seguimiento privado])
+  end
+
+  subgraph OPERACION[Operación interna]
+    UC4([Gestionar clientes y cotizaciones])
+    UC5([Registrar venta y pagos])
+    UC6([Crear pedido y clasificar suministro])
+    UC7([Asignar trabajo de taller])
+    UC8([Revisar avances])
+    UC9([Gestionar acceso de seguimiento])
+    UC10([Programar y completar entrega])
+    UC11([Administrar catálogo e inventario])
+  end
+
+  subgraph TALLER[Operación del taller]
+    UC12([Autenticarse])
+    UC13([Ver trabajos propios])
+    UC14([Reportar inicio, progreso y listo])
+  end
+
+  C --> UC1
+  C --> UC2
+  C --> UC3
+  P --> UC4
+  P --> UC5
+  P --> UC6
+  P --> UC7
+  P --> UC8
+  P --> UC9
+  P --> UC10
+  P --> UC11
+  T --> UC12
+  T --> UC13
+  T --> UC14

@@ -1,0 +1,25 @@
+%% D-09 — Secuencia: venta a pedido y suministro
+%% Fuentes: orders.service.ts; order-state.ts
+sequenceDiagram
+  autonumber
+  actor P as Personal autorizado
+  participant W as Panel Next.js
+  participant A as API NestJS
+  participant DB as MySQL
+
+  P->>W: Crear pedido desde venta
+  W->>A: POST /api/admin/orders/from-sale/:saleId
+  A->>DB: Bloquea venta y variantes involucradas
+  A->>DB: Comprueba que no exista otro pedido
+  loop cada sale_item exactamente una vez
+    alt IN_STOCK
+      A->>DB: Verifica disponible = on_hand - reserved
+      A->>DB: Incrementa reserved y crea item RESERVED
+    else MADE_TO_ORDER
+      A->>DB: Crea item PENDING_PRODUCTION
+    end
+  end
+  A->>DB: Crea pedido OPEN dentro de transacción
+  DB-->>A: Commit
+  A-->>W: Pedido y líneas de suministro
+  W-->>P: Reserva/fabricación listas para operar

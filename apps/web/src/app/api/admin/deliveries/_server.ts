@@ -91,10 +91,16 @@ function optionalText(value: unknown) {
   return typeof value === 'string' ? value.trim() || undefined : undefined;
 }
 
+function optionalIdentifier(value: unknown) {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0
+    ? String(value)
+    : optionalText(value);
+}
+
 export function sanitizedCreatePayload(body: unknown) {
   const value = typeof body === 'object' && body !== null ? (body as Record<string, unknown>) : {};
   return {
-    orderId: optionalText(value.orderId),
+    orderId: optionalIdentifier(value.orderId),
     address: optionalText(value.address),
     addressReference: optionalText(value.addressReference),
     contactName: optionalText(value.contactName),
@@ -102,7 +108,7 @@ export function sanitizedCreatePayload(body: unknown) {
     scheduledDate: optionalText(value.scheduledDate),
     timeWindow: optionalText(value.timeWindow),
     deliveryType: optionalText(value.deliveryType),
-    assignedUserId: optionalText(value.assignedUserId),
+    assignedUserId: optionalIdentifier(value.assignedUserId),
     externalDriverName: optionalText(value.externalDriverName),
     fee: optionalText(value.fee),
     notes: optionalText(value.notes)

@@ -1,0 +1,34 @@
+%% D-04 — Modelo conceptual del dominio
+%% Fuentes: migraciones, servicios y docs/data/database.dbml
+classDiagram
+  direction LR
+  class Cliente
+  class Categoria
+  class Producto
+  class Variante
+  class Cotizacion
+  class ItemCotizacion
+  class Venta
+  class MovimientoPago
+  class Pedido
+  class ItemPedido
+  class TrabajoTaller
+  class ReporteAvance
+  class AccesoSeguimiento
+  class Entrega
+  class Usuario
+
+  Categoria "1" --> "0..*" Producto : clasifica
+  Producto "1" --> "0..*" Variante : ofrece
+  Cliente "1" --> "0..*" Cotizacion : solicita
+  Cotizacion "1" *-- "1..*" ItemCotizacion : contiene
+  Cotizacion "0..1" --> "0..1" Venta : origina
+  Cliente "1" --> "0..*" Venta : compra
+  Venta "1" *-- "1..*" MovimientoPago : registra
+  Venta "1" --> "0..1" Pedido : genera
+  Pedido "1" *-- "1..*" ItemPedido : contiene
+  ItemPedido "1" --> "0..1" TrabajoTaller : requiere
+  Usuario "1" --> "0..*" TrabajoTaller : ejecuta
+  TrabajoTaller "1" *-- "0..*" ReporteAvance : evidencia
+  Pedido "1" --> "0..1" AccesoSeguimiento : publica
+  Pedido "1" --> "0..1" Entrega : culmina

@@ -65,17 +65,16 @@ class VariantFieldsDto {
   @IsOptional() @IsString() color?: string;
   @IsOptional() @IsString() fabric?: string;
   @IsOptional() @IsString() finish?: string;
-  @Transform(({ value }) => toNumber(value)) @IsOptional() @IsNumber({ allowNaN: false, allowInfinity: false }) @Min(0.01) salePrice?: number;
-  @Transform(({ value }) => toNumber(value)) @IsOptional() @IsNumber({ allowNaN: false, allowInfinity: false }) @Min(0) estimatedCost?: number | null;
+  @Transform(({ value }) => toNumber(value)) @IsOptional() @IsNumber({ allowNaN: false, allowInfinity: false }) @Min(0.01) @Max(9999999999.99) salePrice?: number;
+  @Transform(({ value }) => toNumber(value)) @IsOptional() @IsNumber({ allowNaN: false, allowInfinity: false }) @Min(0) @Max(9999999999.99) estimatedCost?: number | null;
   @Transform(({ value }) => toNumber(value)) @IsOptional() @IsInt() @Min(0) quantityOnHand?: number;
-  @Transform(({ value }) => toNumber(value)) @IsOptional() @IsInt() @Min(0) quantityReserved?: number;
   @IsOptional() @IsString() location?: string;
   @IsOptional() @IsEnum(CatalogStatus) status?: CatalogStatus;
 }
 
 export class CreateVariantDto extends VariantFieldsDto {
   @IsString() @IsNotEmpty() sku!: string;
-  @Transform(({ value }) => toNumber(value)) @IsNumber({ allowNaN: false, allowInfinity: false }) @Min(0.01) declare salePrice: number;
+  @Transform(({ value }) => toNumber(value)) @IsNumber({ allowNaN: false, allowInfinity: false }) @Min(0.01) @Max(9999999999.99) declare salePrice: number;
   @Transform(({ value }) => toNumber(value)) @IsInt() @Min(0) declare quantityOnHand: number;
 }
 

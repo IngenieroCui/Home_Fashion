@@ -22,6 +22,37 @@ void main() {
     await cubit.close();
   });
 
+  test('summary global se conserva al filtrar, buscar y cambiar página',
+      () async {
+    const summary = WorkshopJobsSummary(
+        assigned: 7, inProgress: 12, readyForReview: 3, completed: 20);
+    final repository = FakeWorkshopJobsRepository()
+      ..page = const WorkshopJobsPage(
+          items: [],
+          page: 1,
+          limit: 12,
+          total: 24,
+          totalPages: 2,
+          summary: summary);
+    final cubit = WorkshopJobsCubit(repository: repository);
+    await cubit.load();
+    await cubit.setFilter(WorkshopJobStatus.inProgress);
+    expect(cubit.state.summary, same(summary));
+    await cubit.search('sofá');
+    expect(cubit.state.summary, same(summary));
+    repository.page = const WorkshopJobsPage(
+        items: [],
+        page: 2,
+        limit: 12,
+        total: 24,
+        totalPages: 2,
+        summary: summary);
+    await cubit.loadMore();
+    expect(cubit.state.page, 2);
+    expect(cubit.state.summary, same(summary));
+    await cubit.close();
+  });
+
   test('error de listado conserva retry posible', () async {
     final repository = FakeWorkshopJobsRepository()
       ..listError = const NetworkException();

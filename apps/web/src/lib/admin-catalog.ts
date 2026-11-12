@@ -31,7 +31,7 @@ export type AdminVariant = {
   fabric: string | null;
   finish: string | null;
   salePrice: string;
-  estimatedCost: string | null;
+  estimatedCost?: string | null;
   quantityOnHand: number;
   quantityReserved: number;
   location: string | null;
@@ -68,6 +68,8 @@ export function adminJson(result: ApiResult) {
     409: 'Ya existe un registro con esos datos.',
     503: 'El servicio no está disponible.'
   };
+  const backendMessage = typeof result.body === 'object' && result.body !== null ? (result.body as { message?: unknown }).message : null;
+  if (result.status === 400 && typeof backendMessage === 'string' && /quantityReserved cannot exceed quantityOnHand|chk_product_variants_reserved_quantity/i.test(backendMessage)) messages[400] = 'No puedes reducir las existencias por debajo de las unidades reservadas.';
   const body =
     result.status >= 200 && result.status < 300
       ? result.body

@@ -1,3 +1,5 @@
+import { CommerceItemVisual } from './commerce-item-visual';
+import { EvidenceLinks } from './evidence-links';
 import { Fragment } from 'react';
 import { formatCustomization } from '@/lib/workshop-jobs';
 import {
@@ -30,20 +32,47 @@ function PublicTrackingTimeline({ item }: { item: PublicTrackingItem }) {
           {entry.progressPercent !== null && (
             <p className="public-timeline-progress">Avance: {entry.progressPercent}%</p>
           )}
-          {entry.evidenceUrls?.length ? (
-            <div className="public-evidence-links">
-              {entry.evidenceUrls.map((url, evidenceIndex) => (
-                <a
-                  href={url}
-                  key={`${url}-${evidenceIndex}`}
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  Abrir evidencia {evidenceIndex + 1}
-                </a>
-              ))}
-            </div>
-          ) : null}
+          <EvidenceLinks urls={entry.evidenceUrls} title="Fotografías del avance" />
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function OrderProgress({ tracking }: { tracking: PublicOrderTracking }) {
+  // A global summary of observed public states, without manufacturing dated events.
+  const activeItems = tracking.items.filter((item) => item.status !== 'CANCELLED');
+  const manufacturing = activeItems.some((item) => item.supplyType === 'MADE_TO_ORDER');
+  const stock = activeItems.some((item) => item.supplyType === 'IN_STOCK');
+  const preparationLabel = manufacturing
+    ? stock
+      ? 'Preparación y fabricación'
+      : 'Fabricación'
+    : 'Preparación';
+  const production = activeItems.some(
+    (item) =>
+      item.timeline.length > 0 ||
+      ['IN_PRODUCTION', 'RESERVED', 'READY', 'DELIVERED'].includes(item.status)
+  );
+  const ready = tracking.orderStatus === 'READY' || tracking.orderStatus === 'COMPLETED';
+  const stages = [
+    ['Pedido recibido', true],
+    [preparationLabel, production],
+    ['Listo', ready],
+    ['Entrega programada', Boolean(tracking.delivery)],
+    [
+      'En camino',
+      tracking.delivery?.status === 'OUT_FOR_DELIVERY' || tracking.delivery?.status === 'DELIVERED'
+    ],
+    ['Entregado', tracking.delivery?.status === 'DELIVERED']
+  ] as const;
+  return (
+    <ol aria-label="Resumen global del pedido" className="tracking-progress tracking-global">
+      {stages.map(([label, reached], index) => (
+        <li key={label} className={reached ? 'is-active' : ''}>
+          <span aria-hidden="true">{index + 1}</span>
+          {label}
+          <span className="sr-only">{reached ? ': registrado' : ': pendiente'}</span>
         </li>
       ))}
     </ol>
@@ -56,8 +85,12 @@ function PublicTrackingItemCard({ item }: { item: PublicTrackingItem }) {
     <article className="public-tracking-item">
       <div className="public-item-heading">
         <div>
-          <h2 className="font-serif text-2xl">{item.productNameSnapshot}</h2>
-          {item.variantNameSnapshot && <p>{item.variantNameSnapshot}</p>}
+          <CommerceItemVisual
+            imageUrl={item.imageUrlSnapshot}
+            name={item.productNameSnapshot}
+            variant={item.variantNameSnapshot}
+            quantity={item.quantity}
+          />
         </div>
         <span className="public-item-status">{publicItemStatusLabel[item.status]}</span>
       </div>
@@ -99,13 +132,16 @@ export function PublicOrderTrackingView({ tracking }: { tracking: PublicOrderTra
       <div className="page-shell public-tracking-shell">
         <header className="public-tracking-heading">
           <p className="eyebrow">Home Fashion</p>
-          <h1 className="font-serif text-4xl">Seguimiento de tu pedido</h1>
+          <h1 className="font-serif text-4xl">Tu pedido</h1>
           <div className="public-order-summary">
             <div>
               <p>Código del pedido</p>
               <strong>{tracking.orderCode}</strong>
             </div>
-            <PublicTrackingStatusBadge status={tracking.orderStatus} />
+            <div>
+              <p>Estado actual</p>
+              <PublicTrackingStatusBadge status={tracking.orderStatus} />
+            </div>
           </div>
           <dl>
             <dt>Creado</dt>
@@ -118,11 +154,52 @@ export function PublicOrderTrackingView({ tracking }: { tracking: PublicOrderTra
             )}
           </dl>
         </header>
+        <p className="public-last-update">
+          Última actualización pública:{' '}
+          {formatTrackingDateTime(tracking.lastPublicUpdateAt ?? tracking.createdAt)}
+        </p>
+        {tracking.orderStatus !== 'CANCELLED' && <OrderProgress tracking={tracking} />}
         <section className="public-tracking-items" aria-label="Productos del pedido">
           {tracking.items.map((item) => (
-            <PublicTrackingItemCard item={item} key={item.publicItemId} />
+            <PublicTrackingItemCard item={item} key={item.publicItemKey} />
           ))}
         </section>
+        {tracking.delivery && (
+          <section className="admin-section" aria-label="Entrega">
+            <h2 className="font-serif text-2xl">Entrega</h2>
+            <ol className="tracking-progress">
+              {(['SCHEDULED', 'OUT_FOR_DELIVERY', 'DELIVERED'] as const).map((status, index) => (
+                <li
+                  className={
+                    (['SCHEDULED', 'OUT_FOR_DELIVERY', 'DELIVERED'] as const).indexOf(
+                      tracking.delivery!.status
+                    ) >= index
+                      ? 'is-active'
+                      : ''
+                  }
+                  key={status}
+                >
+                  <span aria-hidden="true">{index + 1}</span>
+                  {
+                    {
+                      SCHEDULED: 'Programada',
+                      OUT_FOR_DELIVERY: 'En camino',
+                      DELIVERED: 'Entregada'
+                    }[status]
+                  }
+                </li>
+              ))}
+            </ol>
+            <p>Fecha programada: {formatTrackingDate(tracking.delivery.scheduledDate)}</p>
+            {tracking.delivery.timeWindow && <p>Franja horaria: {tracking.delivery.timeWindow}</p>}
+            {tracking.delivery.deliveredAt && (
+              <p>Entregada: {formatTrackingDateTime(tracking.delivery.deliveredAt)}</p>
+            )}
+            {tracking.delivery.status === 'DELIVERED' && (
+              <EvidenceLinks urls={tracking.delivery.evidenceUrls} />
+            )}
+          </section>
+        )}
       </div>
     </main>
   );

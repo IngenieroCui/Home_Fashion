@@ -52,7 +52,7 @@ class ProgressReport {
 
   factory ProgressReport.fromJson(Map<String, dynamic> json) {
     return ProgressReport(
-      id: _requiredString(json, 'id'),
+      id: _identifier(json, 'id'),
       type: ProgressReportType.values.firstWhere(
         (item) => item.apiValue == json['type'],
         orElse: () => throw const FormatException('Invalid report type'),
@@ -88,6 +88,7 @@ class WorkshopJobSummary {
     required this.quantity,
     required this.assignedAt,
     this.variantName,
+    this.imageUrlSnapshot,
     this.expectedCompletionDate,
     this.latestReport,
   });
@@ -95,12 +96,13 @@ class WorkshopJobSummary {
   factory WorkshopJobSummary.fromJson(Map<String, dynamic> json) {
     final order = _map(json['order']);
     return WorkshopJobSummary(
-      id: _requiredString(json, 'id'),
+      id: _identifier(json, 'id'),
       code: _requiredString(json, 'code'),
       status: WorkshopJobStatus.parse(json['status']),
       orderCode: _requiredString(order, 'code'),
       productName: _requiredString(json, 'productNameSnapshot'),
       variantName: _nullableString(json['variantNameSnapshot']),
+      imageUrlSnapshot: _nullableString(json['imageUrlSnapshot']),
       quantity: (json['quantity'] as num?)?.toInt() ??
           (throw const FormatException('Missing quantity')),
       assignedAt: DateTime.parse(_requiredString(json, 'assignedAt')),
@@ -117,6 +119,7 @@ class WorkshopJobSummary {
   final String orderCode;
   final String productName;
   final String? variantName;
+  final String? imageUrlSnapshot;
   final int quantity;
   final DateTime assignedAt;
   final DateTime? expectedCompletionDate;
@@ -137,6 +140,7 @@ class WorkshopJobDetail {
     required this.progressReports,
     this.instructions,
     this.variantName,
+    this.imageUrlSnapshot,
     this.sku,
     this.customization,
     this.notes,
@@ -148,13 +152,14 @@ class WorkshopJobDetail {
     final reports = json['progressReports'];
     if (reports is! List) throw const FormatException('Missing reports');
     return WorkshopJobDetail(
-      id: _requiredString(json, 'id'),
+      id: _identifier(json, 'id'),
       code: _requiredString(json, 'code'),
       status: WorkshopJobStatus.parse(json['status']),
-      orderId: _requiredString(order, 'id'),
+      orderId: _identifier(order, 'id'),
       orderCode: _requiredString(order, 'code'),
       productName: _requiredString(json, 'productNameSnapshot'),
       variantName: _nullableString(json['variantNameSnapshot']),
+      imageUrlSnapshot: _nullableString(json['imageUrlSnapshot']),
       sku: _nullableString(json['skuSnapshot']),
       quantity: (json['quantity'] as num?)?.toInt() ??
           (throw const FormatException('Missing quantity')),
@@ -177,6 +182,7 @@ class WorkshopJobDetail {
   final String orderCode;
   final String productName;
   final String? variantName;
+  final String? imageUrlSnapshot;
   final String? sku;
   final int quantity;
   final Object? customization;
@@ -218,12 +224,40 @@ class WorkshopJobDetail {
       progressReports: exists ? progressReports : [...progressReports, report],
       instructions: instructions,
       variantName: variantName,
+      imageUrlSnapshot: imageUrlSnapshot,
       sku: sku,
       customization: customization,
       notes: notes,
       expectedCompletionDate: expectedCompletionDate,
     );
   }
+}
+
+class WorkshopJobsSummary {
+  const WorkshopJobsSummary(
+      {this.assigned = 0,
+      this.inProgress = 0,
+      this.readyForReview = 0,
+      this.completed = 0});
+  factory WorkshopJobsSummary.fromJson(Map<String, dynamic> json) =>
+      WorkshopJobsSummary(
+        assigned: _count(json, 'assigned'),
+        inProgress: _count(json, 'inProgress'),
+        readyForReview: _count(json, 'readyForReview'),
+        completed: _count(json, 'completed'),
+      );
+  static int _count(Map<String, dynamic> json, String key) {
+    final value = json[key];
+    if (value is! int || value < 0) {
+      throw FormatException('Invalid summary $key');
+    }
+    return value;
+  }
+
+  final int assigned;
+  final int inProgress;
+  final int readyForReview;
+  final int completed;
 }
 
 class WorkshopJobsPage {
@@ -233,6 +267,7 @@ class WorkshopJobsPage {
     required this.limit,
     required this.total,
     required this.totalPages,
+    this.summary = const WorkshopJobsSummary(),
   });
 
   factory WorkshopJobsPage.fromJson(Map<String, dynamic> json) {
@@ -246,6 +281,7 @@ class WorkshopJobsPage {
       page: (pagination['page'] as num?)?.toInt() ?? 1,
       limit: (pagination['limit'] as num?)?.toInt() ?? 12,
       total: (pagination['total'] as num?)?.toInt() ?? 0,
+      summary: WorkshopJobsSummary.fromJson(_map(json['summary'])),
       totalPages: (pagination['totalPages'] as num?)?.toInt() ?? 0,
     );
   }
@@ -255,6 +291,7 @@ class WorkshopJobsPage {
   final int limit;
   final int total;
   final int totalPages;
+  final WorkshopJobsSummary summary;
 }
 
 class SubmitProgressCommand {
@@ -262,20 +299,22 @@ class SubmitProgressCommand {
     required this.type,
     required this.message,
     this.progressPercent,
-    this.evidenceUrls = const [],
+    this.imagePaths = const [],
+    this.requestId,
   });
 
   final ProgressReportType type;
   final String message;
   final int? progressPercent;
-  final List<String> evidenceUrls;
+  final List<String> imagePaths;
+  final String? requestId;
 
   Map<String, dynamic> toJson() => {
+        if (requestId != null) 'requestId': requestId,
         'type': type.apiValue,
         'message': message.trim(),
         if (type == ProgressReportType.progress && progressPercent != null)
           'progressPercent': progressPercent,
-        if (evidenceUrls.isNotEmpty) 'evidenceUrls': evidenceUrls,
       };
 }
 
@@ -283,6 +322,12 @@ Map<String, dynamic> _map(Object? value) {
   if (value is Map<String, dynamic>) return value;
   if (value is Map) return value.cast<String, dynamic>();
   throw const FormatException('Invalid object');
+}
+
+String _identifier(Map<String, dynamic> json, String key) {
+  final value = json[key];
+  if (value is int && value >= 0) return value.toString();
+  return _requiredString(json, key);
 }
 
 String _requiredString(Map<String, dynamic> json, String key) {

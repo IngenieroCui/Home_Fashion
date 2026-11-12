@@ -8,6 +8,8 @@ export default async function SalePage({ params }: { params: Promise<{ id: strin
     user.role === 'ADMIN' || user.permissions.includes(permission);
   return (
     <SaleDetail
+      userId={user.id}
+      canWompi={user.role === 'ADMIN' && has('FINANCIAL_PAYMENT_REGISTER') && has('SALE_MANAGE')}
       canCostView={has('FINANCIAL_COST_VIEW')}
       canMarginView={has('FINANCIAL_MARGIN_VIEW')}
       canPaymentCorrect={has('FINANCIAL_PAYMENT_CORRECT')}

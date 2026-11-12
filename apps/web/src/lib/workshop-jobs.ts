@@ -1,3 +1,6 @@
+import type { OrderItemStatus, OrderStatus } from './orders';
+import { formatDateTime as sharedDateTime } from './formatters';
+import { formatDate as sharedDate } from './formatters';
 import type { WorkshopProgressHistoryEntry } from './workshop-progress';
 
 export type WorkshopJobStatus =
@@ -43,6 +46,7 @@ export type WorkshopJobListItem = {
   orderCode: string;
   customer: { id: string; fullName: string; phone: string | null } | null;
   productNameSnapshot: string;
+  imageUrlSnapshot: string | null;
   variantNameSnapshot: string | null;
   quantity: number;
 };
@@ -59,7 +63,7 @@ export type WorkshopJob = {
   order: {
     id: string;
     code: string;
-    status: string;
+    status: OrderStatus;
     promisedDate: string | null;
     notes: string | null;
   };
@@ -67,12 +71,13 @@ export type WorkshopJob = {
   orderItem: {
     id: string;
     productNameSnapshot: string;
+    imageUrlSnapshot: string | null;
     variantNameSnapshot: string | null;
     skuSnapshot: string | null;
     customization: Record<string, unknown> | null;
     quantity: number;
     supplyType: 'IN_STOCK' | 'MADE_TO_ORDER';
-    status: string;
+    status: OrderItemStatus;
     notes: string | null;
   };
   progressReports: WorkshopProgressHistoryEntry[];
@@ -98,17 +103,9 @@ export const workshopJobStatusLabel: Record<WorkshopJobStatus, string> = {
   CANCELLED: 'Cancelado'
 };
 
-export function formatDate(value: string | null | undefined) {
-  if (!value) return '—';
-  const date = new Date(`${value.slice(0, 10)}T12:00:00`);
-  return Number.isNaN(date.valueOf()) ? '—' : date.toLocaleDateString('es-CO');
-}
+export const formatDate = sharedDate;
 
-export function formatDateTime(value: string | null | undefined) {
-  if (!value) return '—';
-  const date = new Date(value);
-  return Number.isNaN(date.valueOf()) ? '—' : date.toLocaleString('es-CO');
-}
+export const formatDateTime = sharedDateTime;
 
 export function formatCustomization(values: Record<string, unknown> | null) {
   if (!values) return [];

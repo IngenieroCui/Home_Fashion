@@ -1,0 +1,35 @@
+%% D-12 — Secuencia: entrega y cierre
+%% Fuentes: deliveries.service.ts; order-state.ts
+sequenceDiagram
+  autonumber
+  actor P as Personal autorizado
+  participant W as Panel Next.js
+  participant A as API NestJS
+  participant DB as MySQL
+  participant C as Cloudinary
+
+  P->>W: Programa entrega
+  W->>A: POST entrega (fecha, responsable, tipo)
+  A->>DB: Verifica pedido activo y entrega única vigente
+  A->>DB: Crea SCHEDULED
+  P->>W: Iniciar despacho
+  W->>A: POST start
+  A->>DB: Verifica líneas RESERVED/READY
+  A->>DB: Entrega OUT_FOR_DELIVERY + pedido IN_PROGRESS
+  P->>W: Completar con receptor y 1–5 fotografías
+  W->>A: POST complete-media con archivos multipart
+  A->>C: Carga autenticada en carpeta de entrega
+  A->>DB: BEGIN y locks de pedido, entrega e items
+  A->>DB: Bloquea variantes IN_STOCK por id ascendente
+  A->>DB: Descuenta onHand y reserved por cantidad IN_STOCK
+  Note over A,DB: MADE_TO_ORDER no consume stock terminado
+  A->>DB: Marca líneas activas DELIVERED
+  A->>DB: Entrega DELIVERED
+  A->>A: Recalcula estado del pedido
+  A->>DB: Pedido COMPLETED si todas las líneas activas fueron entregadas
+  A->>DB: COMMIT (fallo intermedio: ROLLBACK)
+  A-->>W: Cierre confirmado con enlaces de cinco minutos
+  opt cancelar antes de terminal
+    P->>A: Cancelar entrega
+    A->>DB: Marca CANCELLED y recalcula pedido
+  end

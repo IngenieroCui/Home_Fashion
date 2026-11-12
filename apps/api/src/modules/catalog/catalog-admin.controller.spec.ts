@@ -5,6 +5,38 @@ import { CatalogAdminController } from './catalog-admin.controller';
 import { CATALOG_MANAGE_PERMISSION } from './catalog-admin.types';
 
 describe('CatalogAdminController security', () => {
+  it.each(['getProduct', 'createVariant', 'updateVariant'])('omits catalog cost from %s for a manager without cost-view permission', async (method) => {
+    const payload = { estimatedCost: '100.00', variants: [{ estimatedCost: '200.00', quantityReserved: 1 }], created_at: new Date('2026-09-29T00:00:00Z') };
+    const catalog = { getProduct: jest.fn().mockResolvedValue(payload), createVariant: jest.fn().mockResolvedValue(payload), updateVariant: jest.fn().mockResolvedValue(payload) };
+    const auth = { getAuthenticatedUser: jest.fn().mockResolvedValue({ permissions: ['CATALOG_MANAGE', 'CATALOG_PRICE_EDIT'] }) };
+    const controller = new CatalogAdminController(catalog as never, {} as never, auth as never, {} as never);
+    const result = method === 'getProduct' ? await controller.getProduct({ id: '1' }, { id: 'QA' }) : method === 'createVariant' ? await controller.createVariant({ productId: '1' }, {} as never, { id: 'QA' }) : await controller.updateVariant({ id: '1' }, {}, { id: 'QA' });
+    expect(JSON.stringify(result)).not.toContain('estimatedCost');
+    expect(result).toMatchObject({ variants: [{ quantityReserved: 1 }], created_at: payload.created_at });
+    auth.getAuthenticatedUser.mockResolvedValue({ permissions: ['CATALOG_MANAGE', 'FINANCIAL_COST_VIEW'] });
+    await expect(controller.getProduct({ id: '1' }, { id: 'QA' })).resolves.toBe(payload);
+  });
+  it('denies financial writes before touching persistence and permits an inventory-only edit', async () => {
+    const catalog = { createVariant: jest.fn(), updateVariant: jest.fn() };
+    const auth = { getAuthenticatedUser: jest.fn().mockResolvedValue({ permissions: ['CATALOG_MANAGE'] }) };
+    const controller = new CatalogAdminController(catalog as never, {} as never, auth as never, {} as never);
+    const user = { id: '7' };
+    await expect(controller.createVariant({ productId: '1' }, { sku: 'SKU', salePrice: 10, quantityOnHand: 0 }, user)).rejects.toMatchObject({ status: 403 });
+    for (const body of [{ salePrice: 10 }, { estimatedCost: 0 }, { estimatedCost: null }]) {
+      await expect(controller.updateVariant({ id: '2' }, body, user)).rejects.toMatchObject({ status: 403 });
+    }
+    expect(catalog.createVariant).not.toHaveBeenCalled();
+    expect(catalog.updateVariant).not.toHaveBeenCalled();
+    await controller.updateVariant({ id: '2' }, { quantityOnHand: 5 }, user);
+    expect(catalog.updateVariant).toHaveBeenLastCalledWith('2', { quantityOnHand: 5 });
+    auth.getAuthenticatedUser.mockResolvedValue({ permissions: ['CATALOG_MANAGE', 'CATALOG_PRICE_EDIT', 'FINANCIAL_COST_EDIT'] });
+    const body = { sku: 'SKU', salePrice: 10, quantityOnHand: 0, estimatedCost: 0 };
+    await controller.createVariant({ productId: '1' }, body, user);
+    expect(catalog.createVariant).toHaveBeenCalledWith('1', body, '7');
+    await controller.updateVariant({ id: '2' }, { estimatedCost: null }, user);
+    expect(catalog.updateVariant).toHaveBeenLastCalledWith('2', { estimatedCost: null });
+  });
+
   it('requires authentication and CATALOG_MANAGE for every administrative endpoint', () => {
     expect(Reflect.getMetadata(GUARDS_METADATA, CatalogAdminController)).toEqual([JwtAuthGuard, PermissionsGuard]);
     expect(Reflect.getMetadata('required_permissions', CatalogAdminController)).toEqual([CATALOG_MANAGE_PERMISSION]);

@@ -31,7 +31,8 @@ describe('PublicQuoteRequestsService', () => {
     quotes as never,
     items as never,
     products as never,
-    variants as never
+    variants as never,
+    { resolvePrimaryImageUrl: jest.fn().mockResolvedValue(null) } as never
   );
   const dto = {
     requestId: '19d4bcf0-4307-4b1c-b3f4-61d2ecafdcec',
@@ -88,6 +89,26 @@ describe('PublicQuoteRequestsService', () => {
     customers.create.mockResolvedValue({ id: '30' });
     quotes.create.mockResolvedValue(quote);
     items.create.mockResolvedValue({ id: '50' });
+  });
+
+  it('retries a rolled-back deadlock with the same idempotency key and replays the winner', async () => {
+    quotes.sequelize.transaction.mockRejectedValueOnce({ parent: { code: 'ER_LOCK_DEADLOCK' } });
+    quotes.findOne.mockResolvedValue({ code: 'QA-WINNER', publicRequestPayloadHash: hashFor() });
+    await expect(service.create(dto)).resolves.toMatchObject({ requestCode: 'QA-WINNER' });
+    expect(quotes.sequelize.transaction).toHaveBeenCalledTimes(2);
+    expect(customers.create).not.toHaveBeenCalled();
+  });
+
+  it('limits retries and returns a controlled conflict on repeated lock errors', async () => {
+    for (let i = 0; i < 3; i++) quotes.sequelize.transaction.mockRejectedValueOnce({ parent: { code: 'ER_LOCK_WAIT_TIMEOUT' } });
+    await expect(service.create(dto)).rejects.toBeInstanceOf(ConflictException);
+    expect(quotes.sequelize.transaction).toHaveBeenCalledTimes(3);
+  });
+
+  it('rejects a catalog-price request whose total would overflow the database', async () => {
+    variants.findOne.mockResolvedValue({ id: '20', productId: '10', salePrice: '9999999999.99' });
+    await expect(service.create(dto)).rejects.toBeInstanceOf(BadRequestException);
+    expect(quotes.create).not.toHaveBeenCalled();
   });
 
   it('creates a REQUESTED quote and historical item snapshots using the backend catalog price', async () => {

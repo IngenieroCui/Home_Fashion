@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { AdminRecordCard } from './admin-record-card';
 import { type FormEvent } from 'react';
 import { usePageData } from '@/lib/use-page-data';
 import { ListError } from './page-state';
@@ -106,7 +107,9 @@ export function DeliveriesList() {
       )}
       {page &&
         (page.data.length ? (
-          <div className="admin-table-wrap">
+          <>
+          <div className="admin-mobile-records">{page.data.map((delivery) => <AdminRecordCard key={delivery.id} title={delivery.code} subtitle={`Pedido ${delivery.order.code}`} badge={<DeliveryStatusBadge status={delivery.status} />} actions={<Link className="button-link button-link-secondary" href={`/panel/entregas/${delivery.id}`}>Gestionar entrega</Link>}><p>Contacto: {delivery.customer?.fullName ?? '—'}</p><p>{formatDeliveryDate(delivery.scheduledDate)}{delivery.timeWindow ? ` · ${delivery.timeWindow}` : ''}</p></AdminRecordCard>)}</div>
+          <div className="admin-table-wrap sprint-desktop-table">
             <table className="admin-table">
               <thead>
                 <tr>
@@ -150,6 +153,7 @@ export function DeliveriesList() {
               </tbody>
             </table>
           </div>
+          </>
         ) : (
           <p className="notice">No hay entregas que coincidan con los filtros.</p>
         ))}

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:home_fashion_workshop/core/errors/app_exception.dart';
@@ -19,6 +20,12 @@ void main() {
         request = options;
         return jsonResponse(200, {
           'data': [_summaryJson],
+          'summary': {
+            'assigned': 7,
+            'inProgress': 12,
+            'readyForReview': 3,
+            'completed': 20
+          },
           'pagination': {
             'page': 2,
             'limit': 12,
@@ -44,6 +51,9 @@ void main() {
     });
     expect(result.items.single.productName, 'Sofá Verona');
     expect(result.totalPages, 2);
+    expect(result.summary.assigned, 7);
+    expect(result.summary.inProgress, 12);
+    expect(result.summary.readyForReview, 3);
   });
 
   test('detalle interpreta snapshots, personalización e historial', () async {
@@ -68,11 +78,16 @@ void main() {
 
   test('submit envía tipos exactos y omite porcentajes que controla backend',
       () async {
+    final directory = await Directory.systemTemp.createTemp('hf-progress-test');
+    addTearDown(() => directory.delete(recursive: true));
+    final photo = await File('${directory.path}/photo.jpg')
+        .writeAsBytes([255, 216, 255, 217]);
     final requests = <RequestOptions>[];
     final repository = RemoteWorkshopJobsRepository(
       api: api((options) async {
         requests.add(options);
-        return jsonResponse(201, _reportJson(type: options.data['type']));
+        final fields = Map.fromEntries((options.data as FormData).fields);
+        return jsonResponse(201, _reportJson(type: fields['type']));
       }),
     );
 
@@ -85,11 +100,11 @@ void main() {
     );
     await repository.submit(
       'job-1',
-      const SubmitProgressCommand(
+      SubmitProgressCommand(
         type: ProgressReportType.progress,
         message: 'Avance',
         progressPercent: 45,
-        evidenceUrls: ['https://example.com/foto.jpg'],
+        imagePaths: [photo.path],
       ),
     );
     await repository.submit(
@@ -107,21 +122,39 @@ void main() {
       ),
     );
 
-    expect(requests[0].data, {'type': 'STARTED', 'message': 'Inicié'});
-    expect(requests[1].data, {
-      'type': 'PROGRESS',
-      'message': 'Avance',
-      'progressPercent': 45,
-      'evidenceUrls': ['https://example.com/foto.jpg'],
-    });
+    Map<String, String> fields(int index) =>
+        Map.fromEntries((requests[index].data as FormData).fields);
+    expect(fields(0), {'type': 'STARTED', 'message': 'Inicié'});
+    expect(fields(1),
+        {'type': 'PROGRESS', 'message': 'Avance', 'progressPercent': '45'});
+    expect(fields(2), {'type': 'READY_FOR_REVIEW', 'message': 'Terminado'});
+    expect(fields(3), {'type': 'PROGRESS', 'message': 'Avance sin porcentaje'});
+    expect((requests[1].data as FormData).files.single.key, 'files');
+    expect((requests[1].data as FormData).files.single.value.filename,
+        'photo.jpg');
+    expect((requests[0].data as FormData).files, isEmpty);
     expect(
-      requests[2].data,
-      {'type': 'READY_FOR_REVIEW', 'message': 'Terminado'},
-    );
-    expect(
-      requests[3].data,
-      {'type': 'PROGRESS', 'message': 'Avance sin porcentaje'},
-    );
+        requests.every(
+            (request) => request.path == '/workshop/jobs/job-1/progress-media'),
+        isTrue);
+  });
+
+  test(
+      'detalle admite IDs numéricos reales de MySQL sin confundirlos con textos',
+      () async {
+    final repository = RemoteWorkshopJobsRepository(
+        api: api((_) async => jsonResponse(200, {
+              ..._detailJson,
+              'id': 10,
+              'order': {'id': 20, 'code': 'HF-PED-001'},
+              'progressReports': [
+                {..._reportJson(type: 'PROGRESS'), 'id': 30}
+              ],
+            })));
+    final result = await repository.detail('10');
+    expect(result.id, '10');
+    expect(result.orderId, '20');
+    expect(result.progressReports.single.id, '30');
   });
 
   test('401, 404, validación y conflicto producen errores separados', () async {

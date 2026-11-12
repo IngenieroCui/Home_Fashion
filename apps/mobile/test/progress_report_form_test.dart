@@ -8,7 +8,7 @@ import 'package:home_fashion_workshop/features/workshop_jobs/presentation/progre
 import 'helpers/fakes.dart';
 
 void main() {
-  testWidgets('PROGRESS valida mensaje, porcentaje y URLs sin borrar datos',
+  testWidgets('PROGRESS valida mensaje y porcentaje sin borrar datos',
       (tester) async {
     final repository = FakeWorkshopJobsRepository();
     final cubit = WorkshopJobDetailCubit(
@@ -30,15 +30,14 @@ void main() {
 
     await tester.enterText(find.byType(TextFormField).at(0), 'Avance real');
     await tester.enterText(find.byType(TextFormField).at(1), '100');
-    await tester.enterText(
-        find.byKey(const ValueKey('evidence-0')), 'archivo.jpg');
     final submit = find.text('Enviar reporte');
     await tester.ensureVisible(submit);
     await tester.tap(submit);
     await tester.pump();
 
     expect(find.text('El porcentaje debe estar entre 1 y 99.'), findsOneWidget);
-    expect(find.text('Ingresa una URL https válida.'), findsOneWidget);
+    expect(find.text('0 / 5 fotografías'), findsOneWidget);
+    expect(find.text('Agregar fotografía'), findsOneWidget);
     expect(find.text('Avance real'), findsOneWidget);
     expect(repository.submitCalls, 0);
     await cubit.close();
@@ -86,6 +85,7 @@ void main() {
     expect(repository.submitCalls, 1);
     expect(repository.submittedCommand?.progressPercent, isNull);
     expect(repository.submittedCommand?.toJson(), {
+      'requestId': matches(r'^[a-f0-9]{32}$'),
       'type': 'PROGRESS',
       'message': 'Avance sin cifra',
     });

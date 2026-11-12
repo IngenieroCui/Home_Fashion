@@ -18,12 +18,22 @@ const value = (input: string | string[] | undefined) =>
 
 function filtersFrom(params: Record<string, string | string[] | undefined>): CatalogFiltersType {
   const page = Number(value(params.page));
+  const price = (field: 'minPrice' | 'maxPrice') => {
+    const raw = value(params[field]);
+    if (!raw) return undefined;
+    const number = Number(raw);
+    return Number.isSafeInteger(number) && number >= 0 ? number : undefined;
+  };
+  const sort = value(params.sort);
   return {
     page: Number.isSafeInteger(page) && page > 0 ? page : 1,
     q: value(params.q)?.trim(),
     category: value(params.category),
     allowsCustomization: value(params.allowsCustomization) === 'true',
-    inStock: value(params.inStock) === 'true'
+    inStock: value(params.inStock) === 'true',
+    sort: sort === 'newest' || sort === 'price-asc' || sort === 'price-desc' ? sort : 'name',
+    minPrice: price('minPrice'),
+    maxPrice: price('maxPrice')
   };
 }
 
@@ -34,6 +44,9 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
     filters.category ||
     filters.allowsCustomization ||
     filters.inStock ||
+    filters.minPrice !== undefined ||
+    filters.maxPrice !== undefined ||
+    filters.sort !== 'name' ||
     (filters.page ?? 1) > 1
   );
   const [categoriesResult, productsResult] = await Promise.allSettled([
@@ -49,7 +62,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
     <main className="page-shell py-12">
       <p className="eyebrow">Colección Home Fashion</p>
       <h1 className="mt-2 font-serif text-5xl">Encuentra tu próximo favorito</h1>
-      <p className="mt-4 max-w-2xl text-[#67574d]">
+      <p className="mt-4 max-w-2xl text-[var(--color-text-muted)]">
         Diseños para vivirlos. Explora los muebles, conoce sus detalles y cotiza las opciones que
         van contigo.
       </p>
@@ -90,7 +103,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
           </PageState>
         ) : productsResult.value.data.length ? (
           <section aria-label="Resultados del catálogo">
-            <p className="mb-5 text-sm text-[#67574d]">
+            <p className="mb-5 text-sm text-[var(--color-text-muted)]">
               {productsResult.value.pagination.total}{' '}
               {productsResult.value.pagination.total === 1
                 ? 'mueble encontrado'

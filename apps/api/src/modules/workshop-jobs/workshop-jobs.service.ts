@@ -72,12 +72,15 @@ export class WorkshopJobsService {
   async create(dto: CreateWorkshopJobDto, assignedByUserId: string) {
     try {
       return await this.jobs.sequelize!.transaction(async (transaction) => {
-        const orderItem = await this.orderItems.findByPk(dto.orderItemId, { transaction, lock: transaction.LOCK.UPDATE });
-        if (!orderItem) throw new NotFoundException('Order item not found');
-        const order = await this.orders.findByPk(orderItem.orderId, { transaction });
+        const reference = await this.orderItems.findByPk(dto.orderItemId, { transaction });
+        if (!reference) throw new NotFoundException('Order item not found');
+        const locked = { transaction, lock: transaction.LOCK.UPDATE };
+        const order = await this.orders.findByPk(reference.orderId, locked);
         if (!order) throw new NotFoundException('Order not found');
+        const orderItem = await this.orderItems.findByPk(dto.orderItemId, locked);
+        if (!orderItem) throw new NotFoundException('Order item not found');
         this.validateOrderItem(orderItem, order);
-        if (await this.jobs.findOne({ where: { orderItemId: orderItem.id }, transaction }))
+        if (await this.jobs.findOne({ where: { orderItemId: orderItem.id }, ...locked }))
           throw new ConflictException('Order item already has a workshop job');
         await this.validateWorkshopUser(dto.workshopUserId, transaction);
         const assignedAt = new Date();
@@ -146,7 +149,7 @@ export class WorkshopJobsService {
       { model: User, as: 'assignedByUser', attributes: ['id', 'fullName', 'email'] },
       {
         model: OrderItem,
-        attributes: ['id', 'orderId', 'productNameSnapshot', 'variantNameSnapshot', 'skuSnapshot', 'customization', 'quantity', 'supplyType', 'status', 'notes'],
+        attributes: ['id', 'orderId', 'productNameSnapshot', 'variantNameSnapshot', 'skuSnapshot', 'imageUrlSnapshot', 'customization', 'quantity', 'supplyType', 'status', 'notes'],
         include: [{
           model: Order,
           attributes: detail ? ['id', 'code', 'status', 'promisedDate', 'notes'] : ['id', 'code'],
@@ -174,7 +177,7 @@ export class WorkshopJobsService {
       orderId: order.id,
       orderCode: order.code,
       customer: order.customer,
-      productNameSnapshot: item.productNameSnapshot,
+      productNameSnapshot: item.productNameSnapshot, imageUrlSnapshot: item.imageUrlSnapshot,
       variantNameSnapshot: item.variantNameSnapshot,
       quantity: item.quantity
     };
@@ -197,7 +200,7 @@ export class WorkshopJobsService {
       customer: order.customer,
       orderItem: {
         id: item.id,
-        productNameSnapshot: item.productNameSnapshot,
+        productNameSnapshot: item.productNameSnapshot, imageUrlSnapshot: item.imageUrlSnapshot,
         variantNameSnapshot: item.variantNameSnapshot,
         skuSnapshot: item.skuSnapshot,
         customization: item.customization,

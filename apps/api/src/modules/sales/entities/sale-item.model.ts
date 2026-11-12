@@ -26,6 +26,7 @@ export class SaleItem extends Model {
   @Column({ type: DataType.STRING(180), field: 'variant_name_snapshot' })
   declare variantNameSnapshot: string | null;
   @Column({ type: DataType.STRING(100), field: 'sku_snapshot' }) declare skuSnapshot: string | null;
+  @Column({ type: DataType.STRING(2048), field: 'image_url_snapshot' }) declare imageUrlSnapshot: string | null;
   @Column(DataType.JSON) declare customization: Record<string, unknown> | null;
   @Column({ type: DataType.INTEGER.UNSIGNED, allowNull: false }) declare quantity: number;
   @Column({ type: DataType.DECIMAL(12, 2), field: 'unit_list_price' }) declare unitListPrice:

@@ -1,0 +1,23 @@
+%% D-17 — Flujo E2E del negocio
+%% Fuentes: docs/smoke-test-mvp.md; módulos funcionales
+flowchart TB
+  A[Catálogo público] --> B[Solicitud<br/>REQUESTED]
+  B --> C[Cotización<br/>QUOTED]
+  C -->|aceptada| D[Venta<br/>CONFIRMED]
+  C -->|rechazada / vencida| Z1([Fin sin venta])
+  D --> E[Pagos<br/>append-only]
+  D --> F[Pedido<br/>OPEN]
+  F --> G{Suministro<br/>por línea}
+  G -->|IN_STOCK| H[Reserva de inventario]
+  G -->|MADE_TO_ORDER| I[Trabajo de taller]
+  I --> J[Avances y revisión]
+  J -->|rechazo| I
+  J -->|aprobación| K[Línea READY]
+  H --> L[Entrega programada]
+  K --> L
+  F --> M[Acceso de seguimiento<br/>rotatable/revocable]
+  J -->|solo avances aprobados| M
+  M --> N[Vista privada del cliente]
+  L --> O[OUT_FOR_DELIVERY]
+  O --> P[DELIVERED]
+  P --> Q[Pedido COMPLETED]

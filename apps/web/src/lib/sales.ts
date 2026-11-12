@@ -1,3 +1,4 @@
+import { formatMoney } from './formatters';
 export type SaleStatus = 'CONFIRMED' | 'CANCELLED';
 export type PaymentStatus = 'PENDING' | 'PARTIALLY_PAID' | 'PAID';
 export type PaymentType = 'DEPOSIT' | 'PAYMENT' | 'FINAL_PAYMENT' | 'REFUND' | 'ADJUSTMENT';
@@ -30,6 +31,7 @@ export type SaleItem = {
   productId: string;
   productVariantId: string | null;
   productNameSnapshot: string;
+  imageUrlSnapshot: string | null;
   variantNameSnapshot: string | null;
   skuSnapshot: string | null;
   customization: Record<string, unknown> | null;
@@ -83,6 +85,7 @@ export type Sale = {
   quote?: { id: string; code: string };
   createdByUser?: { id: string; fullName: string; email?: string };
   items?: SaleItem[];
+  order?: { id: string; code: string; status: string } | null;
   payments?: SalePayment[];
   warnings?: string[];
   financialSummary?: { costStatus: string; grossProfit: string | null; margin: number | null };
@@ -91,14 +94,7 @@ export type Page<T> = {
   data: T[];
   pagination: { page: number; limit: number; total: number; totalPages: number };
 };
-export const money = (value: string | number | null | undefined) =>
-  value === null || value === undefined || value === ''
-    ? '—'
-    : new Intl.NumberFormat('es-CO', {
-        style: 'currency',
-        currency: 'COP',
-        maximumFractionDigits: 2
-      }).format(Number(value));
+export const money = formatMoney;
 export const text = (value: FormDataEntryValue | null) => String(value ?? '').trim() || undefined;
 export const number = (value: FormDataEntryValue | null) => {
   const valueText = text(value);

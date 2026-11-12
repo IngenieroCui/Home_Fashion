@@ -2,7 +2,7 @@
 
 Aplicación Flutter para talleres.
 
-La referencia completa de arquitectura, rutas, uso, pruebas, compilación y distribución está en [`../../docs/mobile.md`](../../docs/mobile.md).
+La referencia completa de arquitectura, rutas, uso, pruebas, compilación y distribución está en [PROJECT.md](../../docs/PROJECT.md#aplicación-android).
 
 Android Emulator normalmente usa `http://10.0.2.2:3001/api`.
 

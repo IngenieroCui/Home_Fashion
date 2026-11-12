@@ -87,8 +87,8 @@ describe('WorkshopJobsService', () => {
   it('does not update the order item or inventory while assigning', async () => {
     const { service, orderItems } = setup();
     await service.create(dto(), '1');
-    expect(orderItems.findByPk.mock.calls).toHaveLength(1);
-    expect(JSON.stringify(orderItems.findByPk.mock.calls)).not.toContain('update');
+    expect(orderItems.findByPk).toHaveBeenCalledTimes(2);
+    expect(orderItems.findByPk).toHaveBeenLastCalledWith('20', expect.objectContaining({ lock: 'UPDATE' }));
   });
 
   it('lists jobs through one paginated query with joined data and no per-job lookups', async () => {

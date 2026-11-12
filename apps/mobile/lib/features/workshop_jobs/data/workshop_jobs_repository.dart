@@ -79,9 +79,14 @@ class RemoteWorkshopJobsRepository implements WorkshopJobsRepository {
     CancelToken? cancelToken,
   }) async {
     try {
+      final form = FormData.fromMap({
+        ...command.toJson(),
+        'files': [for (final path in command.imagePaths) await MultipartFile.fromFile(path)],
+      });
       final response = await _api.post<Map<String, dynamic>>(
-        '/workshop/jobs/$jobId/progress',
-        data: command.toJson(),
+        '/workshop/jobs/$jobId/progress-media',
+        data: form,
+        options: Options(sendTimeout: const Duration(seconds: 60), receiveTimeout: const Duration(seconds: 60)),
         cancelToken: cancelToken,
       );
       return ProgressReport.fromJson(_payload(response));
@@ -108,8 +113,8 @@ class RemoteWorkshopJobsRepository implements WorkshopJobsRepository {
 
   String _validationMessage(DioException error) {
     final message = _rawServerMessage(error);
-    if (message.contains('evidenceUrls')) {
-      return 'Las evidencias deben ser hasta cinco URLs válidas.';
+    if (message.contains('evidenceUrls') || message.contains('fotografías')) {
+      return 'Selecciona hasta cinco fotografías válidas.';
     }
     if (message.contains('progressPercent')) {
       return 'El porcentaje de avance debe ser un número válido entre 1 y 99.';
@@ -117,7 +122,7 @@ class RemoteWorkshopJobsRepository implements WorkshopJobsRepository {
     if (message.contains('message')) {
       return 'Escribe un mensaje válido para el reporte.';
     }
-    return 'Revisa el mensaje, el porcentaje y las URLs antes de enviar.';
+    return 'Revisa el mensaje, el porcentaje y las fotografías antes de enviar.';
   }
 
   String _stateMessage(DioException error) {

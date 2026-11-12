@@ -1,0 +1,199 @@
+.ui-button-danger {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+}
+.ui-button-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-text);
+}
+.ui-icon-button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0.5rem;
+}
+.ui-dialog {
+  max-width: calc(100vw - 2rem);
+  max-height: 90dvh;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+  padding: var(--space-5);
+}
+.ui-dialog::backdrop {
+  background: #201910cc;
+}
+.ui-dialog button {
+  min-height: 44px;
+}
+.ui-form-field {
+  display: grid;
+  gap: var(--space-2);
+}
+.ui-form-field label {
+  font-weight: 600;
+}
+.ui-form-field small {
+  color: var(--color-text-muted);
+}
+.ui-status-success {
+  background: #e3ecd8;
+  color: var(--color-success);
+}
+.ui-status-warning {
+  background: #f5ead3;
+  color: var(--color-warning);
+}
+.ui-status-danger {
+  background: #f8e4e1;
+  color: var(--color-danger);
+}
+.ui-toasts {
+  position: fixed;
+  z-index: 150;
+  bottom: var(--space-4);
+  right: var(--space-4);
+  width: min(26rem, calc(100vw - 2rem));
+  display: grid;
+  gap: var(--space-2);
+}
+.ui-toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-md);
+}
+.ui-toast-success {
+  border-left-color: var(--color-success);
+}
+.ui-toast-error {
+  border-left-color: var(--color-danger);
+}
+.ui-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: ui-spin 0.8s linear infinite;
+}
+@keyframes ui-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.branded-state {
+  min-height: 55vh;
+  padding-block: var(--space-8);
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: var(--space-5);
+}
+.branded-state p {
+  max-width: 55ch;
+}
+.reference-image-note {
+  margin-top: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+.dense-item-card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  display: grid;
+  gap: var(--space-3);
+}
+.dense-item-card dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+.dense-item-card dt {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+.dense-item-card dd {
+  margin: 0;
+}
+/* Cards also keep financial details legible beside the tablet sidebar. */
+@media (max-width: 1199px) {
+  .responsive-item-table .admin-table,
+  .responsive-item-table tbody,
+  .responsive-item-table tr,
+  .responsive-item-table td {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+  .responsive-item-table thead {
+    display: none;
+  }
+  .responsive-item-table tr {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
+    margin-bottom: var(--space-4);
+    background: var(--color-surface);
+  }
+  .responsive-item-table td {
+    display: grid;
+    grid-template-columns: minmax(6rem, 0.8fr) minmax(0, 1.2fr);
+    gap: var(--space-2);
+    padding: var(--space-2);
+    border: 0;
+  }
+  .responsive-item-table td::before {
+    content: attr(data-label);
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+  .responsive-item-table td:first-child,
+  .responsive-item-table td[data-label='Acciones'] {
+    display: block;
+  }
+  .responsive-item-table td:first-child::before,
+  .responsive-item-table td[data-label='Acciones']::before {
+    display: none;
+  }
+  .responsive-item-table td button {
+    min-height: 44px;
+    margin-right: var(--space-3);
+  }
+  .responsive-item-table {
+    overflow: visible;
+  }
+}
+@media (max-width: 767px) {
+  .admin-form-wide {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .quote-success h2 {
+    font-size: clamp(1.8rem, 8vw, 2.5rem);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-spinner {
+    animation: none;
+  }
+}
+
+.form-field-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}

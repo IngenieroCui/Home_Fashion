@@ -13,6 +13,7 @@ class WorkshopJobsState {
   const WorkshopJobsState({
     this.status = WorkshopJobsLoadStatus.initial,
     this.items = const [],
+    this.summary = const WorkshopJobsSummary(),
     this.query = '',
     this.isSlow = false,
     this.isLoadingMore = false,
@@ -25,6 +26,7 @@ class WorkshopJobsState {
 
   final WorkshopJobsLoadStatus status;
   final List<WorkshopJobSummary> items;
+  final WorkshopJobsSummary summary;
   final String query;
   final WorkshopJobStatus? filter;
   final bool isSlow;
@@ -39,6 +41,7 @@ class WorkshopJobsState {
   WorkshopJobsState copyWith({
     WorkshopJobsLoadStatus? status,
     List<WorkshopJobSummary>? items,
+    WorkshopJobsSummary? summary,
     String? query,
     WorkshopJobStatus? filter,
     bool clearFilter = false,
@@ -54,6 +57,7 @@ class WorkshopJobsState {
     return WorkshopJobsState(
       status: status ?? this.status,
       items: items ?? this.items,
+      summary: summary ?? this.summary,
       query: query ?? this.query,
       filter: clearFilter ? null : (filter ?? this.filter),
       isSlow: isSlow ?? this.isSlow,
@@ -113,6 +117,7 @@ class WorkshopJobsCubit extends Cubit<WorkshopJobsState> {
           items: result.items,
           page: result.page,
           totalPages: result.totalPages,
+          summary: result.summary,
           isSlow: false,
           clearError: true,
         ),
@@ -182,6 +187,7 @@ class WorkshopJobsCubit extends Cubit<WorkshopJobsState> {
           items: [...state.items, ...result.items],
           page: result.page,
           totalPages: result.totalPages,
+          summary: result.summary,
           isLoadingMore: false,
         ),
       );

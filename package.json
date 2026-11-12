@@ -18,9 +18,25 @@
     "db:seed:status": "pnpm --filter @home-fashion/api db:seed:status",
     "db:seed:undo": "pnpm --filter @home-fashion/api db:seed:undo",
     "db:seed:undo:all": "pnpm --filter @home-fashion/api db:seed:undo:all",
-    "format": "pnpm -r --filter @home-fashion/shared --filter @home-fashion/api --filter @home-fashion/web format"
+    "format": "pnpm -r --filter @home-fashion/shared --filter @home-fashion/api --filter @home-fashion/web format",
+    "test:e2e:journey": "tsx tests/e2e/support/run.ts",
+    "test:e2e:provision": "node tests/e2e/support/local-mysql.mjs",
+    "test:e2e:stop": "node tests/e2e/support/local-mysql.mjs --stop",
+    "test:e2e:typecheck": "tsc -p tests/e2e/tsconfig.json",
+    "test:e2e:safety": "tsx --test tests/e2e/support/safety.test.ts",
+    "source:package": "python scripts/package-source.py",
+    "test:release": "tsx --test tests/e2e/support/release.test.ts",
+    "test:source-package": "python scripts/package-source.test.py",
+    "test:closure": "node tests/payments/sandbox-directed.cjs --closure"
   },
   "devDependencies": {
-    "prettier": "^3.9.8"
+    "@playwright/test": "^1.64.0",
+    "@types/node": "^24.13.6",
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.4.2",
+    "mysql2": "^3.24.4",
+    "prettier": "^3.9.8",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
   }
 }

@@ -1,15 +1,16 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
+import 'package:image_picker/image_picker.dart';
 import '../domain/workshop_job.dart';
 import '../logic/workshop_job_detail_cubit.dart';
 import 'workshop_labels.dart';
 
 class ProgressReportSheet extends StatefulWidget {
   const ProgressReportSheet({required this.type, super.key});
-
   final ProgressReportType type;
-
   @override
   State<ProgressReportSheet> createState() => _ProgressReportSheetState();
 }
@@ -18,162 +19,211 @@ class _ProgressReportSheetState extends State<ProgressReportSheet> {
   final _formKey = GlobalKey<FormState>();
   final _message = TextEditingController();
   final _percent = TextEditingController();
-  final _urls = List.generate(5, (_) => TextEditingController());
+  final _picker = ImagePicker();
+  final List<XFile> _photos = [];
+  bool _picking = false;
+  String? _pickerError;
+  String? _requestId;
+  String? _lastPayload;
+
+  @override
+  void initState() {
+    super.initState();
+    _recoverPhotos();
+  }
+
+  Future<void> _recoverPhotos() async {
+    try {
+      final response = await _picker.retrieveLostData();
+      if (!mounted || response.isEmpty) return;
+      if (response.files != null) {
+        setState(
+            () => _photos.addAll(response.files!.take(5 - _photos.length)));
+      }
+      if (response.exception != null) {
+        setState(() => _pickerError =
+            'No pudimos recuperar las fotografías. Puedes seleccionarlas nuevamente.');
+      }
+    } catch (_) {
+      // Unsupported platforms/test hosts have no pending Android picker data.
+    }
+  }
 
   @override
   void dispose() {
     _message.dispose();
     _percent.dispose();
-    for (final controller in _urls) {
-      controller.dispose();
-    }
     super.dispose();
+  }
+
+  Future<void> _addPhoto() async {
+    if (_photos.length >= 5 || _picking) return;
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+        ListTile(
+            leading: const Icon(Icons.camera_alt_outlined),
+            title: const Text('Tomar fotografía'),
+            onTap: () => Navigator.pop(context, ImageSource.camera)),
+        ListTile(
+            leading: const Icon(Icons.photo_library_outlined),
+            title: const Text('Elegir de galería'),
+            onTap: () => Navigator.pop(context, ImageSource.gallery)),
+        ListTile(
+            title: const Text('Cancelar'), onTap: () => Navigator.pop(context)),
+      ])),
+    );
+    if (source == null || !mounted) return;
+    setState(() {
+      _picking = true;
+      _pickerError = null;
+    });
+    try {
+      final photo = await _picker.pickImage(
+          source: source, maxWidth: 1600, maxHeight: 1600, imageQuality: 82);
+      if (photo != null && mounted) setState(() => _photos.add(photo));
+    } catch (_) {
+      if (mounted) {
+        setState(() => _pickerError =
+            'No pudimos abrir la cámara o la galería. Puedes volver a intentarlo.');
+      }
+    } finally {
+      if (mounted) setState(() => _picking = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<WorkshopJobDetailCubit>().state;
-    final submitting = state.isSubmitting;
+    final busy = state.isSubmitting || _picking;
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        20,
-        16,
-        20,
-        MediaQuery.viewInsetsOf(context).bottom + 24,
-      ),
+          20, 16, 20, MediaQuery.viewInsetsOf(context).bottom + 24),
       child: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
+          key: _formKey,
+          child: SingleChildScrollView(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                Row(children: [
                   Expanded(
-                    child: Text(
-                      reportTypeLabel(widget.type),
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
+                      child: Text(reportTypeLabel(widget.type),
+                          style: Theme.of(context).textTheme.titleLarge)),
                   IconButton(
-                    tooltip: 'Cerrar',
-                    onPressed: submitting ? null : () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _message,
-                enabled: !submitting,
-                minLines: 3,
-                maxLines: 6,
-                maxLength: 4000,
-                decoration: const InputDecoration(
-                  labelText: 'Mensaje *',
-                  hintText: 'Describe claramente el trabajo realizado.',
-                  alignLabelWithHint: true,
-                ),
-                validator: (value) => value == null || value.trim().isEmpty
-                    ? 'Escribe un mensaje.'
-                    : null,
-              ),
-              if (widget.type == ProgressReportType.progress) ...[
-                const SizedBox(height: 12),
+                      tooltip: 'Cerrar',
+                      onPressed: busy ? null : () => Navigator.pop(context),
+                      icon: const Icon(Icons.close))
+                ]),
+                const SizedBox(height: 8),
                 TextFormField(
-                  controller: _percent,
-                  enabled: !submitting,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Porcentaje de avance (opcional)',
-                    suffixText: '%',
-                    helperText: 'Si lo indicas, debe estar entre 1 y 99.',
-                  ),
-                  validator: (value) {
-                    final text = value?.trim() ?? '';
-                    if (text.isEmpty) return null;
-                    final parsed = int.tryParse(text);
-                    return parsed == null || parsed < 1 || parsed > 99
-                        ? 'El porcentaje debe estar entre 1 y 99.'
-                        : null;
-                  },
-                ),
-              ],
-              const SizedBox(height: 18),
-              Text('Evidencias por URL (opcional)',
-                  style: Theme.of(context).textTheme.titleSmall),
-              const SizedBox(height: 4),
-              const Text(
-                'Puedes agregar hasta 5 enlaces https. No selecciones archivos del teléfono.',
-              ),
-              const SizedBox(height: 12),
-              for (var index = 0; index < _urls.length; index++) ...[
-                TextFormField(
-                  key: ValueKey('evidence-$index'),
-                  controller: _urls[index],
-                  enabled: !submitting,
-                  keyboardType: TextInputType.url,
-                  decoration: InputDecoration(
-                    labelText: 'URL ${index + 1}',
-                    prefixIcon: const Icon(Icons.link),
-                  ),
-                  validator: _validateUrl,
-                ),
-                if (index < _urls.length - 1) const SizedBox(height: 10),
-              ],
-              if (state.submitError != null) ...[
-                const SizedBox(height: 16),
-                Text(
-                  state.submitError!.message,
-                  key: const Key('submit-error'),
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ],
-              const SizedBox(height: 20),
-              FilledButton.icon(
-                onPressed: submitting ? null : _submit,
-                icon: submitting
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.send_outlined),
-                label: Text(submitting ? 'Enviando…' : 'Enviar reporte'),
-              ),
-            ],
-          ),
-        ),
-      ),
+                    controller: _message,
+                    enabled: !busy,
+                    minLines: 3,
+                    maxLines: 6,
+                    maxLength: 4000,
+                    decoration: const InputDecoration(
+                        labelText: 'Mensaje *',
+                        hintText: 'Describe claramente el trabajo realizado.'),
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? 'Escribe un mensaje.'
+                        : null),
+                if (widget.type == ProgressReportType.progress)
+                  TextFormField(
+                      controller: _percent,
+                      enabled: !busy,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                          labelText: 'Porcentaje de avance (opcional)',
+                          suffixText: '%'),
+                      validator: (value) {
+                        final text = value?.trim() ?? '';
+                        if (text.isEmpty) return null;
+                        final number = int.tryParse(text);
+                        return number == null || number < 1 || number > 99
+                            ? 'El porcentaje debe estar entre 1 y 99.'
+                            : null;
+                      }),
+                const SizedBox(height: 18),
+                Text('Evidencias',
+                    style: Theme.of(context).textTheme.titleSmall),
+                Text('${_photos.length} / 5 fotografías'),
+                if (_pickerError != null)
+                  Text(_pickerError!,
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.error)),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                    onPressed: busy || _photos.length >= 5 ? null : _addPhoto,
+                    icon: const Icon(Icons.add_a_photo_outlined),
+                    label: const Text('Agregar fotografía')),
+                if (_photos.isNotEmpty)
+                  Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Wrap(spacing: 10, runSpacing: 10, children: [
+                        for (var i = 0; i < _photos.length; i++)
+                          Stack(children: [
+                            ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.file(File(_photos[i].path),
+                                    width: 96, height: 96, fit: BoxFit.cover)),
+                            Positioned(
+                                right: 0,
+                                child: IconButton(
+                                    tooltip: 'Quitar fotografía',
+                                    onPressed: busy
+                                        ? null
+                                        : () =>
+                                            setState(() => _photos.removeAt(i)),
+                                    icon: const Icon(Icons.cancel),
+                                    color: Colors.white))
+                          ])
+                      ])),
+                if (state.submitError != null)
+                  Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: Text(state.submitError!.message,
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.error))),
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                    onPressed: busy ? null : _submit,
+                    icon: state.isSubmitting
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.send_outlined),
+                    label: Text(
+                        state.isSubmitting ? 'Enviando…' : 'Enviar reporte')),
+              ]))),
     );
-  }
-
-  String? _validateUrl(String? value) {
-    final trimmed = value?.trim() ?? '';
-    if (trimmed.isEmpty) return null;
-    final uri = Uri.tryParse(trimmed);
-    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
-      return 'Ingresa una URL https válida.';
-    }
-    return null;
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    final cubit = context.read<WorkshopJobDetailCubit>();
-    final success = await cubit.submit(
-      SubmitProgressCommand(
-        type: widget.type,
-        message: _message.text,
-        progressPercent: widget.type == ProgressReportType.progress &&
-                _percent.text.trim().isNotEmpty
-            ? int.parse(_percent.text.trim())
-            : null,
-        evidenceUrls: _urls
-            .map((item) => item.text.trim())
-            .where((item) => item.isNotEmpty)
-            .toList(growable: false),
-      ),
-    );
+    final percent = widget.type == ProgressReportType.progress
+        ? int.tryParse(_percent.text.trim())
+        : null;
+    final imagePaths =
+        _photos.map((photo) => photo.path).toList(growable: false);
+    final payload = jsonEncode(
+        [widget.type.apiValue, _message.text.trim(), percent, imagePaths]);
+    if (_lastPayload != payload) {
+      final random = Random.secure();
+      _requestId = List.generate(
+              16, (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0'))
+          .join();
+      _lastPayload = payload;
+    }
+    final success = await context.read<WorkshopJobDetailCubit>().submit(
+          SubmitProgressCommand(
+            type: widget.type,
+            message: _message.text,
+            progressPercent: percent,
+            imagePaths: imagePaths,
+            requestId: _requestId,
+          ),
+        );
     if (success && mounted) Navigator.pop(context, true);
   }
 }

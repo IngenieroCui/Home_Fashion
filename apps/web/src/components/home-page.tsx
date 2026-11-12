@@ -6,21 +6,19 @@ import { RetryButton } from './retry-button';
 import { getCategories, getProducts } from '@/lib/catalog';
 
 export async function HomePage() {
-  const [categoriesResult, productsResult] = await Promise.allSettled([
-    getCategories(),
-    getProducts({ page: 1 })
-  ]);
+  const [categoriesResult, productsResult, availableResult, customizableResult] =
+    await Promise.allSettled([
+      getCategories(),
+      getProducts({ page: 1, limit: 50, sort: 'newest' }),
+      getProducts({ limit: 4, inStock: true }),
+      getProducts({ limit: 4, allowsCustomization: true })
+    ]);
   const categories = categoriesResult.status === 'fulfilled' ? categoriesResult.value : [];
   const products = productsResult.status === 'fulfilled' ? productsResult.value.data : [];
-  const categoriesShown = new Set<string>();
-  const featuredProducts = products
-    .filter((product) => {
-      const category = product.category?.slug ?? product.slug;
-      if (categoriesShown.has(category)) return false;
-      categoriesShown.add(category);
-      return true;
-    })
-    .slice(0, 3);
+  const featuredProducts = [
+    ...products.filter((product) => product.images?.length),
+    ...products.filter((product) => !product.images?.length)
+  ].slice(0, 6);
   const featured =
     products.find((product) => product.category?.slug === 'sofas' && product.images?.length) ??
     products.find((product) => product.images?.length);
@@ -58,6 +56,11 @@ export async function HomePage() {
               <ProductImage
                 image={featured.images?.find((image) => image.isPrimary) ?? featured.images?.[0]}
                 alt={featured.name}
+                width={1100}
+                widths={[750, 1100, 1500, 1800]}
+                sizes="(max-width: 1023px) 100vw, (max-width: 1919px) 50vw, 880px"
+                loading="eager"
+                fetchPriority="high"
               />
               <div>
                 <p className="eyebrow">Encuentra inspiración</p>
@@ -104,13 +107,24 @@ export async function HomePage() {
         </div>
         <div className="mt-8">
           {categories.length ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="home-category-grid">
               {categories.map((category, index) => (
                 <Link
                   className="category-card"
                   href={`/catalogo?category=${encodeURIComponent(category.slug)}`}
                   key={category.id}
                 >
+                  <div className="category-visual">
+                    <ProductImage
+                      alt={`Colección ${category.name}`}
+                      image={
+                        products.find(
+                          (product) =>
+                            product.category?.slug === category.slug && product.images?.length
+                        )?.images?.[0]
+                      }
+                    />
+                  </div>
                   <span className="category-index" aria-hidden="true">
                     {String(index + 1).padStart(2, '0')}
                   </span>
@@ -149,6 +163,48 @@ export async function HomePage() {
               </p>
             </PageState>
           )}
+        </div>
+      </section>
+      {[
+        { title: 'Disponibles ahora', result: availableResult, href: '/catalogo?inStock=true' },
+        {
+          title: 'Personalizables',
+          result: customizableResult,
+          href: '/catalogo?allowsCustomization=true'
+        }
+      ].map(({ title, result, href }) =>
+        result.status === 'fulfilled' && result.value.data.length > 0 ? (
+          <section className="page-shell py-12" key={title}>
+            <div className="section-heading">
+              <h2 className="font-serif text-4xl">{title}</h2>
+              <Link className="text-link" href={href}>
+                Ver colección →
+              </Link>
+            </div>
+            <div className="mt-8">
+              <ProductGrid products={result.value.data.slice(0, 4)} />
+            </div>
+          </section>
+        ) : null
+      )}
+      <section className="home-customization">
+        <div className="page-shell home-customization-grid">
+          <div>
+            <p className="eyebrow">A tu medida</p>
+            <h2 className="font-serif text-4xl">Una pieza que conversa con tu hogar</h2>
+            <p>
+              Elige una referencia y cuéntanos qué necesitas. Podemos revisar contigo telas,
+              colores, acabados y medidas cuando el diseño permita personalización.
+            </p>
+            <Link className="button-link" href="/catalogo?allowsCustomization=true">
+              Explorar personalizables →
+            </Link>
+          </div>
+          <div className="home-customization-note">
+            <span>01 / 03</span>
+            <strong className="font-serif">Tu espacio inspira cada detalle.</strong>
+            <p>La propuesta final y la disponibilidad se confirman al cotizar.</p>
+          </div>
         </div>
       </section>
       <section className="home-collection">

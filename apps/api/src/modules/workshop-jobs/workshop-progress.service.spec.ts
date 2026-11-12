@@ -19,7 +19,7 @@ describe('WorkshopProgressService', () => {
   };
   function setup({ currentJob = job(), currentItem = item(), user = { id: '8', isActive: true, role: { code: 'WORKSHOP' } }, report = null as Record<string, unknown> | null } = {}) {
     const reports = { sequelize: { transaction: jest.fn(async (callback) => callback(transaction)) }, create: jest.fn(async (values) => ({ ...values, id: '30', get: () => ({ ...values, id: '30' }) })), findByPk: jest.fn().mockResolvedValue(report), findAndCountAll: jest.fn().mockResolvedValue({ rows: [], count: 0 }) };
-    const jobs = { findOne: jest.fn().mockResolvedValue(currentJob), findByPk: jest.fn().mockResolvedValue(currentJob), findAndCountAll: jest.fn().mockResolvedValue({ rows: [], count: 0 }) };
+    const jobs = { count: jest.fn().mockResolvedValue(0), findOne: jest.fn().mockResolvedValue(currentJob), findByPk: jest.fn().mockResolvedValue(currentJob), findAndCountAll: jest.fn().mockResolvedValue({ rows: [], count: 0 }) };
     const order: { id: string; status: OrderStatus; update: jest.Mock } = {
       id: '1', status: OrderStatus.OPEN, update: jest.fn(async (changes) => Object.assign(order, changes))
     };
@@ -36,6 +36,14 @@ describe('WorkshopProgressService', () => {
     expect(jobs.findAndCountAll).toHaveBeenCalledWith(expect.objectContaining({ where: { workshopUserId: '8' }, limit: 5, offset: 5 }));
     const include = jobs.findAndCountAll.mock.calls[0][0].include as Array<{ include?: Array<{ include?: unknown[] }> }>;
     expect(include[0].include?.[0].include).toBeUndefined();
+  });
+
+  it('workspace summary ignores filters and scopes counts to the authenticated workshop', async () => {
+    const { service, jobs } = setup();
+    jobs.count.mockResolvedValueOnce(7).mockResolvedValueOnce(12).mockResolvedValueOnce(3).mockResolvedValueOnce(20);
+    const result = await service.listOwnJobs('8', { page: 2, limit: 5, q: 'sofá', status: WorkshopJobStatus.IN_PROGRESS });
+    expect(result.summary).toEqual({ assigned: 7, inProgress: 12, readyForReview: 3, completed: 20 });
+    for (const [options] of jobs.count.mock.calls) expect(options).toEqual({ where: { workshopUserId: '8', status: expect.any(String) } });
   });
 
   it('returns 404 for an owned-job lookup that does not belong to the workshop', async () => {

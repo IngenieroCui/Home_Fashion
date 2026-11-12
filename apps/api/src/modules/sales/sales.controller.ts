@@ -1,4 +1,10 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { createHash } from 'node:crypto';
+import { MediaCleanupService } from '../media/media-cleanup.service';
+import { CloudinaryMediaService } from '../media/cloudinary-media.service';
+import { validateMediaFiles } from '../media/validate-media-files';
+import type { ImageFile } from '../media/media.types';
 import { CurrentUser } from '../auth/security/current-user.decorator';
 import { JwtAuthGuard } from '../auth/security/jwt-auth.guard';
 import { RequirePermissions } from '../auth/security/permissions.decorator';
@@ -21,7 +27,7 @@ import { SalesService } from './sales.service';
 @Controller('admin/sales')
 @UseGuards(JwtAuthGuard, PermissionsGuard)
 export class SalesController {
-  constructor(private readonly sales: SalesService) {}
+  constructor(private readonly sales: SalesService, private readonly media: CloudinaryMediaService, private readonly cleanup: MediaCleanupService) {}
   @Get() @RequirePermissions(SALE_MANAGE_PERMISSION) list(
     @Query() query: SaleQueryDto,
     @CurrentUser() user: { id: string }
@@ -46,6 +52,24 @@ export class SalesController {
     @CurrentUser() user: { id: string }
   ) {
     return this.sales.registerPayment(params.id, body, user.id);
+  }
+  @Post(':id/payments-media') @RequirePermissions(PAYMENT_REGISTER_PERMISSION)
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024, files: 1 } }))
+  async registerPaymentMedia(@Param() params: IdParamDto, @Body() body: RegisterSalePaymentDto,
+    @UploadedFile() file: ImageFile | undefined, @CurrentUser() user: { id: string }) {
+    validateMediaFiles(file ? [file] : [], 0);
+    const evidenceIdentity = file ? createHash('sha256').update(file.buffer).digest('hex') : '';
+    const sale = await this.sales.preparePaymentMedia(params.id, body, user.id, evidenceIdentity);
+    if (sale.replay) return sale.replay;
+    const uploaded = file ? await this.media.uploadImage(file, 'payments', sale.code) : undefined;
+    try {
+      const result = await this.sales.registerPayment(params.id, { ...body, evidenceUrl: uploaded?.secureUrl }, user.id, evidenceIdentity);
+      if (uploaded && result.payment.evidenceUrl !== uploaded.secureUrl) await this.cleanup.scheduleRollback('payments', [uploaded.publicId]);
+      return result;
+    } catch (error) {
+      if (uploaded) await this.cleanup.scheduleRollback('payments', [uploaded.publicId]);
+      throw error;
+    }
   }
   @Post(':saleId/payments/:paymentId/void') @RequirePermissions(PAYMENT_CORRECT_PERMISSION) voidPayment(
     @Param() params: SalePaymentParamDto,

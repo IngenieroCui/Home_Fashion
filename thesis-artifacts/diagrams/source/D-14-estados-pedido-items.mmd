@@ -1,0 +1,37 @@
+%% D-14 — Estados derivados de Order y transiciones de OrderItem
+%% Fuentes: orders.types.ts; order-state.ts; workshop-progress.service.ts; deliveries.service.ts
+flowchart TB
+  subgraph ITEM[OrderItem]
+    I0{Tipo de suministro}
+    RS[RESERVED]
+    PP[PENDING_PRODUCTION]
+    IP[IN_PRODUCTION]
+    RD[READY]
+    DL[DELIVERED]
+    CN[CANCELLED]
+    I0 -->|IN_STOCK| RS
+    I0 -->|MADE_TO_ORDER| PP
+    PP -->|STARTED| IP
+    IP -->|aprobación READY_FOR_REVIEW| RD
+    RD -->|completar entrega| DL
+    RS -->|completar entrega| DL
+    PP -. cancelación autorizada .-> CN
+    IP -. cancelación autorizada .-> CN
+    RD -. cancelación autorizada .-> CN
+  end
+
+  subgraph ORDER[Order · estado derivado de ítems activos]
+    O[OPEN]
+    PR[IN_PROGRESS]
+    R[READY]
+    C[COMPLETED]
+    X[CANCELLED]
+    O -->|algún ítem avanza| PR
+    PR -->|todos READY/DELIVERED| R
+    R -->|todos DELIVERED| C
+    O -. cancelación del pedido .-> X
+    PR -. cancelación del pedido .-> X
+    R -. cancelación del pedido .-> X
+  end
+
+  ITEM -. recalculateOrderStatus .-> ORDER

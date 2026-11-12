@@ -1,9 +1,12 @@
 'use client';
+import { LoadingState as AdminSkeleton } from './ui/loading-state';
+import { formatDate } from '@/lib/formatters';
 
 import Link from 'next/link';
 import { type FormEvent } from 'react';
 import { usePageData } from '@/lib/use-page-data';
-import { ListError } from './page-state';
+import { AdminRecordCard } from './admin-record-card';
+import { ListError, PageState } from './page-state';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { orderStatusLabel, type OrderPage, type OrderStatus } from '@/lib/orders';
 import { OrderStatusBadge } from './order-status-badge';
@@ -23,6 +26,7 @@ export function OrdersList() {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const params = new URLSearchParams();
+    if (search.get('customerId')) params.set('customerId', search.get('customerId')!);
     for (const key of ['q', 'status', 'dateFrom', 'dateTo']) {
       const value = String(data.get(key) ?? '').trim();
       if (value) params.set(key, value);
@@ -79,51 +83,85 @@ export function OrdersList() {
         </button>
       </form>
       {error && <ListError message={error} retry={retry} />}
-      {!error && !page && (
-        <p className="notice" role="status">
-          Cargando pedidos…
-        </p>
-      )}
+      {!error && !page && <AdminSkeleton label="Cargando pedidos" />}
       {page &&
         (page.data.length ? (
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Código</th>
-                  <th>Cliente</th>
-                  <th>Venta</th>
-                  <th>Estado</th>
-                  <th>Prometida</th>
-                  <th>Unidades</th>
-                  <th>Creado</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {page.data.map((order) => (
-                  <tr key={order.id}>
-                    <td>{order.code}</td>
-                    <td>{order.customer?.fullName ?? '—'}</td>
-                    <td>{order.sale?.code ?? order.saleId}</td>
-                    <td>
-                      <OrderStatusBadge status={order.status} />
-                    </td>
-                    <td>{order.promisedDate ?? '—'}</td>
-                    <td>{order.totalItems ?? '—'}</td>
-                    <td>{new Date(order.createdAt).toLocaleDateString('es-CO')}</td>
-                    <td>
-                      <Link className="text-link" href={`/panel/pedidos/${order.id}`}>
-                        Ver detalle
-                      </Link>
-                    </td>
+          <>
+            <div className="admin-table-wrap admin-desktop">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Pedido</th>
+                    <th>Cliente</th>
+                    <th>Estado</th>
+                    <th>Prometida</th>
+                    <th>Unidades</th>
+                    <th>Creado</th>
+                    <th>Acción</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {page.data.map((order) => (
+                    <tr key={order.id}>
+                      <td>
+                        <strong>{order.code}</strong>
+                      </td>
+                      <td>{order.customer?.fullName || '—'}</td>
+                      <td>
+                        <OrderStatusBadge status={order.status} />
+                      </td>
+                      <td>{order.promisedDate || 'Sin definir'}</td>
+                      <td>{order.totalItems ?? '—'}</td>
+                      <td>{formatDate(order.createdAt)}</td>
+                      <td>
+                        <Link className="text-link" href={`/panel/pedidos/${order.id}`}>
+                          Ver pedido →
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="admin-mobile-cards">
+              {page.data.map((order) => (
+                <AdminRecordCard
+                  key={order.id}
+                  title={order.code}
+                  subtitle={order.customer?.fullName}
+                  badge={<OrderStatusBadge status={order.status} />}
+                  actions={
+                    <Link className="text-link" href={`/panel/pedidos/${order.id}`}>
+                      Ver pedido →
+                    </Link>
+                  }
+                >
+                  <dl className="record-values">
+                    <div>
+                      <dt>Prometida</dt>
+                      <dd>{order.promisedDate || 'Sin definir'}</dd>
+                    </div>
+                    <div>
+                      <dt>Unidades</dt>
+                      <dd>{order.totalItems ?? '—'}</dd>
+                    </div>
+                  </dl>
+                  <small>Creado: {formatDate(order.createdAt)}</small>
+                </AdminRecordCard>
+              ))}
+            </div>
+          </>
         ) : (
-          <p className="notice">No hay pedidos que coincidan con los filtros.</p>
+          <PageState
+            title="No hay pedidos para mostrar"
+            action={
+              <Link className="button-link" href="/panel/ventas">
+                Preparar desde una venta
+              </Link>
+            }
+          >
+            <p>Ajusta los filtros o abre una venta confirmada para preparar su pedido.</p>
+          </PageState>
         ))}
       {page && page.pagination.totalPages > 1 && (
         <div className="admin-actions">

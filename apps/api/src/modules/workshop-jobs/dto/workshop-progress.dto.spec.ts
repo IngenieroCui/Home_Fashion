@@ -10,18 +10,12 @@ describe('Workshop progress DTOs', () => {
     ...overrides
   });
 
-  it('accepts a valid optional evidence URL snapshot', async () => {
-    await expect(validate(validProgress({ evidenceUrls: ['https://example.com/evidence.jpg'] }))).resolves.toHaveLength(0);
+  it('accepts a text-only progress report', async () => {
+    await expect(validate(validProgress())).resolves.toHaveLength(0);
   });
 
-  it.each([
-    ['six evidence URLs', { evidenceUrls: Array.from({ length: 6 }, (_value, index) => `https://example.com/${index}`) }],
-    ['an invalid evidence URL', { evidenceUrls: ['not-a-url'] }],
-    ['an empty evidence URL', { evidenceUrls: [''] }],
-    ['a non-string evidence value', { evidenceUrls: [5] }],
-    ['a blank message', { message: '   ' }]
-  ])('rejects %s', async (_name, values) => {
-    await expect(validate(validProgress(values))).resolves.not.toHaveLength(0);
+  it('rejects a blank message', async () => {
+    await expect(validate(validProgress({ message: '   ' }))).resolves.not.toHaveLength(0);
   });
 
   it('requires a non-blank comment only for rejection', async () => {

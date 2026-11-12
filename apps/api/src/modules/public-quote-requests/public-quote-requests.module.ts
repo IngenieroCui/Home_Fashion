@@ -1,3 +1,4 @@
+import { CatalogModule } from '../catalog/catalog.module';
 import { Module } from '@nestjs/common';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { Product } from '../catalog/entities/product.model';
@@ -9,7 +10,7 @@ import { PublicQuoteRequestsController } from './public-quote-requests.controlle
 import { PublicQuoteRequestsService } from './public-quote-requests.service';
 
 @Module({
-  imports: [SequelizeModule.forFeature([Customer, Quote, QuoteItem, Product, ProductVariant])],
+  imports: [CatalogModule, SequelizeModule.forFeature([Customer, Quote, QuoteItem, Product, ProductVariant])],
   controllers: [PublicQuoteRequestsController],
   providers: [PublicQuoteRequestsService]
 })

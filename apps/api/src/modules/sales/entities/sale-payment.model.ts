@@ -11,6 +11,11 @@ import { Sale } from './sale.model';
 
 @Table({ tableName: 'sale_payments', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at' })
 export class SalePayment extends Model {
+  // Historical rows stay NULL; MySQL permits multiple NULLs in a unique index.
+  @Column({ type: DataType.STRING(36), unique: true, field: 'intent_id' })
+  declare intentId: string | null;
+  @Column({ type: DataType.STRING(64), field: 'intent_fingerprint' })
+  declare intentFingerprint: string | null;
   @Column({ type: DataType.BIGINT.UNSIGNED, autoIncrement: true, primaryKey: true })
   declare id: string;
   @ForeignKey(() => Sale)

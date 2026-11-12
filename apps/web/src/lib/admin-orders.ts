@@ -13,6 +13,8 @@ function safeMessage(body: unknown, status: number) {
     typeof (body as { message?: unknown }).message === 'string'
       ? (body as { message: string }).message
       : '';
+  if (status === 400 && message === 'Esta venta ya tiene un pedido') return 'Esta venta ya tiene un pedido.';
+  if (status === 400 && message === 'Solo las ventas confirmadas pueden crear pedidos') return 'Solo las ventas confirmadas pueden crear pedidos.';
   const orders: Array<[RegExp, string]> = [
     [/already converted/i, 'Esta venta ya tiene un pedido.'],
     [

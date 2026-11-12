@@ -1,0 +1,26 @@
+%% D-01 — Contexto del sistema
+%% Fuentes: docs/architecture.md; apps/api; apps/web; apps/mobile
+flowchart LR
+  C([Cliente])
+  P([Personal<br/>ADMIN / EMPLOYEE])
+  T([Taller externo<br/>WORKSHOP])
+  W[Web pública y panel<br/>Next.js 15]
+  M[Aplicación Android<br/>Flutter]
+  A[API Home Fashion<br/>NestJS 11]
+  DB[(MySQL 8)]
+  EXT[(Contenido externo<br/>referenciado por URL)]
+
+  C -->|consulta catálogo,<br/>solicita cotización,<br/>revisa seguimiento| W
+  P -->|opera ventas,<br/>pedidos y entregas| W
+  T -->|consulta trabajos<br/>y reporta avances| M
+  W -->|HTTPS / BFF| A
+  M -->|HTTPS + JWT| A
+  A -->|Sequelize| DB
+  A -.->|URLs de imágenes<br/>y evidencias| EXT
+
+  classDef actor fill:#FFF7ED,stroke:#EA580C,color:#7C2D12;
+  classDef system fill:#EEF2FF,stroke:#4F46E5,color:#172554;
+  classDef data fill:#ECFDF5,stroke:#059669,color:#064E3B;
+  class C,P,T actor;
+  class W,M,A system;
+  class DB,EXT data;

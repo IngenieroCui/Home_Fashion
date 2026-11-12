@@ -1,3 +1,5 @@
+import { formatDate } from './formatters';
+import { formatDateTime } from './formatters';
 export type TrackingAccessStatus =
   | { exists: false; active: false }
   | {
@@ -29,8 +31,9 @@ export type PublicTrackingTimelineEntry = {
 };
 
 export type PublicTrackingItem = {
-  publicItemId: string;
+  publicItemKey: string;
   productNameSnapshot: string;
+  imageUrlSnapshot: string | null;
   variantNameSnapshot: string | null;
   skuSnapshot: string | null;
   customization: Record<string, unknown> | null;
@@ -42,11 +45,19 @@ export type PublicTrackingItem = {
 };
 
 export type PublicOrderTracking = {
+  lastPublicUpdateAt?: string;
   orderCode: string;
   orderStatus: 'OPEN' | 'IN_PROGRESS' | 'READY' | 'COMPLETED' | 'CANCELLED';
   promisedDate: string | null;
   createdAt: string;
   items: PublicTrackingItem[];
+  delivery: {
+    status: 'SCHEDULED' | 'OUT_FOR_DELIVERY' | 'DELIVERED';
+    scheduledDate: string;
+    timeWindow: string | null;
+    deliveredAt: string | null;
+    evidenceUrls: string[] | null;
+  } | null;
 };
 
 export const publicOrderStatusLabel: Record<PublicOrderTracking['orderStatus'], string> = {
@@ -77,14 +88,6 @@ export const publicTimelineTypeLabel: Record<PublicTrackingTimelineEntry['type']
   READY_FOR_REVIEW: 'Fabricación terminada'
 };
 
-export function formatTrackingDateTime(value: string | null | undefined) {
-  if (!value) return '—';
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('es-CO');
-}
+export const formatTrackingDateTime = formatDateTime;
 
-export function formatTrackingDate(value: string | null | undefined) {
-  if (!value) return '—';
-  const date = /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T12:00:00`) : new Date(value);
-  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString('es-CO');
-}
+export const formatTrackingDate = formatDate;

@@ -5,7 +5,13 @@ import { OperationalSummary } from '@/components/operational-summary';
 
 const modules = [
   {
-    title: 'Catálogo',
+    title: 'Inventario',
+    description: 'Existencias, reservas y disponibilidad real.',
+    href: '/panel/inventario',
+    permission: 'CATALOG_MANAGE'
+  },
+  {
+    title: 'Productos',
     description: 'Productos, variantes e inventario terminado.',
     href: '/panel/catalogo',
     permission: 'CATALOG_MANAGE'
@@ -66,21 +72,34 @@ export default async function PanelPage() {
     <>
       <section className="panel-welcome">
         <p className="eyebrow">Panel interno</p>
-        <h1 className="font-serif text-4xl text-[#3d291e]">Tu negocio, en un solo lugar</h1>
+        <h1 className="font-serif text-4xl text-[var(--color-text)]">
+          Buenos días, {user.fullName.split(' ')[0]}
+        </h1>
         <p>
-          Organiza la atención al cliente y acompaña cada pedido, desde la primera cotización hasta
-          la entrega.
+          Esto es lo que necesita atención en Home Fashion. Consulta la operación y continúa donde
+          hace falta.
         </p>
-        <Link className="button-link mt-6" href="/catalogo">
-          Ir al catálogo público
-        </Link>
       </section>
-      <OperationalSummary
-        canQuotes={user.role === 'ADMIN' || user.permissions.includes('QUOTE_MANAGE')}
-        canOrders={user.role === 'ADMIN' || user.permissions.includes('ORDER_MANAGE')}
-      />
+      <OperationalSummary />
+      <section className="panel-quick-actions" aria-label="Acciones rápidas">
+        <h2 className="font-serif text-2xl">Empieza por aquí</h2>
+        <div className="panel-quick-grid">
+          {(user.role === 'ADMIN' || user.permissions.includes('CUSTOMER_MANAGE')) && (
+            <Link href="/panel/clientes/nuevo">+ Nuevo cliente</Link>
+          )}
+          {(user.role === 'ADMIN' || user.permissions.includes('QUOTE_MANAGE')) && (
+            <Link href="/panel/cotizaciones/nueva">+ Nueva cotización</Link>
+          )}
+          {(user.role === 'ADMIN' || user.permissions.includes('SALE_MANAGE')) && (
+            <Link href="/panel/ventas/nueva">+ Nueva venta</Link>
+          )}
+          {(user.role === 'ADMIN' || user.permissions.includes('CATALOG_MANAGE')) && (
+            <Link href="/panel/catalogo/nuevo">+ Nuevo producto</Link>
+          )}
+        </div>
+      </section>
       <section className="mt-8">
-        <h2 className="font-serif text-2xl text-[#3d291e]">Módulos operativos</h2>
+        <h2 className="font-serif text-2xl text-[var(--color-text)]">Módulos operativos</h2>
         {!visibleModules.length && (
           <p className="notice mt-4">
             Tu cuenta aún no tiene módulos habilitados. Solicita al administrador los permisos

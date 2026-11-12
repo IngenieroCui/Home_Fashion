@@ -1,3 +1,4 @@
+import { formatMoney } from './formatters';
 export type Customer = {
   id: string;
   fullName: string;
@@ -11,6 +12,8 @@ export type Customer = {
   notes: string | null;
   isActive: boolean;
   quotes?: QuoteSummary[];
+  createdAt?: string;
+  updatedAt?: string;
 };
 export type QuoteStatus =
   'REQUESTED' | 'DRAFT' | 'QUOTED' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'CANCELLED';
@@ -31,6 +34,7 @@ export type QuoteItem = {
   productId: string;
   productVariantId: string | null;
   productNameSnapshot: string;
+  imageUrlSnapshot: string | null;
   variantNameSnapshot: string | null;
   skuSnapshot: string | null;
   quantity: number;
@@ -89,15 +93,7 @@ export const allowedQuoteStatuses: Partial<Record<QuoteStatus, QuoteStatus[]>> =
 };
 
 export function money(value: string | number | null | undefined) {
-  if (value === null || value === undefined || value === '') return 'Pendiente de definir';
-  const amount = Number(value);
-  return Number.isFinite(amount)
-    ? new Intl.NumberFormat('es-CO', {
-        style: 'currency',
-        currency: 'COP',
-        maximumFractionDigits: 2
-      }).format(amount)
-    : 'Pendiente de definir';
+  return formatMoney(value, 'Pendiente de definir');
 }
 
 export function optionalNumber(value: FormDataEntryValue | null): number | undefined {

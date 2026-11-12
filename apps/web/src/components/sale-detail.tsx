@@ -1,9 +1,17 @@
 'use client';
+import { LoadingState as AdminSkeleton } from './ui/loading-state';
+import { formatDate, formatDateTime } from '@/lib/formatters';
+
+import { ListError } from './page-state';
+import { CommerceItemVisual } from './commerce-item-visual';
+
 import { clientFetch } from '@/lib/client-fetch';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { money, type Sale } from '@/lib/sales';
+import { SaleFinancialSummary } from './sales/sale-financial-summary';
 import { PaymentForm } from './payment-form';
+import { PaymentAttempts } from './payment-attempts';
 import { PaymentsHistory } from './payments-history';
 import { PaymentSummary } from './payment-summary';
 async function load(id: string) {
@@ -14,6 +22,8 @@ async function load(id: string) {
 }
 export function SaleDetail({
   id,
+  userId,
+  canWompi,
   canCostView,
   canMarginView,
   canPaymentRegister,
@@ -21,6 +31,8 @@ export function SaleDetail({
   canOrderManage
 }: {
   id: string;
+  userId: string;
+  canWompi: boolean;
   canCostView: boolean;
   canMarginView: boolean;
   canPaymentRegister: boolean;
@@ -40,13 +52,8 @@ export function SaleDetail({
   useEffect(() => {
     void refresh();
   }, [refresh]);
-  if (error)
-    return (
-      <p className="form-error" role="alert">
-        {error}
-      </p>
-    );
-  if (!sale) return <p className="notice">Cargando venta…</p>;
+  if (error) return <ListError message={error} retry={() => void refresh()} />;
+  if (!sale) return <AdminSkeleton label="Cargando venta" />;
   return (
     <div className="admin-stack">
       <section className="admin-heading">
@@ -54,12 +61,33 @@ export function SaleDetail({
           <Link className="text-link" href="/panel/ventas">
             ← Ventas
           </Link>
-          <p className="eyebrow">{sale.code}</p>
-          <h1 className="font-serif text-4xl">Venta de {sale.customer?.fullName ?? 'cliente'}</h1>
+          <p className="eyebrow">Venta</p>
+          <h1 className="font-serif text-4xl">{sale.code}</h1>
+          <p>
+            {sale.customer?.fullName ?? 'Cliente'} · {formatDate(sale.createdAt)} ·{' '}
+            {sale.quoteId ? 'Cotización' : 'Venta directa'}
+          </p>
         </div>
         <span className="admin-status">
           {sale.status === 'CONFIRMED' ? 'Confirmada' : 'Cancelada'}
         </span>
+        <div className="admin-actions">
+          {canOrderManage && sale.order && (
+            <Link className="button-link" href={`/panel/pedidos/${sale.order.id}`}>
+              Ver pedido {sale.order.code}
+            </Link>
+          )}
+          {canOrderManage && !sale.order && sale.status === 'CONFIRMED' && (
+            <Link className="button-link" href={`/panel/ventas/${sale.id}/crear-pedido`}>
+              Crear pedido
+            </Link>
+          )}
+          {canPaymentRegister && sale.status === 'CONFIRMED' && (
+            <a className="button-link button-link-secondary" href="#registrar-movimiento">
+              Registrar movimiento
+            </a>
+          )}
+        </div>
       </section>
       {sale.warnings?.map((warning) => (
         <p className="notice" key={warning}>
@@ -69,13 +97,13 @@ export function SaleDetail({
       <section className="admin-section">
         <p>Origen: {sale.quoteId ? 'Cotización' : 'Venta directa'}</p>
         {sale.quote && <p>Cotización: {sale.quote.code}</p>}
-        <p>Fecha: {new Date(sale.createdAt).toLocaleString('es-CO')}</p>
+        <p>Fecha: {formatDateTime(sale.createdAt)}</p>
         {sale.createdByUser && <p>Registró: {sale.createdByUser.fullName}</p>}
         <p>Notas: {sale.notes ?? '—'}</p>
       </section>
       <section className="admin-section">
         <h2 className="font-serif text-2xl">Elementos</h2>
-        <div className="admin-table-wrap">
+        <div className="admin-table-wrap responsive-item-table">
           <table className="admin-table">
             <thead>
               <tr>
@@ -97,11 +125,12 @@ export function SaleDetail({
             <tbody>
               {sale.items?.map((item) => (
                 <tr key={item.id}>
-                  <td>
-                    {item.productNameSnapshot}
-                    {item.variantNameSnapshot
-                      ? ` · ${item.variantNameSnapshot}`
-                      : ' · Personalizado'}
+                  <td data-label="Producto">
+                    <CommerceItemVisual
+                      imageUrl={item.imageUrlSnapshot}
+                      name={item.productNameSnapshot}
+                      variant={item.variantNameSnapshot ?? 'Personalizado'}
+                    />
                     <small className="item-note">
                       {item.skuSnapshot ?? ''}
                       {item.customization
@@ -112,13 +141,13 @@ export function SaleDetail({
                       {item.notes ? ` · ${item.notes}` : ''}
                     </small>
                   </td>
-                  <td>{item.quantity}</td>
-                  <td>{money(item.unitListPrice)}</td>
-                  <td>{money(item.unitSalePrice)}</td>
-                  <td>{money(item.discountAmount)}</td>
-                  <td>{money(item.subtotal)}</td>
+                  <td data-label="Cantidad">{item.quantity}</td>
+                  <td data-label="Lista">{money(item.unitListPrice)}</td>
+                  <td data-label="Venta">{money(item.unitSalePrice)}</td>
+                  <td data-label="Descuento">{money(item.discountAmount)}</td>
+                  <td data-label="Subtotal">{money(item.subtotal)}</td>
                   {canCostView && (
-                    <td>
+                    <td data-label="Costo">
                       {item.unitCostSnapshot === null
                         ? 'Costo no registrado'
                         : money(item.unitCostSnapshot)}
@@ -126,12 +155,12 @@ export function SaleDetail({
                   )}
                   {canMarginView && (
                     <>
-                      <td>
+                      <td data-label="Utilidad">
                         {item.grossProfit === null
                           ? 'Sin cálculo completo'
                           : money(item.grossProfit)}
                       </td>
-                      <td>
+                      <td data-label="Margen">
                         {item.margin === null || item.margin === undefined
                           ? '—'
                           : `${item.margin}%`}
@@ -144,24 +173,8 @@ export function SaleDetail({
           </table>
         </div>
       </section>
-      <section className="admin-section quote-totals">
-        <h2 className="font-serif text-2xl">Resumen</h2>
-        <p>Subtotal {money(sale.subtotal)}</p>
-        <p>Descuento {money(sale.discountTotal)}</p>
-        <p>Entrega {money(sale.deliveryFee)}</p>
-        <p>
-          <strong>Total {money(sale.total)}</strong>
-        </p>
-        {canMarginView && sale.financialSummary && (
-          <p>
-            Utilidad total:{' '}
-            {sale.financialSummary.grossProfit === null
-              ? 'Sin cálculo completo'
-              : money(sale.financialSummary.grossProfit)}
-          </p>
-        )}
-      </section>
-      {canOrderManage && sale.status === 'CONFIRMED' && (
+      <SaleFinancialSummary sale={sale} canMarginView={canMarginView} />
+      {canOrderManage && !sale.order && sale.status === 'CONFIRMED' && (
         <section className="admin-section">
           <h2 className="font-serif text-2xl">Pedido</h2>
           <p>Clasifica los elementos antes de crear el pedido y reservar inventario.</p>
@@ -171,8 +184,9 @@ export function SaleDetail({
         </section>
       )}
       <PaymentSummary sale={sale} />
+      {canWompi && sale.status === 'CONFIRMED' && <PaymentAttempts saleId={sale.id} balance={sale.balance ?? '0.00'} onChanged={refresh} />}
       {canPaymentRegister && sale.status === 'CONFIRMED' && (
-        <PaymentForm balance={sale.balance} onChanged={refresh} saleId={sale.id} />
+        <PaymentForm balance={sale.balance} onChanged={refresh} saleId={sale.id} userId={userId} />
       )}
       <PaymentsHistory
         canCorrect={canPaymentCorrect}

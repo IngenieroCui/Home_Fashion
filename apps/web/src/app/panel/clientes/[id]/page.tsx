@@ -1,4 +1,4 @@
-import { CustomerEditor } from '@/components/customer-quote';
+import { CustomerDetail } from '@/components/customer-detail';
 import { requireCustomerManage } from '@/lib/auth/customer-quote-access';
 export const dynamic = 'force-dynamic';
 export default async function CustomerPage({
@@ -11,5 +11,5 @@ export default async function CustomerPage({
   await requireCustomerManage();
   const { id } = await params;
   const { created } = await searchParams;
-  return <CustomerEditor created={created === '1'} id={id} />;
+  return <CustomerDetail created={created === '1'} id={id} />;
 }

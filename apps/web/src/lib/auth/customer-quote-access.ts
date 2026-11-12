@@ -1,11 +1,11 @@
 import 'server-only';
 import { redirect } from 'next/navigation';
-import { getAuthenticatedUser, sessionTokens } from './server';
+import { getAuthenticatedUser, sessionTokens, sessionRefreshRedirect } from './server';
 
 async function requirePermission(permission: string, denied: string) {
   const { accessToken, refreshToken } = await sessionTokens();
   const user = await getAuthenticatedUser(accessToken);
-  if (!user && refreshToken) redirect('/api/session/refresh?next=/panel');
+  if (!user && refreshToken) redirect(await sessionRefreshRedirect());
   if (!user || user.role === 'WORKSHOP') redirect('/iniciar-sesion');
   if (user.role !== 'ADMIN' && !user.permissions.includes(permission))
     redirect(`/panel?denied=${denied}`);
@@ -15,7 +15,7 @@ async function requirePermission(permission: string, denied: string) {
 async function requireAnyPermission(permissions: string[], denied: string) {
   const { accessToken, refreshToken } = await sessionTokens();
   const user = await getAuthenticatedUser(accessToken);
-  if (!user && refreshToken) redirect('/api/session/refresh?next=/panel');
+  if (!user && refreshToken) redirect(await sessionRefreshRedirect());
   if (!user || user.role === 'WORKSHOP') redirect('/iniciar-sesion');
   if (
     user.role !== 'ADMIN' &&

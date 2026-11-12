@@ -51,24 +51,41 @@ class _HomeFashionWorkshopAppState extends State<HomeFashionWorkshopApp> {
         locale: const Locale('es', 'CO'),
         supportedLocales: const [Locale('es', 'CO')],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
-        theme: _theme(),
+        theme: _theme(Brightness.light),
+        darkTheme: _theme(Brightness.dark),
+        themeMode: ThemeMode.system,
         routerConfig: _appRouter.router,
       ),
     );
   }
 
-  ThemeData _theme() {
+  ThemeData _theme(Brightness brightness) {
     const seed = Color(0xFF98462F);
     final scheme = ColorScheme.fromSeed(
       seedColor: seed,
-      brightness: Brightness.light,
+      brightness: brightness,
     );
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      scaffoldBackgroundColor: const Color(0xFFFAF8F4),
+      scaffoldBackgroundColor: brightness == Brightness.light
+          ? const Color(0xFFFAF8F4)
+          : scheme.surface,
+      visualDensity: VisualDensity.standard,
+      materialTapTargetSize: MaterialTapTargetSize.padded,
+      textTheme: Typography.material2021()
+          .black
+          .apply(bodyColor: scheme.onSurface, displayColor: scheme.onSurface),
+      snackBarTheme:
+          const SnackBarThemeData(behavior: SnackBarBehavior.floating),
+      iconButtonTheme: IconButtonThemeData(
+          style: IconButton.styleFrom(minimumSize: const Size(48, 48))),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+          style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48))),
       appBarTheme: AppBarTheme(
-        backgroundColor: const Color(0xFFFAF8F4),
+        backgroundColor: brightness == Brightness.light
+            ? const Color(0xFFFAF8F4)
+            : scheme.surface,
         foregroundColor: scheme.onSurface,
         centerTitle: false,
         elevation: 0,
@@ -77,7 +94,7 @@ class _HomeFashionWorkshopAppState extends State<HomeFashionWorkshopApp> {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: scheme.surfaceContainerLowest,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),

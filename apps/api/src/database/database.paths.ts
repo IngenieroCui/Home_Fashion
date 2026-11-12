@@ -10,5 +10,5 @@ export function resolveDatabaseArtifactDirectory(
 }
 
 export function createArtifactGlob(directory: string): [string, { cwd: string; ignore: string[] }] {
-  return ['*.{js,ts}', { cwd: directory, ignore: ['**/*.d.ts'] }];
+  return ['*.{js,ts}', { cwd: directory, ignore: ['**/*.d.ts', '**/*.spec.ts', '**/*.spec.js'] }];
 }

@@ -1,7 +1,9 @@
 import 'server-only';
+import { apiClientAddress } from './api-client-address';
 import { createHash } from 'node:crypto';
 import { createRefreshCoordinator } from './refresh-coordinator';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
+import { safePanelPath } from './session-redirect';
 import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from './cookies';
 import type { LoginResponse, MeResponse, RefreshResponse } from './types';
 
@@ -13,17 +15,27 @@ export function apiServerUrl() {
   ).replace(/\/$/, '');
 }
 
+export async function sessionRefreshRedirect() {
+  const next = safePanelPath((await headers()).get('x-hf-panel-path'));
+  return `/api/session/refresh?next=${encodeURIComponent(next)}`;
+}
+
 async function authRequest<T>(
   path: string,
   init: RequestInit
-): Promise<{ data: T | null; status: number }> {
+): Promise<{ data: T | null; status: number; retryAfter?: string }> {
   try {
+    const requestHeaders = new Headers(init.headers);
+    if (path === '/auth/login' || path === '/auth/refresh') {
+      for (const [key, value] of Object.entries(apiClientAddress(path, await headers()))) requestHeaders.set(key, value);
+    }
     const response = await fetch(`${apiServerUrl()}${path}`, {
       ...init,
+      headers: requestHeaders,
       cache: 'no-store',
       signal: AbortSignal.timeout(15000)
     });
-    if (!response.ok) return { data: null, status: response.status };
+    if (!response.ok) return { data: null, status: response.status, retryAfter: response.headers.get('retry-after') ?? undefined };
     return { data: (await response.json()) as T, status: response.status };
   } catch {
     return { data: null, status: 0 };
