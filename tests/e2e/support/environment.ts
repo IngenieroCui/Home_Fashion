@@ -20,7 +20,9 @@ export function loadEnvironment() {
   process.env.PORT = '4301';
   process.env.API_SERVER_URL = 'http://127.0.0.1:4301/api';
   process.env.NEXT_PUBLIC_API_URL = process.env.API_SERVER_URL;
-  for (const key of ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET']) process.env[key] ??= '';
+  for (const key of ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET']) {
+    process.env[key] = process.env.HF_E2E_ISOLATED_CLOUDINARY === 'true' ? process.env[key] ?? '' : '';
+  }
   process.env.CLOUDINARY_ROOT_FOLDER = `home-fashion-e2e/${required('E2E_RUN_ID')}`;
   process.env.CLOUDINARY_FOLDER = `${process.env.CLOUDINARY_ROOT_FOLDER}/products`;
   if (required('E2E_DEDICATED') !== 'true' || required('DB_HOST') !== '127.0.0.1'

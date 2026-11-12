@@ -1,4 +1,5 @@
 import { OperationsModule } from './modules/operations/operations.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { resolve } from 'node:path';
@@ -31,6 +32,7 @@ import { DeliveriesModule } from './modules/deliveries/deliveries.module';
     CatalogModule,
     QuotesModule,
     SalesModule,
+    PaymentsModule,
     OrdersModule,
     WorkshopJobsModule,
     OrderTrackingModule,

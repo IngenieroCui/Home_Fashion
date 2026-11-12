@@ -9,6 +9,7 @@ import { publicForm, login, uiMutation, confirm, deposit, createOrder, assign, t
 test('01 · Solicitud pública → cotización → venta → taller → entrega del mismo pedido', async ({ page, browser, request, evidence, caseKey }) => {
   const { product, make } = await catalog();
   const ids = evidence.ids;
+  const liveMedia = process.env.HF_E2E_ISOLATED_CLOUDINARY === 'true';
   await test.step('Cliente selecciona catálogo/variante y conserva requestCode real', async () => {
     const form = await publicForm(page, product, make, `QA Asistida ${caseKey}`);
     const pending = page.waitForRequest(req => new URL(req.url()).pathname === '/api/public/quote-requests' && req.method() === 'POST');
@@ -66,10 +67,13 @@ test('01 · Solicitud pública → cotización → venta → taller → entrega 
     const progress = await workshop.call('POST', `/workshop/jobs/${ids.jobId}/progress`, { type: 'PROGRESS', message: 'QA-HIDDEN-PROGRESS', progressPercent: 50 });
     ids.progressId = String(progress.id);
     const ready = await workshop.call('POST', `/workshop/jobs/${ids.jobId}/progress-media`, undefined,
-      { type: 'READY_FOR_REVIEW', message: 'QA-PUBLIC-APPROVED', progressPercent: '100', files: testImage });
-    ids.reportId = String(ready.id); expect(ready.evidenceUrls).toHaveLength(1);
-    expect(ready.evidenceUrls[0]).toMatch(/^https:\/\/res\.cloudinary\.com\//);
-    evidence.notes.push('WORKSHOP: integración API real, no Android. Imagen PNG multipart enviada a Cloudinary real.');
+      { type: 'READY_FOR_REVIEW', message: 'QA-PUBLIC-APPROVED', progressPercent: '100', ...(liveMedia ? { files: testImage } : {}) });
+    ids.reportId = String(ready.id);
+    expect(ready.evidenceUrls).toHaveLength(liveMedia ? 1 : 0);
+    if (liveMedia) expect(new URL(ready.evidenceUrls[0]).searchParams.get('expires_at')).toBeTruthy();
+    evidence.notes.push(liveMedia
+      ? 'Imagen PNG multipart enviada al Cloudinary de prueba.'
+      : 'API y base reales de QA. Multipart sin archivo; Cloudinary externo deshabilitado.');
   });
   await test.step('ADMIN aprueba reporte y publica enlace privado del mismo pedido', async () => {
     await page.goto(`/panel/talleres/avances/${ids.reportId}`);
@@ -89,7 +93,7 @@ test('01 · Solicitud pública → cotización → venta → taller → entrega 
       const projection = await new ApiClient(request).call('GET', `/public/tracking/${tracking.token}`);
       publicProjection(projection, ['QA-PUBLIC-APPROVED'], ['QA-HIDDEN-STARTED', 'QA-HIDDEN-PROGRESS', 'QA-INTERNAL-PRIVATE']);
     });
-    await test.step('ADMIN programa, inicia y completa entrega con imagen multipart', async () => {
+    await test.step('ADMIN programa, inicia y completa la entrega', async () => {
       await page.getByLabel('Dirección de entrega', { exact: true }).fill('Dirección sintética QA');
       await page.getByLabel('Fecha programada', { exact: true }).fill(new Date().toISOString().slice(0, 10));
       await page.getByRole('combobox', { name: 'Tipo de responsable', exact: true }).selectOption('EXTERNAL_DRIVER');
@@ -98,10 +102,20 @@ test('01 · Solicitud pública → cotización → venta → taller → entrega 
       ids.deliveryId = String(delivery.id);
       await page.getByRole('link', { name: 'Ver y gestionar entrega', exact: true }).click();
       await uiMutation(page, `/api/admin/deliveries/${ids.deliveryId}/start`, () => page.getByRole('button', { name: 'Iniciar entrega', exact: true }).click());
-      await page.getByLabel('Nombre de quien recibe', { exact: true }).fill('Receptor QA');
-      await page.getByLabel('Seleccionar fotografías', { exact: true }).setInputFiles(testImage);
-      const completed = await uiMutation(page, `/api/admin/deliveries/${ids.deliveryId}/complete-media`, () => page.getByRole('button', { name: 'Confirmar entrega recibida', exact: true }).click());
-      expect(completed.status).toBe('DELIVERED'); expect(completed.evidenceUrls).toHaveLength(1);
+      if (liveMedia) {
+        await page.getByLabel('Nombre de quien recibe', { exact: true }).fill('Receptor QA');
+        await page.getByLabel('Seleccionar fotografías', { exact: true }).setInputFiles(testImage);
+        const completed = await uiMutation(page, '/api/admin/deliveries/' + ids.deliveryId + '/complete-media', () => page.getByRole('button', { name: 'Confirmar entrega recibida', exact: true }).click());
+        expect(completed.status).toBe('DELIVERED');
+        expect(completed.evidenceUrls).toHaveLength(1);
+      } else {
+        const admin = new ApiClient(request); await admin.login('admin');
+        const completed = await admin.call('POST', '/admin/deliveries/' + ids.deliveryId + '/complete', {
+          receiverName: 'Receptor QA', evidenceUrls: ['https://evidence.example.invalid/fixture.png']
+        });
+        expect(completed.status).toBe('DELIVERED');
+        expect(completed.evidenceUrls).toEqual([]);
+      }
     });
     await test.step('Tracking actualizado y cadena persistida COMPLETED en MySQL', async () => {
       await publicPage.reload(); await expect(publicPage.getByText('Completado', { exact: true }).first()).toBeVisible();

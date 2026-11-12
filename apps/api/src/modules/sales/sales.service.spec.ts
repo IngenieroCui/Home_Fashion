@@ -3,6 +3,7 @@ import { QuoteStatus } from '../quotes/quotes.types';
 import { calculatePaymentSummary, calculateSaleItem, calculateSaleTotals } from './sales-calculations';
 import { RegisterSalePaymentDto, SaleItemInputDto } from './dto/sales.dto';
 import { SalesService } from './sales.service';
+import { randomUUID } from 'node:crypto';
 import {
   SalePaymentAdjustmentEffect,
   SalePaymentMethod,
@@ -46,7 +47,7 @@ describe('SalesService', () => {
         const sale = {
           ...values,
           id: '1',
-          update: jest.fn(async (update) => Object.assign(sale, update))
+          update: jest.fn(async (update): Promise<unknown> => Object.assign(sale, update))
         };
         return Promise.resolve(sale);
       }),
@@ -85,7 +86,7 @@ describe('SalesService', () => {
       salePayments as never,
       { findByPk: jest.fn() } as never,
       quotes as never,
-      {} as never,
+      { findAll: jest.fn(async () => (await quotes.findByPk())?.items ?? []) } as never,
       products as never,
       variants as never,
       { resolvePrimaryImageUrl: jest.fn().mockResolvedValue(null) } as never,
@@ -455,6 +456,7 @@ describe('sale payment calculations', () => {
 
 describe('SalesService payment movements', () => {
   const paymentDto = (overrides: Partial<RegisterSalePaymentDto> = {}): RegisterSalePaymentDto => ({
+    intentId: randomUUID(),
     type: SalePaymentType.PAYMENT,
     method: SalePaymentMethod.CASH,
     amount: '25.00',
@@ -463,7 +465,7 @@ describe('SalesService payment movements', () => {
   });
 
   function setupPayment(options: { payments?: Array<Record<string, unknown>>; status?: SaleStatus; permissions?: string[] } = {}) {
-    const payments = [...(options.payments ?? [])].map((initial) => {
+    const payments: Array<Record<string, unknown>> = [...(options.payments ?? [])].map((initial) => {
       const payment = { ...initial, status: initial.status ?? SalePaymentStatus.REGISTERED };
       return Object.assign(payment, {
         get: () => ({ ...payment }),
@@ -474,12 +476,13 @@ describe('SalesService payment movements', () => {
     const transaction = { LOCK: { UPDATE: 'UPDATE' } };
     const salePayments = {
       create: jest.fn(async (values) => {
-        const payment = { ...values, id: String(payments.length + 1), get: () => ({ ...payment }), update: jest.fn(async (valuesToUpdate) => Object.assign(payment, valuesToUpdate)) };
+        const payment: Record<string, unknown> = { ...values, id: String(payments.length + 1), get: () => ({ ...payment }), update: jest.fn(async (valuesToUpdate) => Object.assign(payment, valuesToUpdate)) };
         payments.push(payment);
         return payment;
       }),
       findAll: jest.fn(async () => payments.filter((payment) => payment.status === SalePaymentStatus.REGISTERED)),
       findByPk: jest.fn(async (id) => payments.find((payment) => payment.id === id) ?? null)
+      ,findOne: jest.fn(async ({ where }) => payments.find((payment) => payment.intentId === where.intentId) ?? null)
     };
     const sales = {
       sequelize: { transaction: jest.fn(async (callback) => callback(transaction)) },

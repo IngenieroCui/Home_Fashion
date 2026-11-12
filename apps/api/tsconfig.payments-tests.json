@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noEmit": true, "incremental": false, "types": ["node", "jest"] },
+  "include": [
+    "src/modules/sales/sales.service.spec.ts",
+    "src/modules/sales/sales.controller.spec.ts",
+    "src/modules/sales/dto/sales.dto.spec.ts",
+    "src/modules/media/qa-multipart.spec.ts",
+    "src/modules/quotes/quotes.service.spec.ts",
+    "src/modules/deliveries/deliveries.service.spec.ts",
+    "src/modules/orders/order-state.spec.ts"
+  ],
+  "exclude": []
+}

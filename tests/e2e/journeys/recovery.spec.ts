@@ -56,10 +56,15 @@ test('05 · Respuesta perdida conserva requestId, refresh continúa y acciones r
     await form.getByLabel('Monto', { exact: true }).fill('50000');
     await form.getByRole('button', { name: 'Registrar movimiento', exact: true }).click();
     await expect(form.getByRole('alert')).toContainText('comprueba si se guardó');
-    await expect(form.getByRole('button', { name: 'Registrar movimiento', exact: true })).toBeEnabled();
+    await expect(form.getByRole('button', { name: 'Registrar movimiento', exact: true })).toBeDisabled();
     expect(paymentCount).toBe(1);
-    await page.unroute(`**${path}`); await page.reload();
-    await expect(form).toBeVisible(); expect(paymentCount).toBe(1);
+    await page.unroute('**' + path); await page.reload();
+    const replay = form.getByRole('button', { name: 'Reenviar la misma intención', exact: true });
+    await expect(replay).toBeEnabled();
+    expect(paymentCount).toBe(1);
+    const recovered = await uiMutation(page, path, () => replay.click());
+    expect(String(recovered.payment.id)).toBe(String((await rows('SELECT id FROM sale_payments WHERE sale_id=?', [saleId]))[0].id));
+    await expect(replay).toHaveCount(0);
     const payments = await rows('SELECT id, sale_id, amount FROM sale_payments WHERE sale_id=?', [saleId]);
     expect(payments).toHaveLength(1); expect(Number(payments[0].amount)).toBe(50000);
     evidence.ids.saleId = saleId; evidence.finalMySQL.payments = payments;

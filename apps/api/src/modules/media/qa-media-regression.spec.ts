@@ -31,35 +31,35 @@ describe('QA media validation and post-upload compensation', () => {
     expect(() => media.uploadImage({ ...png, buffer: Buffer.from('QA text') }, 'products')).toThrow(BadRequestException);
   });
   function media() {
-    return { uploadImage: jest.fn().mockResolvedValue({ secureUrl: 'https://example.com/qa.png', publicId: 'QA-created-asset' }), destroyMany: jest.fn().mockResolvedValue(undefined) };
+    return { uploadImage: jest.fn().mockResolvedValue({ secureUrl: 'https://example.com/qa.png', publicId: 'QA-created-asset' }), scheduleRollback: jest.fn().mockResolvedValue(undefined) };
   }
   it('deletes workshop uploads when the domain changes between precheck and final write', async () => {
     const domainFailure = new BadRequestException('QA concurrent transition');
     const progress = { validateMediaSubmission: jest.fn().mockResolvedValue('QA-job'), submit: jest.fn().mockRejectedValue(domainFailure) };
-    const cloud = media(); const controller = new WorkshopOwnJobsController(progress as never, cloud as never);
+    const cloud = media(); const controller = new WorkshopOwnJobsController(progress as never, cloud as never, cloud as never);
     await expect(controller.submitMedia({ id: 'QA-user' }, { id: '1' }, { type: 'PROGRESS', message: 'QA' } as never, [png])).rejects.toBe(domainFailure);
-    expect(cloud.destroyMany).toHaveBeenCalledWith(['QA-created-asset']);
+    expect(cloud.scheduleRollback).toHaveBeenCalledWith('workshop-progress', ['QA-created-asset']);
   });
   it('deletes delivery uploads after a domain failure', async () => {
     const failure = new BadRequestException('QA delivery changed');
     const deliveries = { detail: jest.fn().mockResolvedValue({ code: 'QA-delivery' }), complete: jest.fn().mockRejectedValue(failure) };
-    const cloud = media(); const controller = new DeliveriesController(deliveries as never, cloud as never);
+    const cloud = media(); const controller = new DeliveriesController(deliveries as never, cloud as never, cloud as never);
     await expect(controller.completeMedia({ id: '1' }, { receiverName: 'QA receiver' }, [png], { id: 'QA-user' })).rejects.toBe(failure);
-    expect(cloud.destroyMany).toHaveBeenCalledWith(['QA-created-asset']);
+    expect(cloud.scheduleRollback).toHaveBeenCalledWith('deliveries', ['QA-created-asset']);
   });
   it('deletes a payment upload after a concurrent balance change', async () => {
     const failure = new BadRequestException('QA balance changed');
     const sales = { preparePaymentMedia: jest.fn().mockResolvedValue({ code: 'QA-sale' }), registerPayment: jest.fn().mockRejectedValue(failure) };
-    const cloud = media(); const controller = new SalesController(sales as never, cloud as never);
+    const cloud = media(); const controller = new SalesController(sales as never, cloud as never, cloud as never);
     await expect(controller.registerPaymentMedia({ id: '1' }, {} as never, png, { id: 'QA-user' })).rejects.toBe(failure);
-    expect(cloud.destroyMany).toHaveBeenCalledWith(['QA-created-asset']);
+    expect(cloud.scheduleRollback).toHaveBeenCalledWith('payments', ['QA-created-asset']);
   });
   it('cleans successful uploads even if another upload fails in the parallel batch', async () => {
     const progress = { validateMediaSubmission: jest.fn().mockResolvedValue('QA-job'), submit: jest.fn() };
     const cloud = media(); cloud.uploadImage.mockRejectedValueOnce(new Error('QA upload failure'));
-    const controller = new WorkshopOwnJobsController(progress as never, cloud as never);
+    const controller = new WorkshopOwnJobsController(progress as never, cloud as never, cloud as never);
     await expect(controller.submitMedia({ id: 'QA-user' }, { id: '1' }, {} as never, [png, png])).rejects.toThrow('QA upload failure');
-    expect(cloud.destroyMany).toHaveBeenCalledWith(['QA-created-asset']);
+    expect(cloud.scheduleRollback).toHaveBeenCalledWith('workshop-progress', ['QA-created-asset']);
     expect(progress.submit).not.toHaveBeenCalled();
   });
 });

@@ -20,10 +20,12 @@ export async function linkedChain(ids: Record<string, string>) {
   expect(chain[0].request_id).toBe(ids.requestId);
   expect(String(chain[0].quote_customer_id)).toBe(String(chain[0].customer_id));
   expect(String(chain[0].customer_id)).toBe(String(chain[0].order_customer_id));
-  expect(chain[0].report_evidence).toHaveLength(1);
+  const liveMedia = process.env.HF_E2E_ISOLATED_CLOUDINARY === 'true';
+  expect(chain[0].report_evidence).toHaveLength(liveMedia ? 1 : 0);
   expect(chain[0].delivery_evidence).toHaveLength(1);
   for (const url of [...chain[0].report_evidence, ...chain[0].delivery_evidence])
-    expect(url).toContain(`/home-fashion-e2e/${process.env.E2E_RUN_ID}/`);
+    if (liveMedia) expect(url).toContain('/home-fashion-e2e/' + process.env.E2E_RUN_ID + '/');
+    else expect(url).toBe('https://evidence.example.invalid/fixture.png');
   expect(chain[0]).toMatchObject({ request_code: ids.requestCode, quote_status: 'ACCEPTED',
     order_status: 'COMPLETED', delivery_status: 'DELIVERED', job_status: 'COMPLETED', review_status: 'APPROVED' });
   const payments = await rows('SELECT id, sale_id, amount, type FROM sale_payments WHERE sale_id=?', [ids.saleId]);

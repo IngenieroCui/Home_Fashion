@@ -117,6 +117,41 @@ void main() {
     await events.close();
   });
 
+  for (final status in [429, 503, null]) {
+    test('refresh transitorio ($status) conserva tokens y permite reintentar',
+        () async {
+      final storage = MemoryTokenStorage();
+      const stored =
+          AuthTokens(accessToken: 'old-access', refreshToken: 'old-refresh');
+      await storage.write(stored);
+      final events = SessionEvents();
+      var attempts = 0;
+      final adapter = RecordingAdapter((options) async {
+        if (++attempts == 1) {
+          if (status == null) {
+            throw DioException(
+                requestOptions: options, type: DioExceptionType.receiveTimeout);
+          }
+          return jsonResponse(status, {});
+        }
+        return jsonResponse(200, _tokensPayload('new'));
+      });
+      final authApi = Dio(BaseOptions(baseUrl: baseUrl))
+        ..httpClientAdapter = adapter;
+      final coordinator = TokenRefreshCoordinator(
+          authApi: authApi, tokenStorage: storage, sessionEvents: events);
+      await expectLater(
+          coordinator.refreshAccessToken(failedAccessToken: stored.accessToken),
+          throwsA(isA<DioException>()));
+      expect(storage.tokens?.refreshToken, 'old-refresh');
+      final result = await coordinator.refreshAccessToken(
+          failedAccessToken: stored.accessToken);
+      expect(result?.accessToken, 'new-access');
+      expect(storage.tokens?.refreshToken, 'new-refresh');
+      await events.close();
+    });
+  }
+
   test('refresh anterior no revive tokens después de logout', () async {
     final storage = MemoryTokenStorage(
       const AuthTokens(accessToken: 'old-access', refreshToken: 'old-refresh'),

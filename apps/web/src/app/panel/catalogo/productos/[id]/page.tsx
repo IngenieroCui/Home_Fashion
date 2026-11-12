@@ -8,8 +8,11 @@ export default async function ProductAdminPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ created?: string }>;
 }) {
-  await requireCatalogManage();
+  const { permissions } = await requireCatalogManage();
   const { id } = await params;
   const { created } = await searchParams;
-  return <ProductEditor created={created === '1'} id={id} />;
+  return <ProductEditor created={created === '1'} id={id} financialAccess={{
+    price: permissions.includes('CATALOG_PRICE_EDIT'),
+    cost: permissions.includes('FINANCIAL_COST_EDIT') && permissions.includes('FINANCIAL_COST_VIEW')
+  }} />;
 }

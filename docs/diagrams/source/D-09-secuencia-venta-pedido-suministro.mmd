@@ -8,7 +8,7 @@ sequenceDiagram
   participant DB as MySQL
 
   P->>W: Crear pedido desde venta
-  W->>A: POST /orders (clasificación por línea)
+  W->>A: POST /api/admin/orders/from-sale/:saleId
   A->>DB: Bloquea venta y variantes involucradas
   A->>DB: Comprueba que no exista otro pedido
   loop cada sale_item exactamente una vez

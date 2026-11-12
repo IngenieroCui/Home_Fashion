@@ -8,6 +8,7 @@ import {
   IsObject,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   Max,
   Min,
@@ -61,6 +62,7 @@ export class QuoteParamDto {
   @IsString() @IsNotEmpty() quoteId!: string;
 }
 export class RegisterSalePaymentDto {
+  @IsUUID('4') intentId!: string;
   @IsEnum(SalePaymentType) type!: SalePaymentType;
   @IsEnum(SalePaymentMethod) method!: SalePaymentMethod;
   @Transform(({ value }) => decimal(value))

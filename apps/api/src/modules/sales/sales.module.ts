@@ -33,6 +33,7 @@ import { SalesService } from './sales.service';
     ])
   ],
   controllers: [SalesController],
-  providers: [SalesService]
+  providers: [SalesService],
+  exports: [SalesService]
 })
 export class SalesModule {}

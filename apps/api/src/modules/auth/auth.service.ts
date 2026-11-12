@@ -25,14 +25,18 @@ export class AuthService {
   private refreshExpiry() { return this.config.get<string>('JWT_REFRESH_EXPIRES_IN', '30d'); }
   private publicUser(user: User) { return { id: user.id, fullName: user.fullName, email: user.email, role: user.role?.code }; }
   private expiresAt() { const raw = this.refreshExpiry(); const match = /^(\d+)([smhd])$/.exec(raw); const factor = match?.[2] === 's' ? 1000 : match?.[2] === 'm' ? 60000 : match?.[2] === 'h' ? 3600000 : 86400000; return new Date(Date.now() + Number(match?.[1] ?? 30) * factor); }
-  private accessToken(user: User) { return sign({ sub: user.id, role: user.role!.code, type: 'access', jti: randomUUID() }, this.accessSecret(), { expiresIn: this.accessExpiry() as never }); }
-  private refreshToken(user: User) { return sign({ sub: user.id, role: user.role!.code, type: 'refresh', jti: randomUUID() }, this.refreshSecret(), { expiresIn: this.refreshExpiry() as never }); }
+  private accessToken(user: User) { return sign({ sub: user.id, role: user.role!.code, type: 'access', version: user.authVersion, jti: randomUUID() }, this.accessSecret(), { expiresIn: this.accessExpiry() as never }); }
+  private refreshToken(user: User) { return sign({ sub: user.id, role: user.role!.code, type: 'refresh', version: user.authVersion, jti: randomUUID() }, this.refreshSecret(), { expiresIn: this.refreshExpiry() as never }); }
 
   async login(email: string, password: string) {
-    const user = await this.users.findOne({ where: { email: email.trim().toLowerCase() }, include: [Role] });
-    if (!user || !user.isActive || !(await bcrypt.compare(password, user.passwordHash))) throw invalidCredentials();
-    await user.update({ lastLoginAt: new Date() });
-    return this.issue(user);
+    return this.users.sequelize!.transaction(async transaction => {
+      const user = await this.users.findOne({ where: { email: email.trim().toLowerCase() }, transaction, lock: transaction.LOCK.UPDATE });
+      if (!user || !user.isActive || !(await bcrypt.compare(password, user.passwordHash))) throw invalidCredentials();
+      user.role = await this.roles.findByPk(user.roleId, { transaction }) ?? undefined;
+      if (!user.role) throw invalidCredentials();
+      await user.update({ lastLoginAt: new Date() }, { transaction });
+      return this.issue(user, transaction);
+    });
   }
 
   private async issue(user: User, transaction?: Transaction) {
@@ -47,10 +51,12 @@ export class AuthService {
     if (payload.type !== 'refresh') throw invalidCredentials();
     const sequelize = this.sessions.sequelize!;
     return sequelize.transaction(async (transaction) => {
-      const session = await this.sessions.findOne({ where: { tokenHash: hashToken(refreshToken) }, transaction, lock: transaction.LOCK.UPDATE });
+      const user = await this.users.findByPk(payload.sub, { transaction, lock: transaction.LOCK.UPDATE });
+      if (!user || !user.isActive || (payload.version ?? 0) !== (user.authVersion ?? 0)) throw invalidCredentials();
+      const session = await this.sessions.findOne({ where: { tokenHash: hashToken(refreshToken), userId: user.id }, transaction, lock: transaction.LOCK.UPDATE });
       if (!session || session.revokedAt || session.expiresAt <= new Date()) throw invalidCredentials();
-      const user = await this.users.findByPk(session.userId, { include: [Role], transaction, lock: transaction.LOCK.UPDATE });
-      if (!user || !user.isActive) throw invalidCredentials();
+      user.role = await this.roles.findByPk(user.roleId, { transaction }) ?? undefined;
+      if (!user.role) throw invalidCredentials();
       const result = await this.issue(user, transaction);
       const replacement = await this.sessions.findOne({ where: { tokenHash: hashToken(result.refreshToken) }, transaction });
       await session.update({ revokedAt: new Date(), replacedBySessionId: replacement!.id }, { transaction });
@@ -77,6 +83,11 @@ export class AuthService {
     const effective = new Set(rolePermissions.map((permission) => permission.code));
     for (const override of overrides) { if (override.effect === PermissionEffect.ALLOW) effective.add(override.code); else effective.delete(override.code); }
     return [...effective].sort();
+  }
+
+  async validateAccessSession(payload: JwtPayload) {
+    const user = await this.users.findByPk(payload.sub, { attributes: ['id', 'authVersion', 'isActive'] });
+    if (!user?.isActive || (payload.version ?? 0) !== (user.authVersion ?? 0)) throw invalidCredentials();
   }
 
   verifyAccessToken(token: string): JwtPayload { try { const payload = verify(token, this.accessSecret()) as JwtPayload; if (payload.type !== 'access') throw new Error(); return payload; } catch { throw invalidCredentials(); } }

@@ -121,3 +121,5 @@ Cada evidencia usa `EV-HF-XXXX`. Un registro `verificado` requiere observación 
 - Resultado: Vercel informó `success` para API y web; `/api/health` y `/catalogo` devolvieron 200. La API publicada aceptó un movimiento decimal ficticio `0.01` y lo anuló; cero cuentas temporales activas y cero sesiones abiertas después de la prueba.
 - Ubicación: `outputs/evidencias_tesis/verificaciones/despliegue-2026-09-28/README.md`.
 - Estado: verificado para despliegue y validador decimal; no equivale a compras o pagos reales.
+
+Para el corte del 12 de noviembre, consulta el [protocolo OE4](evidence/oe4-session-protocol.md) y el [registro de cierre](../release/backlog-2026-11-12.md). Las cifras previas corresponden a los cortes históricos indicados.

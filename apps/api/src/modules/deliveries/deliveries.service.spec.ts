@@ -51,7 +51,7 @@ describe('DeliveriesService', () => {
       ...(options.assignedUser ?? {})
     });
     const deliveries = {
-      sequelize: { transaction: jest.fn(async (callback: (value: typeof transaction) => Promise<unknown>) => callback(transaction)) },
+      sequelize: { query: jest.fn(), transaction: jest.fn(async (callback: (value: typeof transaction) => Promise<unknown>) => callback(transaction)) },
       findOne: jest.fn().mockResolvedValue(options.existing ?? null),
       findByPk: jest.fn().mockResolvedValue(delivery),
       findAndCountAll: jest.fn().mockResolvedValue({ rows: [], count: 0 }),
@@ -64,7 +64,7 @@ describe('DeliveriesService', () => {
       findAndCountAll: jest.fn().mockResolvedValue({ rows: [], count: 0 })
     };
     const auth = { getAuthenticatedUser: jest.fn().mockResolvedValue({ permissions: options.permissions ?? ['ORDER_MANAGE'] }) };
-    const service = new DeliveriesService(deliveries as never, orders as never, orderItems as never, users as never, auth as never);
+    const service = new DeliveriesService(deliveries as never, orders as never, orderItems as never, users as never, auth as never, { findAll: jest.fn().mockResolvedValue([]) } as never);
     return { service, deliveries, orders, orderItems, users, auth, transaction, delivery, order, items, assignedUser };
   }
 

@@ -51,7 +51,7 @@ test('reporter archives success, failure and partial runs without overwriting th
   process.env.E2E_RUN_ID = 'synthetic-catalog';
   function report(id: string, statuses: string[], status: string) {
     process.env.E2E_EXECUTION_ID = id;
-    const reporter = new JourneyReporter(evidence); reporter.onBegin();
+    const reporter = new JourneyReporter({ evidence, expectedScenarios: 5 }); reporter.onBegin();
     statuses.forEach((testStatus, index) => reporter.onTestEnd({ title: `${index + 1} Synthetic`,
       location: { file: `synthetic-${index}.spec.ts` } } as TestCase,
     { status: testStatus, duration: 1, attachments: [], errors: [] } as unknown as TestResult));

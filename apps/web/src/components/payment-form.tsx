@@ -2,8 +2,9 @@
 import { useActionFeedback } from './ui/action-feedback';
 
 import { EvidenceLinks } from './evidence-links';
+import { clearPaymentIntention, loadPaymentIntention, savePaymentIntention } from '@/lib/payment-intention';
 import { clientFetch } from '@/lib/client-fetch';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   money,
   paymentMethodLabel,
@@ -23,14 +24,28 @@ const localDateTime = () => {
 
 export function PaymentForm({
   saleId,
+  userId,
   balance,
   onChanged
 }: {
   saleId: string;
+  userId: string;
   balance: string | null | undefined;
   onChanged: () => Promise<void>;
 }) {
   const notify = useActionFeedback();
+  const submitting = useRef(false);
+  const intentionKey = `manual:${userId}:${saleId}`;
+  const [pending, setPending] = useState<FormData | null>(null);
+  const [restoring, setRestoring] = useState(true);
+  useEffect(() => {
+    let active = true;
+    setRestoring(true);
+    loadPaymentIntention(intentionKey).then(value => {
+      if (active) { setPending(value); setRestoring(false); }
+    }).catch(() => { if (active) setError('No se pudo recuperar la intención anterior. Recarga antes de registrar un movimiento.'); });
+    return () => { active = false; };
+  }, [intentionKey]);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   useEffect(() => {
@@ -82,7 +97,26 @@ export function PaymentForm({
     }
     if (type === 'ADJUSTMENT') upload.set('adjustmentEffect', adjustmentEffect);
     if (file) upload.set('file', file);
+    upload.set('intentId', crypto.randomUUID());
+    try {
+      await savePaymentIntention(intentionKey, upload);
+      setPending(upload);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'No se pudo conservar el movimiento.');
+      return;
+    }
+    await send(upload, form);
+  }
+  async function guardedSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (submitting.current || restoring || pending) return;
+    submitting.current = true;
+    try { await submit(event); } finally { submitting.current = false; }
+  }
+  async function send(upload: FormData, form?: HTMLFormElement) {
+    if (saving) return;
     setSaving(true);
+    setError(null);
     try {
       const response = await clientFetch(
         `/api/admin/sales/${encodeURIComponent(saleId)}/payments-media`,
@@ -93,13 +127,21 @@ export function PaymentForm({
         }
       );
       const body = (await response.json().catch(() => null)) as { message?: string } | null;
-      if (!response.ok) throw new Error(body?.message ?? 'No fue posible registrar el movimiento.');
+      if (!response.ok) {
+        if (response.status === 400) {
+          await clearPaymentIntention(intentionKey);
+          setPending(null);
+        }
+        throw new Error(body?.message ?? 'No fue posible registrar el movimiento.');
+      }
+      await clearPaymentIntention(intentionKey);
+      setPending(null);
       notify('Pago registrado');
       setFile(null);
       setAmount('');
       setPaidAt(localDateTime());
       setAdjustmentEffect('');
-      form.reset();
+      form?.reset();
       await onChanged();
     } catch (reason) {
       setError(
@@ -110,16 +152,23 @@ export function PaymentForm({
     }
   }
   return (
-    <form id="registrar-movimiento" className="admin-form admin-form-wide" onSubmit={submit}>
+    <form id="registrar-movimiento" className="admin-form admin-form-wide" onSubmit={guardedSubmit}>
       <h2 className="font-serif text-2xl">Registrar movimiento</h2>
       <p className="notice">
         Saldo pendiente: {money(balance)}. El valor se verifica al registrar el movimiento.
       </p>
+      {pending && <div className="notice" role="status">
+        <p>Intención conservada por {money(String(pending.get('amount')))}. El reenvío consulta o registra el mismo movimiento.</p>
+        <button className="button-link" type="button" disabled={saving} onClick={() => void send(pending)}>
+          {saving ? 'Verificando…' : 'Reenviar la misma intención'}
+        </button>
+      </div>}
       {error && (
         <p className="form-error" role="alert">
           {error}
         </p>
       )}
+      <fieldset disabled={saving || restoring || pending !== null} className="contents">
       <label>
         Tipo
         <select
@@ -242,6 +291,7 @@ export function PaymentForm({
           {saving ? 'Registrando…' : 'Registrar movimiento'}
         </button>
       </div>
+      </fieldset>
     </form>
   );
 }

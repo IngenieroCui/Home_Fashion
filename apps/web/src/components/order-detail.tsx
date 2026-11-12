@@ -5,7 +5,8 @@ import { CommerceItemVisual } from './commerce-item-visual';
 
 import { clientFetch } from '@/lib/client-fetch';
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { confirmAction } from '@/lib/confirm-action';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { orderItemStatusLabel, orderStatusLabel, supplyTypeLabel, type Order } from '@/lib/orders';
 import { formatCustomization } from '@/lib/workshop-jobs';
 import { AssignWorkshopJobForm } from './assign-workshop-job-form';
@@ -25,6 +26,25 @@ export function OrderDetail({ id, canWorkshopManage }: { id: string; canWorkshop
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [assignmentNotice, setAssignmentNotice] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState('');
+  async function cancel(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const reason = String(new FormData(event.currentTarget).get('reason') ?? '').trim();
+    if (!reason || !(await confirmAction('¿Cancelar este pedido y liberar sus reservas?', 'Cancelar pedido'))) return;
+    setCancelling(true);
+    setCancelError('');
+    try {
+      const response = await clientFetch('/api/admin/orders/' + encodeURIComponent(id) + '/cancel', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ reason })
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body?.message || 'No fue posible cancelar el pedido.');
+      setOrder(body);
+    } catch (reason) {
+      setCancelError(reason instanceof Error ? reason.message : 'No fue posible cancelar el pedido.');
+    } finally { setCancelling(false); }
+  }
   const refresh = useCallback(async () => {
     setError(null);
     try {
@@ -56,6 +76,14 @@ export function OrderDetail({ id, canWorkshopManage }: { id: string; canWorkshop
         </div>
         <span className="admin-status">{orderStatusLabel[order.status]}</span>
       </section>
+      {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
+        <form className="admin-form admin-section" onSubmit={cancel}>
+          <label>Motivo de cancelación<input name="reason" required maxLength={300} /></label>
+          <p>La venta y los abonos conservan su historial. La cancelación no genera un reembolso.</p>
+          <button className="button-link button-link-secondary" disabled={cancelling}>Cancelar pedido</button>
+          {cancelError && <p role="alert">{cancelError}</p>}
+        </form>
+      )}
       {assignmentNotice && (
         <p className="notice" role="status">
           {assignmentNotice}

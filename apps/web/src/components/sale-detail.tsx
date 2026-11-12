@@ -11,6 +11,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { money, type Sale } from '@/lib/sales';
 import { SaleFinancialSummary } from './sales/sale-financial-summary';
 import { PaymentForm } from './payment-form';
+import { PaymentAttempts } from './payment-attempts';
 import { PaymentsHistory } from './payments-history';
 import { PaymentSummary } from './payment-summary';
 async function load(id: string) {
@@ -21,6 +22,8 @@ async function load(id: string) {
 }
 export function SaleDetail({
   id,
+  userId,
+  canWompi,
   canCostView,
   canMarginView,
   canPaymentRegister,
@@ -28,6 +31,8 @@ export function SaleDetail({
   canOrderManage
 }: {
   id: string;
+  userId: string;
+  canWompi: boolean;
   canCostView: boolean;
   canMarginView: boolean;
   canPaymentRegister: boolean;
@@ -179,8 +184,9 @@ export function SaleDetail({
         </section>
       )}
       <PaymentSummary sale={sale} />
+      {canWompi && sale.status === 'CONFIRMED' && <PaymentAttempts saleId={sale.id} balance={sale.balance ?? '0.00'} onChanged={refresh} />}
       {canPaymentRegister && sale.status === 'CONFIRMED' && (
-        <PaymentForm balance={sale.balance} onChanged={refresh} saleId={sale.id} />
+        <PaymentForm balance={sale.balance} onChanged={refresh} saleId={sale.id} userId={userId} />
       )}
       <PaymentsHistory
         canCorrect={canPaymentCorrect}

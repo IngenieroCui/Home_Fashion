@@ -17,11 +17,16 @@ sequenceDiagram
   A->>DB: Entrega OUT_FOR_DELIVERY + pedido IN_PROGRESS
   P->>W: Completar con receptor y 1–5 evidencias URL
   W->>A: POST complete
+  A->>DB: BEGIN y locks de pedido, entrega e items
+  A->>DB: Bloquea variantes IN_STOCK por id ascendente
+  A->>DB: Descuenta onHand y reserved por cantidad IN_STOCK
+  Note over A,DB: MADE_TO_ORDER no consume stock terminado
   A->>DB: Marca líneas activas DELIVERED
   A->>DB: Entrega DELIVERED
   A->>A: Recalcula estado del pedido
   A->>DB: Pedido COMPLETED si todas las líneas activas fueron entregadas
-  A-->>W: Cierre confirmado
+  A->>DB: COMMIT (fallo intermedio: ROLLBACK)
+  A-->>W: Cierre confirmado (repetición rechazada sin descuento)
   opt cancelar antes de terminal
     P->>A: Cancelar entrega
     A->>DB: Marca CANCELLED y recalcula pedido

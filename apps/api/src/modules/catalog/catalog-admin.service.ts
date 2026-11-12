@@ -1,13 +1,15 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
-import { Op, type WhereOptions } from 'sequelize';
+import { Op, QueryTypes, type WhereOptions } from 'sequelize';
 import { CreateCategoryDto, CreateImageDto, CreateProductDto, CreateVariantDto, type AdminCategoryQueryDto, type AdminProductQueryDto, type UpdateCategoryDto, type UpdateImageDto, type UpdateProductDto, type UpdateVariantDto } from './dto/catalog-admin.dto';
 import { Category } from './entities/category.model';
 import { ProductImage } from './entities/product-image.model';
 import { Product } from './entities/product.model';
 import { ProductVariant } from './entities/product-variant.model';
 import { resolveSlug } from './utils/slug.util';
-import { CloudinaryMediaService } from '../media/cloudinary-media.service';
+import { MediaCleanupService } from '../media/media-cleanup.service';
+
+import { InventoryAdjustmentDto, recordInventoryMovement } from './inventory-adjustment';
 
 const productAttributes = ['id', 'categoryId', 'name', 'slug', 'description', 'allowsCustomization', 'status'];
 const variantAttributes = ['id', 'productId', 'sku', 'name', 'dimensions', 'material', 'color', 'fabric', 'finish', 'salePrice', 'estimatedCost', 'quantityOnHand', 'quantityReserved', 'location', 'status'];
@@ -22,7 +24,7 @@ export class CatalogAdminService {
     @InjectModel(Product) private readonly products: typeof Product,
     @InjectModel(ProductVariant) private readonly variants: typeof ProductVariant,
     @InjectModel(ProductImage) private readonly images: typeof ProductImage,
-    private readonly cloudinary: CloudinaryMediaService
+    private readonly cleanup: MediaCleanupService
   ) {}
 
   private async categoryOrFail(id: string) { const category = await this.categories.findByPk(id); if (!category) throw new NotFoundException('Category not found'); return category; }
@@ -102,12 +104,21 @@ export class CatalogAdminService {
     return plain(product);
   }
 
-  async createVariant(productId: string, dto: CreateVariantDto) {
+  async createVariant(productId: string, dto: CreateVariantDto, actorId: string) {
     await this.productOrFail(productId);
     const sku = normalizeSku(dto.sku);
     await this.ensureSkuAvailable(sku);
     this.validateInventory(dto.quantityOnHand, 0);
-    return plain(await this.variants.create({ ...dto, productId, sku, quantityReserved: 0 }));
+
+    const db = this.variants.sequelize!;
+    return db.transaction(async transaction => {
+      const variant = await this.variants.create({ ...dto, productId, sku, quantityReserved: 0 }, { transaction });
+      if (variant.quantityOnHand > 0) await recordInventoryMovement(db, transaction, {
+        variantId: variant.id, actorId, kind: 'INITIAL', before: 0, after: variant.quantityOnHand,
+        reason: 'Existencias iniciales al crear la variante', reference: String(variant.id)
+      });
+      return plain(variant);
+    });
   }
 
   async updateVariant(id: string, dto: UpdateVariantDto) {
@@ -117,10 +128,50 @@ export class CatalogAdminService {
       const sku = dto.sku ? normalizeSku(dto.sku) : undefined;
       if (sku) await this.ensureSkuAvailable(sku, variant.id);
       this.validateInventory(dto.quantityOnHand ?? variant.quantityOnHand, variant.quantityReserved);
+      if (dto.quantityOnHand !== undefined && dto.quantityOnHand !== variant.quantityOnHand)
+        throw new BadRequestException('Usa Ajustar inventario e indica un motivo');
+      delete dto.quantityOnHand;
       const { quantityReserved: _reserved, ...fields } = dto as UpdateVariantDto & { quantityReserved?: unknown };
       void _reserved;
       await variant.update({ ...fields, ...(sku ? { sku } : {}) }, { transaction });
       return plain(variant);
+    });
+  }
+
+
+  async inventoryMovements(id: string) {
+    await this.variantOrFail(id);
+    const data = await this.variants.sequelize!.query(
+      'SELECT id, kind, delta, previous_quantity AS previousQuantity, next_quantity AS nextQuantity, reason, actor_id AS actorId, created_at AS createdAt FROM inventory_movements WHERE variant_id = ? ORDER BY id DESC LIMIT 50',
+      { replacements: [id], type: QueryTypes.SELECT }
+    );
+    return { data };
+  }
+
+  async adjustInventory(id: string, dto: InventoryAdjustmentDto, actorId: string) {
+    const db = this.variants.sequelize!;
+    return db.transaction(async transaction => {
+      const variant = await this.variants.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE });
+      if (!variant) throw new NotFoundException('Product variant not found');
+      const [previous] = await db.query<{ actorId: string; beforeQuantity: number; afterQuantity: number; reason: string }>(
+        "SELECT actor_id AS actorId, previous_quantity AS beforeQuantity, next_quantity AS afterQuantity, reason FROM inventory_movements WHERE variant_id = ? AND kind = 'ADJUSTMENT' AND reference = ?",
+        { replacements: [id, dto.requestId], transaction, type: QueryTypes.SELECT }
+      );
+      if (previous) {
+        if (String(previous.actorId) !== String(actorId) || previous.beforeQuantity !== dto.expectedQuantity || previous.afterQuantity !== dto.quantityOnHand || previous.reason !== dto.reason)
+          throw new ConflictException('El identificador ya corresponde a otro ajuste');
+        return { quantityOnHand: previous.afterQuantity };
+      }
+      if (variant.quantityOnHand !== dto.expectedQuantity)
+        throw new ConflictException('Las existencias cambiaron. Actualiza el inventario e inténtalo de nuevo');
+      this.validateInventory(dto.quantityOnHand, variant.quantityReserved);
+      if (dto.quantityOnHand === variant.quantityOnHand) throw new BadRequestException('El ajuste debe cambiar las existencias');
+      await recordInventoryMovement(db, transaction, {
+        variantId: id, actorId, kind: 'ADJUSTMENT', before: variant.quantityOnHand, after: dto.quantityOnHand,
+        reason: dto.reason, reference: dto.requestId
+      });
+      await variant.update({ quantityOnHand: dto.quantityOnHand }, { transaction });
+      return { quantityOnHand: dto.quantityOnHand };
     });
   }
 
@@ -150,9 +201,12 @@ export class CatalogAdminService {
   }
 
   async deleteImage(id: string) {
-    const image = await this.imageOrFail(id);
-    await image.destroy();
-    if (image.publicId) await this.cloudinary.destroy(image.publicId);
+    await this.images.sequelize!.transaction(async transaction => {
+      const image = await this.images.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE });
+      if (!image) throw new NotFoundException('Product image not found');
+      if (image.publicId) await this.cleanup.enqueue('products', image.publicId, transaction);
+      await image.destroy({ transaction });
+    });
   }
 
   private pagination(page: number, limit: number, total: number) { return { page, limit, total, totalPages: Math.ceil(total / limit) }; }

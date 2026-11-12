@@ -18,7 +18,10 @@ export default class JourneyReporter implements Reporter {
   private evidence = resolve(root, 'docs/thesis/evidence');
   private executionId = process.env.E2E_EXECUTION_ID ?? newExecutionId();
   private folder = resolve(this.evidence, 'automated-business-journeys/runs', this.executionId);
-  constructor(evidence?: string) {
+  private readonly expectedScenarios: number;
+  constructor(options?: { evidence?: string; expectedScenarios?: number }) {
+    this.expectedScenarios = options?.expectedScenarios ?? 6;
+    const evidence = options?.evidence;
     if (evidence) {
       this.evidence = evidence;
       this.folder = resolve(evidence, 'automated-business-journeys/runs', this.executionId);
@@ -56,7 +59,7 @@ export default class JourneyReporter implements Reporter {
   }
   onError(error: { message?: string }) { console.error(redact(error.message ?? 'Error del runner')); }
   onEnd(result: FullResult) {
-    const cloudinaryVerified = this.results.some(entry => String(entry.scenario).startsWith('01') && entry.status === 'passed');
+    const cloudinaryVerified = process.env.HF_E2E_ISOLATED_CLOUDINARY === 'true' && this.results.some(entry => String(entry.scenario).startsWith('01') && entry.status === 'passed');
     const report = { executionId: this.executionId, runId: required('E2E_RUN_ID'), date: new Date().toISOString(), status: result.status,
       stack: { browser: 'Chromium real', api: 'NestJS real', database: 'MySQL aislado, UUID y privilegios verificados',
         cloudinary: cloudinaryVerified ? 'REAL: multipart de taller y entrega en carpeta E2E; URLs persistidas en MySQL'
@@ -81,14 +84,14 @@ export default class JourneyReporter implements Reporter {
         ...(entry.errors as string[]).length ? ['Error real:', '```text', ...(entry.errors as string[]), '```', ''] : []])];
     const markdown = lines.join('\n') + '\n';
     writeFileSync(resolve(this.folder, 'report.md'), markdown);
-    const completeSuccess = result.status === 'passed' && this.results.length === 5
+    const completeSuccess = result.status === 'passed' && this.results.length === this.expectedScenarios
       && this.results.every(entry => entry.status === 'passed');
     writeRunStatus(this.evidence, this.executionId, completeSuccess ? 'passed' : result.status === 'passed' ? 'partial' : result.status,
       `${this.results.filter(entry => entry.status === 'passed').length}/${this.results.length} escenarios PASS; suite completa: ${completeSuccess}.`);
-    if (completeSuccess) {
+    if (completeSuccess && (this.expectedScenarios === 5 || cloudinaryVerified)) {
       writeFileSync(resolve(this.evidence, 'automated-business-journeys.md'), markdown);
       writeFileSync(resolve(this.evidence, 'automated-business-journeys-last-success.json'), JSON.stringify({
-        executionId: this.executionId, runId: report.runId, date: report.date, passed: 5,
+        executionId: this.executionId, runId: report.runId, date: report.date, passed: this.results.length,
         results: `automated-business-journeys/runs/${this.executionId}/results.json`,
         report: `automated-business-journeys/runs/${this.executionId}/report.md`
       }, null, 2) + '\n');

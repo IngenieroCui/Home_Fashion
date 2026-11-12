@@ -8,6 +8,7 @@ const rootEnvironment = join(__dirname, '../../.env');
 if (existsSync(rootEnvironment)) process.loadEnvFile(rootEnvironment);
 
 const nextConfig: NextConfig = {
+  ...(process.env.HF_E2E_WEB === 'true' ? { distDir: '.next-e2e' } : {}),
   outputFileTracingRoot: join(__dirname, '../..')
 };
 

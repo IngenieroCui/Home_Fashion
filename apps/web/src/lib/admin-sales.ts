@@ -35,6 +35,8 @@ function safeMessage(body: unknown, status: number) {
   ];
   const paymentMessage = paymentMessages.find(([pattern]) => pattern.test(message))?.[1];
   if (paymentMessage) return paymentMessage;
+  if (/Payment intent already used/i.test(message)) return 'Esta intención ya se usó. Revisa los movimientos antes de registrar otra.';
+  if (/Wompi|Sandbox|importe supera|ADMIN/i.test(message)) return message;
   return userMessage(status, fallback[status]);
 }
 export function salesJson(result: Result) {

@@ -34,6 +34,7 @@ const modules = [
     href: '/panel/inventario',
     group: 'Catálogo'
   },
+  { title: 'Usuarios', permission: 'USER_MANAGE', href: '/panel/usuarios', group: 'Administración' },
   { title: 'Clientes', permission: 'CUSTOMER_MANAGE', href: '/panel/clientes', group: 'Clientes' }
 ];
 export function PanelShell({ user, children }: { user: MeResponse; children: React.ReactNode }) {
@@ -43,7 +44,9 @@ export function PanelShell({ user, children }: { user: MeResponse; children: Rea
   const [logoutError, setLogoutError] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const visibleModules = modules.filter(
-    (module) => user.role === 'ADMIN' || user.permissions.includes(module.permission)
+    (module) => module.permission === 'USER_MANAGE'
+      ? user.role === 'ADMIN' && user.permissions.includes(module.permission)
+      : user.role === 'ADMIN' || user.permissions.includes(module.permission)
   );
   async function logout() {
     setLoggingOut(true);

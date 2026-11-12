@@ -17,3 +17,5 @@
 - Validación integral: pendiente.
 - Evaluación con usuarios: pendiente.
 - Documento final: estructura iniciada; resultados no redactables hasta obtener evidencia.
+
+Para el corte del 12 de noviembre, consulta el [protocolo OE4](evidence/oe4-session-protocol.md) y el [registro de cierre](../release/backlog-2026-11-12.md). Las cifras previas corresponden a los cortes históricos indicados.

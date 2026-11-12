@@ -7,7 +7,7 @@ describe('sale money input validation', () => {
   it('accepts decimal prices, delivery fees, and payments', () => {
     const item = plainToInstance(SaleItemInputDto, { productId: '1', quantity: 1, unitSalePrice: '3299000.00' });
     const sale = plainToInstance(CreateSaleDto, { customerId: '1', items: [{ productId: '1', quantity: 1, unitSalePrice: '3299000.00' }], deliveryFee: '50000.50' });
-    const payment = plainToInstance(RegisterSalePaymentDto, { type: 'DEPOSIT', method: 'BANK_TRANSFER', amount: '100000.00', paidAt: '2026-09-28T12:00:00.000Z' });
+    const payment = plainToInstance(RegisterSalePaymentDto, { intentId: 'c941116e-d1d7-4200-bdf2-e8b638c21a7a', type: 'DEPOSIT', method: 'BANK_TRANSFER', amount: '100000.00', paidAt: '2026-09-28T12:00:00.000Z' });
 
     expect(validateSync(item)).toEqual([]);
     expect(validateSync(sale)).toEqual([]);

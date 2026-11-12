@@ -12,7 +12,7 @@ import tarfile
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-DENIED_DIRS = set('node_modules .git .next .vercel dist build out coverage .pnpm-store .e2e-local .e2e-results certs .cache .turbo cache caches __pycache__ .dart_tool .dart-appdata .gradle .idea .vscode .tmp tmp temp work outputs logs sessions secrets credentials private datadir mysql playwright-report test-results'.split())
+DENIED_DIRS = set('node_modules .git .next .next-e2e .vercel dist build out coverage .pnpm-store .e2e-local .e2e-results certs .cache .turbo cache caches __pycache__ .dart_tool .dart-appdata .gradle .idea .vscode .tmp tmp temp work outputs logs sessions secrets credentials private datadir mysql playwright-report test-results'.split())
 # Application database SOURCE (apps/api/src/database) is allowed; local DB files are not.
 SOURCE_DIRS = {'apps', 'packages', 'scripts', 'tests', 'docs'}
 SOURCE_TYPES = set('.ts .tsx .js .jsx .mjs .cjs .json .yaml .yml .md .mmd .dbml .py .ps1 .sh .bat .cmd .dart .java .kt .xml .gradle .kts .properties .lock .toml .css .scss .html .svg .png .jpg .jpeg .webp .ico .ttf .woff .woff2 .pdf .csv .txt .sql .h .c .cpp .cmake .xcconfig .pbxproj .plist .storyboard .xcscheme .xcworkspacedata .xib .entitlements'.split())
@@ -48,6 +48,8 @@ def allowed(name):
     if parts[0] == 'docs':
         # Binary evidence needs an explicit reviewed directory. JSON/CSV reports are
         # enumerated so future arbitrary exports never enter a source archive.
+        if parts[:5] == ('docs', 'thesis', 'evidence', 'automated-business-journeys', 'runs'):
+            return False
         if p.suffix.lower() in {'.md', '.mmd', '.dbml'}:
             return True
         if parts[:3] == ('docs', 'diagrams', 'export'):
@@ -59,7 +61,7 @@ def allowed(name):
         return '/'.join(parts[:3]) == 'docs/thesis/evidence' and base in {
             'qa-2-summary.json', 'qa-2-validation.json', 'qa-2-scenarios.json', 'qa-2-scenarios.csv',
             'qa-2-cleanup.json', 'qa-2-android-environment.json',
-            'automated-business-journeys-status.json', 'automated-business-journeys-last-success.json',
+            'automated-business-journeys-last-success.json',
             'release-validation-2026-10-10.json'}
     return example or p.suffix.lower() in SOURCE_TYPES or base in SPECIAL_FILES or name == 'apps/mobile/android/gradle/wrapper/gradle-wrapper.jar'
 

@@ -27,6 +27,7 @@ export const environmentValidationSchema = Joi.object({
   NODE_ENV: Joi.string()
     .valid('development', 'test', 'production')
     .default('development'),
+  HF_PROXY_SECRET: Joi.string().min(32).optional(),
   PORT: Joi.number().port().default(3001),
   DB_HOST: Joi.string().required(),
   DB_PORT: Joi.number().port().default(3306),

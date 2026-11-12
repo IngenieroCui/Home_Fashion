@@ -13,7 +13,7 @@ La app permite:
 - buscar, filtrar y paginar trabajos;
 - consultar producto, variante, cantidad, personalización, instrucciones y fecha esperada;
 - reportar inicio, avance y listo para revisión;
-- adjuntar hasta cinco URLs de evidencia;
+- adjuntar hasta cinco fotografías desde cámara o galería;
 - consultar historial y decisión administrativa;
 - cerrar sesión de forma segura.
 
@@ -31,7 +31,7 @@ No muestra clientes, precios, costos, pagos ni trabajos ajenos. No aprueba repor
 | `lib/features/auth` | Repositorio, modelos, cubit y login |
 | `lib/features/workshop_jobs` | Datos, dominio, cubits, listado, detalle y formulario |
 
-Dependencias principales: Dio, flutter_bloc, flutter_secure_storage, go_router y flutter_localizations. El idioma de la aplicación y los controles Material es español de Colombia (`es-CO`).
+Dependencias principales: Dio, flutter_bloc, flutter_secure_storage, go_router, image_picker y flutter_localizations. El idioma de la aplicación y los controles Material es español de Colombia (`es-CO`).
 
 ## 3. Rutas de navegación
 
@@ -54,7 +54,7 @@ GoRouter redirige al login sin sesión y al inicio con sesión. Un usuario auten
 | POST | `/auth/logout` | Revocar refresh |
 | GET | `/workshop/jobs` | Listado propio |
 | GET | `/workshop/jobs/:id` | Detalle propio |
-| POST | `/workshop/jobs/:id/progress` | Reporte append-only |
+| POST | `/workshop/jobs/:id/progress-media` | Reporte append-only multipart con `files` (máximo cinco imágenes, 10 MB por archivo) |
 
 `API_BASE_URL` ya incluye `/api`, por ejemplo `https://api.example.com/api`.
 
@@ -128,7 +128,7 @@ Disponible en `IN_PROGRESS`. Requiere mensaje y permite porcentaje 1–99. No ca
 
 Disponible en `IN_PROGRESS`. El backend fuerza 100 y deja el trabajo esperando decisión. Un rechazo permite enviar un nuevo avance; una aprobación completa el trabajo.
 
-Las evidencias opcionales deben ser URLs absolutas accesibles. No selecciones rutas locales como `C:\...` o `/storage/...`: no existe upload.
+La app selecciona fotografías con `image_picker`, muestra su vista previa y envía archivos multipart a `progress-media`. La API valida tipo/tamaño y sube a Cloudinary. Las URLs devueltas quedan en el reporte; el cliente no necesita claves de Cloudinary. El endpoint JSON `/progress` se conserva para consumidores compatibles, pero Flutter usa `progress-media`.
 
 ## 8. Ejecución y pruebas
 
@@ -141,7 +141,7 @@ flutter test
 
 La suite cubre configuración, cliente HTTP, repositorio de autenticación, sesión, guardas de navegación, login, listado, repositorio de trabajos y formulario de avances.
 
-En la revisión del 7 de agosto de 2026, `dart analyze` terminó sin hallazgos. `flutter test` no llegó a iniciar dentro del sandbox actual y debe repetirse en una terminal local antes de distribuir; esto es una limitación de la ejecución, no una prueba aprobada ni un defecto confirmado.
+Este cierre técnico del 28 de octubre no reejecutó Flutter ni valida Android en dispositivo/HTTPS. La evidencia automática histórica y sus fechas permanecen en los reportes de QA; no acredita una demostración móvil actual. El multipart del backend sí forma parte de los checks dirigidos del [cierre técnico](release/closure-2026-10-28.md).
 
 Prueba manual mínima:
 
@@ -203,14 +203,14 @@ Orden de despliegue:
 - Texto largo en instrucciones y personalización.
 - Red lenta, sin red, timeout y 401 durante una operación.
 - Formulario de avance conservado ante error.
-- Porcentajes límite y más de cinco URLs rechazados claramente.
+- Porcentajes límite, más de cinco fotografías y archivos demasiado grandes rechazados claramente.
 - Enlaces de evidencia abribles y comentario de rechazo visible.
 - Contraste, tamaño táctil y navegación atrás coherentes.
 
 ## 12. Límites actuales
 
 - Solo Android; no hay carpetas/proyecto iOS.
-- Sin upload de cámara o galería.
+- Upload de cámara/galería implementado; validación runtime Android/HTTPS pendiente.
 - Sin notificaciones push.
 - Sin modo offline ni sincronización diferida.
 - Sin firma release configurada.
@@ -225,5 +225,5 @@ Orden de despliegue:
 - **Login válido en web pero rechazado en móvil:** la cuenta debe tener rol WORKSHOP y estar activa.
 - **El trabajo no aparece:** debe estar asignado al ID del usuario autenticado; revisa filtros.
 - **No permite reportar:** la acción depende del estado actual y del último proceso de revisión.
-- **Una evidencia falla:** usa URL absoluta HTTP/HTTPS; la app no sube archivos locales.
+- **Una evidencia falla:** revisa conexión, tipo/tamaño de imagen y configuración Cloudinary de la API; la app envía archivos locales por multipart.
 - **Flutter queda esperando al iniciar herramientas:** ejecuta `flutter doctor -v`, acepta licencias Android y verifica que otro proceso no tenga bloqueado el SDK.

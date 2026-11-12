@@ -26,7 +26,8 @@
     "test:e2e:safety": "tsx --test tests/e2e/support/safety.test.ts",
     "source:package": "python scripts/package-source.py",
     "test:release": "tsx --test tests/e2e/support/release.test.ts",
-    "test:source-package": "python scripts/package-source.test.py"
+    "test:source-package": "python scripts/package-source.test.py",
+    "test:closure": "node tests/payments/sandbox-directed.cjs --closure"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.0",

@@ -5,9 +5,11 @@ import { Op, Transaction, type Includeable } from 'sequelize';
 import { AuthService } from '../auth/auth.service';
 import { Role } from '../auth/entities/role.model';
 import { User } from '../auth/entities/user.model';
+import { recordInventoryMovement } from '../catalog/inventory-adjustment';
+import { ProductVariant } from '../catalog/entities/product-variant.model';
 import { OrderItem } from '../orders/entities/order-item.model';
 import { Order } from '../orders/entities/order.model';
-import { OrderItemStatus, OrderStatus } from '../orders/orders.types';
+import { OrderItemStatus, OrderStatus, OrderSupplyType } from '../orders/orders.types';
 import { recalculateOrderStatus } from '../orders/order-state';
 import { Customer } from '../quotes/entities/customer.model';
 import { CompleteDeliveryDto, CreateDeliveryDto, DeliveryAssigneeQueryDto, DeliveryQueryDto } from './dto/deliveries.dto';
@@ -24,7 +26,8 @@ export class DeliveriesService {
     @InjectModel(Order) private readonly orders: typeof Order,
     @InjectModel(OrderItem) private readonly orderItems: typeof OrderItem,
     @InjectModel(User) private readonly users: typeof User,
-    private readonly auth: AuthService
+    private readonly auth: AuthService,
+    @InjectModel(ProductVariant) private readonly variants: typeof ProductVariant
   ) {}
 
   async listAssignees(query: DeliveryAssigneeQueryDto, userId: string) {
@@ -164,6 +167,7 @@ export class DeliveriesService {
       if (!applicable.length) throw new BadRequestException('Order has no items available for delivery');
       if (applicable.some((item) => ![OrderItemStatus.RESERVED, OrderItemStatus.READY, OrderItemStatus.DELIVERED].includes(item.status)))
         throw new ConflictException('Order item state changed after delivery started');
+      await this.consumeFinishedInventory(applicable, delivery.id, userId, transaction);
       for (const item of applicable) {
         if (item.status === OrderItemStatus.RESERVED || item.status === OrderItemStatus.READY)
           await item.update({ status: OrderItemStatus.DELIVERED }, { transaction });
@@ -177,6 +181,37 @@ export class DeliveriesService {
       }, { transaction });
       return this.loadDetail(delivery.id, transaction);
     });
+  }
+
+  private async consumeFinishedInventory(items: OrderItem[], deliveryId: string, actorId: string, transaction: Transaction) {
+    const required = new Map<string, number>();
+    for (const item of items) {
+      if (item.supplyType !== OrderSupplyType.IN_STOCK || item.status === OrderItemStatus.DELIVERED) continue;
+      if (!item.productVariantId) throw new ConflictException('Stock item has no product variant');
+      const id = String(item.productVariantId);
+      required.set(id, (required.get(id) ?? 0) + item.quantity);
+    }
+    if (!required.size) return;
+    // Same ascending variant lock order as reservation in OrdersService.
+    const variants = await this.variants.findAll({
+      where: { id: [...required.keys()] }, transaction,
+      lock: transaction.LOCK.UPDATE, order: [['id', 'ASC']]
+    });
+    if (variants.length !== required.size) throw new ConflictException('Reserved product variant not found');
+    for (const variant of variants) {
+      const quantity = required.get(String(variant.id))!;
+      if (variant.quantityReserved < quantity || variant.quantityOnHand < variant.quantityReserved)
+        throw new ConflictException('Finished inventory is inconsistent with this reservation');
+      const after = variant.quantityOnHand - quantity;
+      await recordInventoryMovement(this.deliveries.sequelize!, transaction, {
+        variantId: variant.id, actorId, kind: 'DELIVERY', before: variant.quantityOnHand, after,
+        reason: 'Salida de inventario por entrega', reference: String(deliveryId)
+      });
+      await variant.update({
+        quantityOnHand: after,
+        quantityReserved: variant.quantityReserved - quantity
+      }, { transaction });
+    }
   }
 
   async cancel(id: string, userId: string) {
@@ -232,10 +267,13 @@ export class DeliveriesService {
   }
 
   private async lockAggregate(id: string, transaction: Transaction) {
+    const reference = await this.deliveries.findByPk(id, { transaction });
+    if (!reference) throw new NotFoundException('Delivery not found');
+    // Creation also locks order before delivery. orderId is immutable.
+    const order = await this.orders.findByPk(reference.orderId, { transaction, lock: transaction.LOCK.UPDATE });
+    if (!order) throw new NotFoundException('Order not found');
     const delivery = await this.deliveries.findByPk(id, { transaction, lock: transaction.LOCK.UPDATE });
     if (!delivery) throw new NotFoundException('Delivery not found');
-    const order = await this.orders.findByPk(delivery.orderId, { transaction, lock: transaction.LOCK.UPDATE });
-    if (!order) throw new NotFoundException('Order not found');
     const items = await this.orderItems.findAll({
       where: { orderId: order.id },
       transaction,

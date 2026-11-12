@@ -10,7 +10,7 @@ async function main() {
   const child = spawn(process.execPath, api
     ? [resolve(root, 'apps/api/node_modules/@nestjs/cli/bin/nest.js'), 'start']
     : [resolve(root, 'apps/web/node_modules/next/dist/bin/next'), 'dev', '--hostname', 'localhost', '-p', '4300'],
-  { cwd: resolve(root, api ? 'apps/api' : 'apps/web'), env: { ...process.env, NODE_ENV: api ? 'test' : 'development' }, stdio: 'inherit' });
+  { cwd: resolve(root, api ? 'apps/api' : 'apps/web'), env: { ...process.env, HF_E2E_WEB: api ? 'false' : 'true', NODE_ENV: api ? 'test' : 'development' }, stdio: 'inherit' });
   for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => child.kill(signal));
   child.on('exit', code => { process.exitCode = code ?? 1; });
 }

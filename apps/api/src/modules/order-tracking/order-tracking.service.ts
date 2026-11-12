@@ -183,7 +183,7 @@ export class OrderTrackingService {
             scheduledDate: delivery.scheduledDate,
             timeWindow: delivery.timeWindow,
             deliveredAt: delivery.deliveredAt,
-            evidenceUrls: delivery.status === 'DELIVERED' ? delivery.evidenceUrls : null
+            evidenceUrls: null
           }
         : null;
     const projection = this.serializePublicOrder(access);
@@ -278,7 +278,7 @@ export class OrderTrackingService {
         type: report.type,
         message: report.message,
         progressPercent: report.progressPercent,
-        evidenceUrls: report.evidenceUrls,
+        evidenceUrls: [],
         submittedAt: report.submittedAt,
         approvedAt: report.reviewedAt ?? null
       }));

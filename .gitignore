@@ -68,6 +68,7 @@ certs/
 .e2e-local/
 .e2e-results/
 !.env.e2e.example
+!.env.wompi.example
 
 # Selective academic evidence: default deny, traverse directories, allow reviewed types.
 !docs/
@@ -123,3 +124,8 @@ docs/**/*credential*
 docs/**/*secret*
 docs/**/*dump*
 docs/**/*backup*
+
+.next-e2e/
+
+/docs/thesis/evidence/automated-business-journeys/runs/
+/docs/thesis/evidence/automated-business-journeys-status.json

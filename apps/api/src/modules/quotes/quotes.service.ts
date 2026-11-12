@@ -3,7 +3,7 @@ const cents = (value: string | number) => { const [whole, decimal = ''] = String
 @Injectable() export class QuotesService {
  constructor(@InjectModel(Customer) private readonly customers: typeof Customer, @InjectModel(Quote) private readonly quotes: typeof Quote, @InjectModel(QuoteItem) private readonly items: typeof QuoteItem, @InjectModel(Product) private readonly products: typeof Product, @InjectModel(ProductVariant) private readonly variants: typeof ProductVariant, private readonly auth: AuthService, private readonly images: CatalogImageResolverService) {}
  private normalizeCustomer(dto: CreateCustomerDto | UpdateCustomerDto) { const result: Record<string, unknown> = { ...dto }; if ('email' in dto && dto.email !== undefined && dto.email !== null) result.email = dto.email.trim().toLowerCase() || null; if ('documentNumber' in dto && dto.documentNumber !== undefined && dto.documentNumber !== null) result.documentNumber = dto.documentNumber.trim().toUpperCase().replace(/\s+/g, '') || null; return result; }
- private async customer(id: string) { const row = await this.customers.findByPk(id); if (!row) throw new NotFoundException('Customer not found'); return row; } private async quote(id: string, include = false, transaction?: Transaction) { const row = await this.quotes.findByPk(id, { transaction, ...(include ? { include: [{ model: Customer }, { model: QuoteItem }] } : {}) }); if (!row) throw new NotFoundException('Quote not found'); return row; }
+ private async customer(id: string) { const row = await this.customers.findByPk(id); if (!row) throw new NotFoundException('Customer not found'); return row; } private async quote(id: string, include = false, transaction?: Transaction, lock = false) { const row = await this.quotes.findByPk(id, { transaction, ...(lock ? { lock: transaction!.LOCK.UPDATE } : {}), ...(include ? { include: [{ model: Customer }, { model: QuoteItem }] } : {}) }); if (!row) throw new NotFoundException('Quote not found'); return row; }
  private editable(q: Quote) { if (![QuoteStatus.REQUESTED, QuoteStatus.DRAFT].includes(q.status)) throw new BadRequestException('Quote items cannot be changed after quoted'); }
  async listCustomers(q: CustomerQueryDto) { const where: Record<PropertyKey, unknown> = {}; if (q.q) where[Op.or] = [{ fullName: { [Op.like]: `%${q.q}%` } }, { phone: { [Op.like]: `%${q.q}%` } }, { documentNumber: { [Op.like]: `%${q.q}%` } }]; if (q.isActive !== undefined) where.isActive = q.isActive; const result = await this.customers.findAndCountAll({ where, order: [['fullName', 'ASC']], limit: q.limit, offset: (q.page - 1) * q.limit }); return { data: result.rows.map(row => ({ ...plain<Record<string, unknown>>(row), updatedAt: row.get('updated_at'), createdAt: row.get('created_at') })), pagination: { page: q.page, limit: q.limit, total: result.count, totalPages: Math.ceil(result.count / q.limit) } }; }
  async createCustomer(dto: CreateCustomerDto, userId: string) { const values = this.normalizeCustomer(dto); try { return plain(await this.customers.create({ ...values, createdByUserId: userId, updatedByUserId: userId })); } catch (error) { if ((error as { name?: string }).name === 'SequelizeUniqueConstraintError') throw new ConflictException('Document already exists'); throw error; } }
@@ -12,12 +12,63 @@ const cents = (value: string | number) => { const [whole, decimal = ''] = String
  async listQuotes(q: QuoteQueryDto) { const where: Record<PropertyKey, unknown> = {}; if (q.customerId) where.customerId = q.customerId; if (q.status) where.status = q.status; else if (q.statusGroup === 'FINALIZED') where.status = { [Op.in]: [QuoteStatus.REJECTED, QuoteStatus.EXPIRED, QuoteStatus.CANCELLED] }; if (q.q) where[Op.or] = [{ code: { [Op.like]: `%${q.q}%` } }, { '$customer.full_name$': { [Op.like]: `%${q.q}%` } }]; const result = await this.quotes.findAndCountAll({ where, include: [{ model: Customer, attributes: ['id', 'fullName', 'phone'] }], order: [['created_at', 'DESC']], limit: q.limit, offset: (q.page - 1) * q.limit }); return { data: result.rows.map(plain), pagination: { page: q.page, limit: q.limit, total: result.count, totalPages: Math.ceil(result.count / q.limit) } }; }
  async createQuote(dto: CreateQuoteDto, userId: string) { await this.customer(dto.customerId); const initial = dto.status ?? QuoteStatus.DRAFT; if (![QuoteStatus.DRAFT, QuoteStatus.REQUESTED].includes(initial)) throw new BadRequestException('Invalid initial quote status'); const quoteId = await this.quotes.sequelize!.transaction(async transaction => { const quote = await this.quotes.create({ customerId: dto.customerId, status: initial, validUntil: dto.validUntil ?? null, customerNotes: dto.customerNotes ?? null, internalNotes: dto.internalNotes ?? null, deliveryFee: money(cents(dto.deliveryFee ?? 0)), code: 'PENDING', createdByUserId: userId, updatedByUserId: userId }, { transaction }); await quote.update({ code: `HF-COT-${new Date().getFullYear()}-${String(quote.id).padStart(5, '0')}` }, { transaction }); for (const item of dto.items ?? []) await this.createItem(quote, item, userId, transaction); await this.recalculate(quote, transaction); return quote.id; }); return this.getQuote(quoteId); }
  async getQuote(id: string, transaction?: Transaction) { const quote = await this.quote(id, true, transaction); return plain(quote); }
- async updateQuote(id: string, dto: UpdateQuoteDto, userId: string) { const quote = await this.quote(id); this.editable(quote); await quote.update({ ...dto, ...(dto.deliveryFee !== undefined ? { deliveryFee: money(cents(dto.deliveryFee)) } : {}), updatedByUserId: userId }); await this.recalculate(quote); return this.getQuote(id); }
+ async updateQuote(id: string, dto: UpdateQuoteDto, userId: string) {
+  return this.quotes.sequelize!.transaction(async transaction => {
+   const quote = await this.quote(id, false, transaction, true);
+   this.editable(quote);
+   await quote.update({ ...dto, ...(dto.deliveryFee !== undefined ? { deliveryFee: money(cents(dto.deliveryFee)) } : {}), updatedByUserId: userId }, { transaction });
+   await this.recalculate(quote, transaction);
+   return this.getQuote(id, transaction);
+  });
+ }
  private async overrideAllowed(userId: string) { const user = await this.auth.getAuthenticatedUser(userId); return user.permissions.includes(SALE_PRICE_OVERRIDE_PERMISSION); }
  private async createItem(quote: Quote, dto: QuoteItemInputDto, userId: string, transaction?: Transaction) { const product = await this.products.findByPk(dto.productId, { transaction }); if (!product) throw new NotFoundException('Product not found'); let variant: ProductVariant | null = null; if (dto.productVariantId) { variant = await this.variants.findByPk(dto.productVariantId, { transaction }); if (!variant) throw new NotFoundException('Product variant not found'); if (variant.productId !== product.id) throw new BadRequestException('Product variant does not belong to product'); } else if (!product.allowsCustomization) throw new BadRequestException('Product does not allow customization'); const list = variant ? variant.salePrice : null; const quoted = dto.unitQuotedPrice === undefined ? list : money(cents(dto.unitQuotedPrice)); if (variant && quoted !== list) { if (!dto.negotiationReason) throw new BadRequestException('negotiationReason is required for a negotiated price'); if (!(await this.overrideAllowed(userId))) throw new ForbiddenException('SALE_PRICE_OVERRIDE permission is required'); } const quotedCents = quoted === null ? null : cents(quoted); const listCents = list === null ? null : cents(list); if (quotedCents !== null && (quotedCents * BigInt(dto.quantity) > 999_999_999_999n || (listCents !== null && listCents * BigInt(dto.quantity) > 999_999_999_999n))) throw new BadRequestException('Quote item exceeds the monetary limit'); return this.items.create({ quoteId: quote.id, productId: product.id, productVariantId: variant?.id ?? null, productNameSnapshot: product.name, imageUrlSnapshot: await this.images.resolvePrimaryImageUrl(product.id, variant?.id, transaction), variantNameSnapshot: variant?.name ?? null, skuSnapshot: variant?.sku ?? null, quantity: dto.quantity, unitListPrice: list, unitQuotedPrice: quoted, discountAmount: quotedCents === null || listCents === null ? '0.00' : money((listCents - quotedCents > 0n ? listCents - quotedCents : 0n) * BigInt(dto.quantity)), subtotal: quotedCents === null ? null : money(quotedCents * BigInt(dto.quantity)), customization: dto.customization ?? null, negotiationReason: dto.negotiationReason ?? null, notes: dto.notes ?? null }, { transaction }); }
- async addItem(id: string, dto: QuoteItemInputDto, userId: string) { const quote = await this.quote(id); this.editable(quote); return this.quotes.sequelize!.transaction(async transaction => { const item = await this.createItem(quote, dto, userId, transaction); await this.recalculate(quote, transaction); return plain(item); }); }
- async updateItem(quoteId: string, itemId: string, dto: QuoteItemInputDto, userId: string) { const quote = await this.quote(quoteId); this.editable(quote); const item = await this.items.findOne({ where: { id: itemId, quoteId } }); if (!item) throw new NotFoundException('Quote item not found'); return this.quotes.sequelize!.transaction(async transaction => { await item.destroy({ transaction }); const replacement = await this.createItem(quote, dto, userId, transaction); await this.recalculate(quote, transaction); return plain(replacement); }); }
- async deleteItem(quoteId: string, itemId: string, userId: string) { const quote = await this.quote(quoteId); this.editable(quote); const item = await this.items.findOne({ where: { id: itemId, quoteId } }); if (!item) throw new NotFoundException('Quote item not found'); await this.quotes.sequelize!.transaction(async transaction => { await item.destroy({ transaction }); await quote.update({ updatedByUserId: userId }, { transaction }); await this.recalculate(quote, transaction); }); }
+ async addItem(id: string, dto: QuoteItemInputDto, userId: string) {
+  return this.quotes.sequelize!.transaction(async transaction => {
+   const quote = await this.quote(id, false, transaction, true);
+   this.editable(quote);
+   const item = await this.createItem(quote, dto, userId, transaction);
+   await quote.update({ updatedByUserId: userId }, { transaction });
+   await this.recalculate(quote, transaction);
+   return plain(item);
+  });
+ }
+ async updateItem(quoteId: string, itemId: string, dto: QuoteItemInputDto, userId: string) {
+  return this.quotes.sequelize!.transaction(async transaction => {
+   const quote = await this.quote(quoteId, false, transaction, true);
+   this.editable(quote);
+   const item = await this.items.findOne({ where: { id: itemId, quoteId }, transaction, lock: transaction.LOCK.UPDATE });
+   if (!item) throw new NotFoundException('Quote item not found');
+   await item.destroy({ transaction });
+   const replacement = await this.createItem(quote, dto, userId, transaction);
+   await quote.update({ updatedByUserId: userId }, { transaction });
+   await this.recalculate(quote, transaction);
+   return plain(replacement);
+  });
+ }
+ async deleteItem(quoteId: string, itemId: string, userId: string) {
+  await this.quotes.sequelize!.transaction(async transaction => {
+   const quote = await this.quote(quoteId, false, transaction, true);
+   this.editable(quote);
+   const item = await this.items.findOne({ where: { id: itemId, quoteId }, transaction, lock: transaction.LOCK.UPDATE });
+   if (!item) throw new NotFoundException('Quote item not found');
+   await item.destroy({ transaction });
+   await quote.update({ updatedByUserId: userId }, { transaction });
+   await this.recalculate(quote, transaction);
+  });
+ }
  private async recalculate(quote: Quote, transaction?: Transaction) { const items = await this.items.findAll({ where: { quoteId: quote.id }, transaction }); if (items.some(item => item.subtotal === null)) return quote.update({ subtotal: null, discountTotal: null, total: null }, { transaction }); const subtotal = items.reduce((sum, item) => sum + cents(item.subtotal!), 0n); const discount = items.reduce((sum, item) => sum + cents(item.discountAmount), 0n); if (subtotal > 999_999_999_999n || discount > 999_999_999_999n || subtotal + cents(quote.deliveryFee) > 999_999_999_999n) throw new BadRequestException('Quote total exceeds the monetary limit'); return quote.update({ subtotal: money(subtotal), discountTotal: money(discount), total: money(subtotal + cents(quote.deliveryFee)) }, { transaction }); }
- async changeStatus(id: string, status: QuoteStatus, userId: string) { const quote = await this.quote(id); const allowed: Partial<Record<QuoteStatus, QuoteStatus[]>> = { REQUESTED: [QuoteStatus.DRAFT, QuoteStatus.QUOTED, QuoteStatus.CANCELLED], DRAFT: [QuoteStatus.QUOTED, QuoteStatus.CANCELLED], QUOTED: [QuoteStatus.ACCEPTED, QuoteStatus.REJECTED, QuoteStatus.EXPIRED, QuoteStatus.CANCELLED] }; if (!allowed[quote.status]?.includes(status)) throw new BadRequestException('Invalid quote status transition'); if (status === QuoteStatus.QUOTED) { const items = await this.items.findAll({ where: { quoteId: id } }); if (!items.length || items.some(item => item.unitQuotedPrice === null || cents(item.unitQuotedPrice) <= 0n)) throw new BadRequestException('Quoted quotes require priced items'); } await quote.update({ status, updatedByUserId: userId }); return this.getQuote(id); }
+ async changeStatus(id: string, status: QuoteStatus, userId: string) {
+  return this.quotes.sequelize!.transaction(async transaction => {
+   const quote = await this.quote(id, false, transaction, true);
+   const allowed: Partial<Record<QuoteStatus, QuoteStatus[]>> = { REQUESTED: [QuoteStatus.DRAFT, QuoteStatus.QUOTED, QuoteStatus.CANCELLED], DRAFT: [QuoteStatus.QUOTED, QuoteStatus.CANCELLED], QUOTED: [QuoteStatus.ACCEPTED, QuoteStatus.REJECTED, QuoteStatus.EXPIRED, QuoteStatus.CANCELLED] };
+   if (!allowed[quote.status]?.includes(status)) throw new BadRequestException('Invalid quote status transition');
+   if (status === QuoteStatus.QUOTED) {
+    const items = await this.items.findAll({ where: { quoteId: id }, transaction, lock: transaction.LOCK.UPDATE, order: [['id', 'ASC']] });
+    if (!items.length || items.some(item => item.unitQuotedPrice === null || cents(item.unitQuotedPrice) <= 0n)) throw new BadRequestException('Quoted quotes require priced items');
+   }
+   await quote.update({ status, updatedByUserId: userId }, { transaction });
+   return this.getQuote(id, transaction);
+  });
+ }
 }

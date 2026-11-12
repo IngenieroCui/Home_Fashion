@@ -1,0 +1,42 @@
+sequenceDiagram
+    autonumber
+    actor A as ADMIN
+    participant N as Next.js
+    participant B as NestJS
+    participant M as MySQL aislado
+    actor C as Cliente
+    participant W as Wompi Sandbox
+    A->>N: Venta confirmada, importe e intención UUID
+    N->>B: POST payment-attempts con sesión existente
+    B->>B: Verificar ADMIN, COP y configuración Sandbox
+    B->>M: Bloquear Sale, validar saldo, crear PaymentAttempt
+    Note over B,M: PENDING no crea SalePayment
+    M-->>B: Referencia única, vencimiento y hash del token
+    B-->>A: Enlace público opaco
+    A-->>C: Compartir enlace
+    C->>N: Abrir cobro sin cuenta
+    N->>B: Consultar importe y estado públicos
+    C->>B: Solicitar apertura del checkout
+    B->>B: Revalidar saldo y vencimiento, firmar importe
+    B-->>C: URL de Web Checkout firmada
+    C->>W: Completar pago ficticio alojado
+    W-->>N: Redirección informativa con ID
+    Note over N,B: La redirección nunca confirma el abono
+    W->>B: POST transaction.updated por HTTPS
+    B->>B: Validar firma dinámica y ambiente test
+    B->>W: GET transacción con llave privada test
+    W-->>B: Estado y datos vigentes
+    B->>B: Contrastar ID, referencia, COP e importe
+    B->>M: Transacción: bloquear Sale y PaymentAttempt
+    alt APPROVED y saldo suficiente
+        B->>M: Servicio Sales: intención única, crear SalePayment
+        B->>M: Enlazar intento y movimiento, commit conjunto
+    else PENDING, DECLINED o ERROR
+        B->>M: Actualizar intento sin movimiento
+    else APPROVED sin saldo o venta cancelada
+        B->>M: Conservar aprobación y marcar revisión sin sobrepago
+    end
+    B-->>W: HTTP 200 después del commit
+    Note over B,M: Reenvíos devuelven el movimiento previo, no hay reversos automáticos
+    N->>B: Consultar estado público o refrescar venta
+    B-->>C: Estado confirmado si existe SalePayment

@@ -7,6 +7,7 @@ import { ListError } from '../page-state';
 import { api, ErrorMessage, type Category, type Product, type Page } from './catalog-shared';
 import { ProductCreateForm, ProductEditForm } from './product-form';
 import { ProductImages } from './product-images-panel';
+import type { VariantFinancialAccess } from './variant-form';
 import { VariantList } from './variant-list';
 
 export function NewProductPage() {
@@ -24,7 +25,7 @@ export function NewProductPage() {
   return <ProductCreateForm categories={categories} />;
 }
 
-export function ProductEditor({ id, created }: { id: string; created: boolean }) {
+export function ProductEditor({ id, created, financialAccess }: { id: string; created: boolean; financialAccess: VariantFinancialAccess }) {
   const notify = useActionFeedback();
   const [product, setProduct] = useState<Product | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -84,6 +85,7 @@ export function ProductEditor({ id, created }: { id: string; created: boolean })
         <h2 className="font-serif text-2xl">Variantes</h2>
         <p>Disponibilidad: existencias menos reservas.</p>
         <VariantList
+          financialAccess={financialAccess}
           onSaved={(message) => {
             notify(message);
             setNotice(message);

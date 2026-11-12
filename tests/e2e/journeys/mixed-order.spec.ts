@@ -29,5 +29,18 @@ test('02 · Pedido mixto: reserva real y fabricación conservan venta y líneas'
     expect(String(jobs[0].order_item_id)).toBe(String(items[1].id));
     evidence.finalMySQL = { orders, items, jobs, inventory, reservationBefore: before.quantity_reserved };
   });
+
   await page.reload(); await screenshot(page, '04-pedido-mixto');
+  await test.step('Cancela un pedido mixto y el reintento no duplica el efecto', async () => {
+    const admin = new ApiClient(request); await admin.login('admin');
+    const cancelPath = '/admin/orders/' + order.id + '/cancel';
+    await admin.call('POST', cancelPath, { reason: 'QA cancelación mixta' });
+    await admin.call('POST', cancelPath, { reason: 'QA reintento' });
+    const orderItems = await rows('SELECT status FROM order_items WHERE order_id = ? ORDER BY id', [order.id]);
+    expect(orderItems.map(item => item.status)).toEqual(['CANCELLED', 'CANCELLED']);
+    expect((await rows('SELECT status FROM workshop_jobs WHERE id = ?', [job.id]))[0].status).toBe('CANCELLED');
+    expect((await rows('SELECT quantity_reserved FROM product_variants WHERE id = ?', [stock.id]))[0].quantity_reserved).toBe(before.quantity_reserved);
+    expect((await rows('SELECT reason FROM order_cancellations WHERE order_id = ?', [order.id])).map(row => row.reason)).toEqual(['QA cancelación mixta']);
+    expect((await rows('SELECT status FROM sales WHERE id = ?', [sale.id]))[0].status).toBe('CONFIRMED');
+  });
 });

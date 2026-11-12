@@ -18,17 +18,19 @@ Este directorio es la referencia técnica y funcional del MVP. El código es la 
 | [Espacio de trabajo de tesis](thesis/README.md) | Contexto, objetivos, requisitos, evidencias, validación y mapa del documento |
 | [Inventario de base de datos](data/database-inventory.md) | Tablas, relaciones, restricciones y diferencias con el snapshot |
 | [Catálogo de diagramas](thesis/diagram-catalog.md) | Diagramas propuestos, fuentes, formatos y estado |
+| [Pagos y Wompi Sandbox](payments/README.md) | Intentos de cobro asistido, idempotencia y límites de validación externa |
+| [Cierre técnico 28/10](release/closure-2026-10-28.md) | H03/H04, regresión H05, versión congelable, riesgos y demostración |
 
 ## Estado verificable
 
-Fecha de corte: 6 de septiembre de 2026.
+Fecha de corte técnico: 28 de octubre de 2026. La evidencia anterior conserva sus fechas originales.
 
 | Componente | Implementado | Verificación disponible | Pendiente principal |
 | --- | --- | --- | --- |
-| API | Sí, núcleo completo del MVP | Lint, 32 suites y 270 pruebas, build | MySQL real y prueba HTTP integral |
-| Web | Sí, público + panel + seguimiento | Lint y build Next.js | Navegador real, responsive y revisión UI/UX |
-| Android | Sí, operación WORKSHOP | 47 pruebas aprobadas y analizador Dart sin hallazgos, reejecutados el 6 de septiembre | Prueba en emulador/dispositivo con API real |
-| Despliegue | Guía y artefactos compilables | Builds locales de API/web | Infraestructura, HTTPS, secretos, backup y firma Android |
+| API | MVP + H05/Wompi Sandbox + correcciones H03/H04 | Build, lint dirigido, 136 checks de API y regresión dirigida real MySQL 8.4 (ver cierre) | Validación del SHA final en entorno desplegado |
+| Web | Público + panel + seguimiento + cobro Sandbox asistido | Build Next.js y regresiones locales; journeys históricos conservados | Prueba externa Wompi pendiente de credenciales |
+| Android | Operación WORKSHOP y upload multipart de fotografías | Evidencia automática histórica; no se reejecutó Android en este cierre | Emulador/dispositivo con API HTTPS real y firma |
+| Despliegue | Guía y artefactos compilables; 15 migraciones en fuente | Builds locales; ninguna migración Aiven ni despliegue en este cierre | Autorización, revisión de estado remoto y smoke del SHA publicado |
 
 “Implementado” no equivale a “validado en producción”. Hasta completar el smoke test, el estado correcto del MVP es: **implementado y verificable automáticamente, pendiente de validación integral real**.
 

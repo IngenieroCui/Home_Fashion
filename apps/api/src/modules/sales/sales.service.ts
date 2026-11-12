@@ -6,7 +6,7 @@ import {
   NotFoundException
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { Op, Transaction } from 'sequelize';
 import { AuthService } from '../auth/auth.service';
 import { CatalogImageResolverService } from '../catalog/catalog-image-resolver.service';
@@ -257,10 +257,11 @@ export class SalesService {
     await sale.update(values, { transaction });
   }
 
-  private async paymentSummary(sale: Sale, transaction?: Transaction) {
+  async paymentSummary(sale: Sale, transaction?: Transaction) {
     const payments = await this.salePayments.findAll({
       where: { saleId: sale.id, status: SalePaymentStatus.REGISTERED },
-      transaction
+      transaction,
+      ...(transaction ? { lock: transaction.LOCK.UPDATE } : {})
     });
     return calculatePaymentSummary(payments, sale.total);
   }
@@ -290,24 +291,59 @@ export class SalesService {
       throw new BadRequestException('Payment cannot exceed the current balance');
   }
 
-  async preparePaymentMedia(saleId: string, dto: RegisterSalePaymentDto, userId: string) {
+  private paymentFingerprint(saleId: string, dto: RegisterSalePaymentDto, userId: string, evidenceIdentity?: string) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(dto.intentId ?? ''))
+      throw new BadRequestException('A stable UUID v4 intentId is required');
+    return createHash('sha256').update(JSON.stringify([
+      String(saleId), userId, dto.type, dto.method, money(cents(dto.amount)),
+      new Date(dto.paidAt).toISOString(), dto.reference ?? null, dto.notes ?? null,
+      dto.adjustmentEffect ?? null, evidenceIdentity ?? dto.evidenceUrl ?? null
+    ])).digest('hex');
+  }
+
+  private async existingPayment(saleId: string, dto: RegisterSalePaymentDto, userId: string, evidenceIdentity?: string, transaction?: Transaction) {
+    const fingerprint = this.paymentFingerprint(saleId, dto, userId, evidenceIdentity);
+    // Sale lock serializes this sale. A non-locking first read avoids absent-key gap locks
+    // across unrelated sales; the global unique index is the final cross-sale arbiter.
+    const payment = await this.salePayments.findOne({ where: { intentId: dto.intentId }, transaction });
+    if (payment && (String(payment.saleId) !== String(saleId) || payment.intentFingerprint !== fingerprint))
+      throw new ConflictException('Payment intent already used with different content');
+    return { payment, fingerprint };
+  }
+
+  async preparePaymentMedia(saleId: string, dto: RegisterSalePaymentDto, userId: string, evidenceIdentity?: string) {
     if (dto.reference && dto.reference.length > 160) throw new BadRequestException('La referencia admite hasta 160 caracteres');
     if (dto.notes && Buffer.byteLength(dto.notes, 'utf8') > 65535) throw new BadRequestException('Las notas son demasiado extensas');
     const user = await this.user(userId);
     this.require(user, PAYMENT_REGISTER_PERMISSION);
     const sale = await this.sales.findByPk(saleId);
     if (!sale) throw new NotFoundException('Sale not found');
+    const { payment } = await this.existingPayment(saleId, dto, userId, evidenceIdentity);
+    if (payment) return { code: sale.code, replay: { payment: plain<Plain>(payment), ...await this.paymentSummary(sale) } };
     if (sale.status !== SaleStatus.CONFIRMED) throw new BadRequestException('Payments can only be registered for confirmed sales');
     this.validatePayment(dto, await this.paymentSummary(sale));
-    return { code: sale.code };
+    return { code: sale.code, replay: undefined };
   }
 
-  async registerPayment(saleId: string, dto: RegisterSalePaymentDto, userId: string) {
+  async registerPayment(saleId: string, dto: RegisterSalePaymentDto, userId: string, evidenceIdentity?: string) {
     const user = await this.user(userId);
     this.require(user, PAYMENT_REGISTER_PERMISSION);
-    return this.sales.sequelize!.transaction(async (transaction) => {
+    try { return await this.sales.sequelize!.transaction(async (transaction) => {
       const sale = await this.sales.findByPk(saleId, { transaction, lock: transaction.LOCK.UPDATE });
       if (!sale) throw new NotFoundException('Sale not found');
+      return this.recordPaymentInTransaction(sale, dto, userId, transaction, evidenceIdentity);
+    }); } catch (error) {
+      if ((error as { name?: string }).name === 'SequelizeUniqueConstraintError')
+        throw new ConflictException('Payment intent already used with different content');
+      throw error;
+    }
+  }
+
+  // Internal entry point: caller holds the Sale UPDATE lock in this same transaction.
+  // Provider verification must complete before entering here; no HTTP route exposes it.
+  async recordPaymentInTransaction(sale: Sale, dto: RegisterSalePaymentDto, userId: string, transaction: Transaction, evidenceIdentity?: string) {
+      const { payment: existing, fingerprint } = await this.existingPayment(sale.id, dto, userId, evidenceIdentity, transaction);
+      if (existing) return { payment: plain<Plain>(existing), ...await this.paymentSummary(sale, transaction) };
       if (sale.status !== SaleStatus.CONFIRMED)
         throw new BadRequestException('Payments can only be registered for confirmed sales');
       const summary = await this.paymentSummary(sale, transaction);
@@ -315,6 +351,8 @@ export class SalesService {
       const payment = await this.salePayments.create(
         {
           saleId: sale.id,
+          intentId: dto.intentId,
+          intentFingerprint: fingerprint,
           customerId: sale.customerId,
           type: dto.type,
           method: dto.method,
@@ -334,7 +372,6 @@ export class SalesService {
       );
       const updated = await this.paymentSummary(sale, transaction);
       return { payment: plain<Plain>(payment), ...updated };
-    });
   }
 
   async voidPayment(saleId: string, paymentId: string, reason: string, userId: string) {
@@ -393,13 +430,16 @@ export class SalesService {
     try {
       return await this.sales.sequelize!.transaction(async (transaction) => {
         const quote = await this.quotes.findByPk(quoteId, {
-          include: [QuoteItem],
           transaction,
           lock: transaction.LOCK.UPDATE
         });
         if (!quote) throw new NotFoundException('Quote not found');
         if (quote.status !== QuoteStatus.ACCEPTED)
           throw new BadRequestException('Only accepted quotes can become sales');
+        // Header -> quote items -> sale, shared with every quote mutation.
+        const items = await this.quoteItems.findAll({
+          where: { quoteId }, transaction, lock: transaction.LOCK.UPDATE, order: [['id', 'ASC']]
+        });
         if (
           await this.sales.findOne({
             where: { quoteId },
@@ -408,7 +448,6 @@ export class SalesService {
           })
         )
           throw new ConflictException('Quote already converted to sale');
-        const items = quote.items ?? [];
         if (!items.length) throw new BadRequestException('Accepted quote has no items');
         const sale = await this.createSaleRecord(
           quote.customerId,

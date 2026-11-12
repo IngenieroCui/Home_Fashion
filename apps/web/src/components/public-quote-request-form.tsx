@@ -382,6 +382,12 @@ export function PublicQuoteRequestForm({
                 </div>
               </>
             )}
+            {step === steps.length - 1 && (
+              <p id="quote-privacy">
+                Home Fashion usa tu nombre y tus datos de contacto para gestionar esta cotización y responderte.
+                Consulta el <a className="text-link" href="/privacidad">aviso de privacidad</a>.
+              </p>
+            )}
             {error && (
               <p id="quote-error" className="form-error" role="alert">
                 {error}
@@ -416,7 +422,8 @@ export function PublicQuoteRequestForm({
                   Editar datos
                 </button>
               )}
-              <button className="button-link" type="submit" disabled={submitting || conflict}>
+              <button className="button-link" type="submit" disabled={submitting || conflict}
+                aria-describedby={step === steps.length - 1 ? 'quote-privacy' : undefined}>
                 {submitting
                   ? 'Enviando…'
                   : step < steps.length - 1

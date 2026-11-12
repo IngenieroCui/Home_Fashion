@@ -4,12 +4,16 @@ import { useState, type FormEvent } from 'react';
 import { formNumber, variantCostPatch } from '@/lib/admin-catalog-utils';
 import { api, ErrorMessage, type Status, type Variant } from './catalog-shared';
 
+export type VariantFinancialAccess = { price: boolean; cost: boolean };
+
 export function VariantForm({
+  financialAccess,
   productId,
   variant,
   onCancel,
   onSaved
 }: {
+  financialAccess: VariantFinancialAccess;
   productId: string;
   variant: Variant | null;
   onCancel: () => void;
@@ -21,16 +25,15 @@ export function VariantForm({
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const salePrice = formNumber(form.get('salePrice'));
-    const quantityOnHand = formNumber(form.get('quantityOnHand'));
+    const quantityOnHand = variant?.quantityOnHand ?? formNumber(form.get('quantityOnHand'));
     const quantityReserved = variant?.quantityReserved ?? 0;
     const estimatedCost = formNumber(form.get('estimatedCost'));
     if (
-      salePrice === null ||
-      salePrice <= 0 ||
+      (financialAccess.price && (salePrice === null || salePrice <= 0)) ||
       quantityOnHand === null ||
       quantityOnHand < 0 ||
       quantityReserved > quantityOnHand ||
-      (form.get('estimatedCost') !== '' && (estimatedCost === null || estimatedCost < 0))
+      (financialAccess.cost && form.get('estimatedCost') !== '' && (estimatedCost === null || estimatedCost < 0))
     ) {
       setError('Revisa precio e inventario. Las reservas no pueden superar las existencias.');
       return;
@@ -43,9 +46,9 @@ export function VariantForm({
       color: form.get('color') || undefined,
       fabric: form.get('fabric') || undefined,
       finish: form.get('finish') || undefined,
-      salePrice,
-      ...variantCostPatch(variant, estimatedCost),
-      quantityOnHand,
+      ...(financialAccess.price && (!variant || salePrice !== Number(variant.salePrice)) ? { salePrice } : {}),
+      ...(financialAccess.cost ? variantCostPatch(variant, estimatedCost) : {}),
+      ...(!variant ? { quantityOnHand } : {}),
       location: form.get('location') || undefined,
       status: form.get('status') as Status
     };
@@ -107,7 +110,7 @@ export function VariantForm({
         Acabado
         <input defaultValue={String(value('finish'))} name="finish" />
       </label>
-      <label>
+      {financialAccess.price && <label>
         Precio de venta
         <input
           inputMode="decimal"
@@ -118,8 +121,8 @@ export function VariantForm({
           type="number"
           required
         />
-      </label>
-      <label>
+      </label>}
+      {financialAccess.cost && <label>
         Costo estimado (opcional)
         <input
           inputMode="decimal"
@@ -129,12 +132,13 @@ export function VariantForm({
           step="0.01"
           type="number"
         />
-      </label>
+      </label>}
       <label>
         Existencias físicas
         <input
           inputMode="numeric"
-          defaultValue={String(value('quantityOnHand'))}
+          defaultValue={String(value('quantityOnHand') || '0')}
+          readOnly={Boolean(variant)}
           min="0"
           name="quantityOnHand"
           step="1"

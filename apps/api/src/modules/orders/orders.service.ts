@@ -12,6 +12,9 @@ import { SaleStatus } from '../sales/sales.types';
 import { CreateOrderFromSaleDto, OrderQueryDto } from './dto/orders.dto';
 import { OrderItem } from './entities/order-item.model';
 import { Order } from './entities/order.model';
+import { Delivery } from '../deliveries/entities/delivery.model';
+import { DeliveryStatus } from '../deliveries/deliveries.types';
+import { WorkshopJobStatus } from '../workshop-jobs/workshop-jobs.types';
 import { WorkshopJob } from '../workshop-jobs/entities/workshop-job.model';
 import { OrderItemStatus, OrderStatus, OrderSupplyType, ORDER_MANAGE_PERMISSION } from './orders.types';
 
@@ -177,6 +180,56 @@ export class OrdersService {
       data: result.rows.map((order) => ({ ...plain<Plain>(order), totalItems: countByOrder.get(order.id) ?? 0 })),
       pagination: { page: query.page, limit: query.limit, total: result.count, totalPages: Math.ceil(result.count / query.limit) }
     };
+  }
+
+
+  async cancel(id: string, reason: string, userId: string) {
+    await this.require(userId);
+    reason = reason.trim();
+    if (!reason) throw new BadRequestException('Indica el motivo de cancelación');
+    const db = this.orders.sequelize!;
+    await db.transaction(async transaction => {
+      const locked = { transaction, lock: transaction.LOCK.UPDATE };
+      const order = await this.orders.findByPk(id, locked);
+      if (!order) throw new NotFoundException('Order not found');
+      if (order.status === OrderStatus.CANCELLED) return;
+      if (order.status === OrderStatus.COMPLETED) throw new ConflictException('El pedido ya se entregó');
+      const delivery = await Delivery.findOne({ where: { orderId: id }, ...locked });
+      if (delivery && [DeliveryStatus.DELIVERED, DeliveryStatus.OUT_FOR_DELIVERY].includes(delivery.status))
+        throw new ConflictException('La entrega está en reparto o ya finalizó');
+      const items = await this.orderItems.findAll({ where: { orderId: id }, order: [['id', 'ASC']], ...locked });
+      if (items.some(item => item.status === OrderItemStatus.DELIVERED))
+        throw new ConflictException('El pedido tiene líneas entregadas');
+      const jobs = items.length ? await WorkshopJob.findAll({ where: { orderItemId: items.map(item => item.id) }, ...locked }) : [];
+      if (jobs.some(job => job.status === WorkshopJobStatus.COMPLETED))
+        throw new ConflictException('El pedido tiene fabricación terminada y requiere revisión operativa');
+      const releases = new Map<string, number>();
+      for (const item of items) {
+        if (item.supplyType !== OrderSupplyType.IN_STOCK || item.status === OrderItemStatus.CANCELLED) continue;
+        if (!item.productVariantId) throw new ConflictException('La reserva no tiene variante asociada');
+        const variantId = String(item.productVariantId);
+        releases.set(variantId, (releases.get(variantId) ?? 0) + item.quantity);
+      }
+      const variants = releases.size ? await this.variants.findAll({ where: { id: [...releases.keys()] }, order: [['id', 'ASC']], ...locked }) : [];
+      if (variants.length !== releases.size) throw new ConflictException('La reserva no tiene variante asociada');
+      for (const variant of variants) {
+        const reserved = variant.quantityReserved - releases.get(String(variant.id))!;
+        if (reserved < 0 || variant.quantityReserved > variant.quantityOnHand)
+          throw new ConflictException('La reserva no coincide con el inventario');
+        await variant.update({ quantityReserved: reserved }, { transaction });
+      }
+      if (delivery?.status === DeliveryStatus.SCHEDULED)
+        await delivery.update({ status: DeliveryStatus.CANCELLED }, { transaction });
+      for (const job of jobs) if (job.status !== WorkshopJobStatus.CANCELLED)
+        await job.update({ status: WorkshopJobStatus.CANCELLED }, { transaction });
+      for (const item of items) if (item.status !== OrderItemStatus.CANCELLED)
+        await item.update({ status: OrderItemStatus.CANCELLED }, { transaction });
+      await order.update({ status: OrderStatus.CANCELLED }, { transaction });
+      await db.query('INSERT INTO order_cancellations (order_id, actor_id, reason, created_at) VALUES (?, ?, ?, NOW())', {
+        replacements: [id, userId, reason], transaction
+      });
+    });
+    return this.detail(id);
   }
 
   async detail(id: string, transaction?: Transaction) {

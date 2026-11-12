@@ -1,13 +1,15 @@
 'use client';
 import { useState } from 'react';
 import { StatusBadge, money, type Variant, type Product } from './catalog-shared';
-import { VariantForm } from './variant-form';
+import { VariantForm, type VariantFinancialAccess } from './variant-form';
 
 export function VariantList({
   product,
+  financialAccess,
   onSaved
 }: {
   product: Product;
+  financialAccess: VariantFinancialAccess;
   onSaved: (message: string) => void;
 }) {
   const [editing, setEditing] = useState<Variant | null>(null);
@@ -37,7 +39,7 @@ export function VariantList({
         </article>
       ))}
       {!product.variants?.length ? <p className="notice">Aún no hay variantes.</p> : null}
-      <button
+      {financialAccess.price && <button
         className="button-link button-link-secondary"
         onClick={() => {
           setAdding(true);
@@ -46,9 +48,10 @@ export function VariantList({
         type="button"
       >
         Nueva variante
-      </button>
+      </button>}
       {adding || editing ? (
         <VariantForm
+          financialAccess={financialAccess}
           onCancel={() => {
             setAdding(false);
             setEditing(null);

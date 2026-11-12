@@ -1,0 +1,42 @@
+erDiagram
+    SALES ||--o{ SALE_PAYMENTS : registra
+    SALES ||--o{ PAYMENT_ATTEMPTS : genera
+    USERS ||--o{ PAYMENT_ATTEMPTS : crea
+    SALE_PAYMENTS o|--o| PAYMENT_ATTEMPTS : confirma
+    SALES {
+        bigint id PK
+        decimal total
+        enum status
+    }
+    SALE_PAYMENTS {
+        bigint id PK
+        bigint sale_id FK
+        varchar intent_id UK "nullable para historicos"
+        varchar intent_fingerprint "SHA256 contenido canonico"
+        decimal amount
+        enum status
+    }
+    PAYMENT_ATTEMPTS {
+        varchar id PK "UUID intencion"
+        bigint sale_id FK
+        varchar provider "WOMPI"
+        varchar reference UK
+        bigint amount_in_cents
+        varchar currency "COP"
+        varchar environment "SANDBOX"
+        enum status
+        varchar provider_transaction_id UK "nullable"
+        bigint sale_payment_id FK,UK "nullable"
+        varchar token_hash UK
+        datetime expires_at
+        bigint created_by_user_id FK
+        datetime verified_at
+        bigint last_event_timestamp
+        boolean review_required
+        varchar review_reason
+        datetime created_at
+        datetime updated_at
+    }
+    USERS {
+        bigint id PK
+    }

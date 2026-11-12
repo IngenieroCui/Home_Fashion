@@ -46,3 +46,5 @@ La rama de demo exige una base MySQL independiente llamada `home_fashion_demo` y
 No hay upload binario de evidencias en Flutter, ni una validación Android en dispositivo acreditada por este sprint. Antes de abrir la operación deben revisarse aislamiento de demo, permisos, límites de peticiones, firma Android, observabilidad y tratamiento de datos de clientes. Las pruebas existentes se conservan; no se ejecutaron aquí.
 
 Se sustituyeron las referencias rotas a `docs/index.md`, `docs/architecture.md` y otros documentos ausentes por los dos documentos principales actuales. Se conservan créditos, guías operativas y evidencia de tesis. La autoría se apoya en los commits y no se reasigna el historial `unknown`.
+
+La aplicación Android permite adjuntar hasta cinco fotos por avance mediante multipart. El estado de las migraciones, las pruebas actuales y el tratamiento de evidencias se documentan en el [registro de cierre](release/backlog-2026-11-12.md).
