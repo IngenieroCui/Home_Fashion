@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
@@ -23,13 +21,35 @@ class _ProgressReportSheetState extends State<ProgressReportSheet> {
   final List<XFile> _photos = [];
   bool _picking = false;
   String? _pickerError;
-  String? _requestId;
-  String? _lastPayload;
+  bool _restoredPending = false;
 
   @override
   void initState() {
     super.initState();
-    _recoverPhotos();
+    _restorePending().whenComplete(_recoverPhotos);
+  }
+
+  /// Restores an unconfirmed submission of the same type (for example after
+  /// the app was closed while sending) so resending reuses its requestId.
+  Future<void> _restorePending() async {
+    final pending =
+        await context.read<WorkshopJobDetailCubit>().pendingSubmission();
+    if (!mounted || pending == null || pending.type != widget.type.apiValue) {
+      return;
+    }
+    final photos = <XFile>[];
+    for (final path in pending.imagePaths) {
+      if (await File(path).exists()) photos.add(XFile(path));
+    }
+    if (!mounted) return;
+    setState(() {
+      _message.text = pending.message;
+      _percent.text = pending.progressPercent?.toString() ?? '';
+      _photos
+        ..clear()
+        ..addAll(photos.take(5));
+      _restoredPending = true;
+    });
   }
 
   Future<void> _recoverPhotos() async {
@@ -115,6 +135,13 @@ class _ProgressReportSheetState extends State<ProgressReportSheet> {
                       onPressed: busy ? null : () => Navigator.pop(context),
                       icon: const Icon(Icons.close))
                 ]),
+                if (_restoredPending)
+                  Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                          'Hay un envío sin confirmar. Revisa los datos y vuelve a enviarlo; no se duplicará.',
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary))),
                 const SizedBox(height: 8),
                 TextFormField(
                     controller: _message,
@@ -206,22 +233,13 @@ class _ProgressReportSheetState extends State<ProgressReportSheet> {
         : null;
     final imagePaths =
         _photos.map((photo) => photo.path).toList(growable: false);
-    final payload = jsonEncode(
-        [widget.type.apiValue, _message.text.trim(), percent, imagePaths]);
-    if (_lastPayload != payload) {
-      final random = Random.secure();
-      _requestId = List.generate(
-              16, (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0'))
-          .join();
-      _lastPayload = payload;
-    }
+    // The cubit reuses the requestId of an identical unconfirmed submission.
     final success = await context.read<WorkshopJobDetailCubit>().submit(
           SubmitProgressCommand(
             type: widget.type,
             message: _message.text,
             progressPercent: percent,
             imagePaths: imagePaths,
-            requestId: _requestId,
           ),
         );
     if (success && mounted) Navigator.pop(context, true);

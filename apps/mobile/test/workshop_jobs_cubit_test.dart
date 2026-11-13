@@ -137,7 +137,11 @@ void main() {
 
     expect(cubit.state.job, isNotNull);
     expect(cubit.state.submitError, isA<NetworkException>());
-    expect(repository.submittedCommand, same(command));
+    final sent = repository.submittedCommand!;
+    expect(sent.type, command.type);
+    expect(sent.message, command.message);
+    expect(sent.progressPercent, command.progressPercent);
+    expect(sent.requestId, matches(r'^[a-f0-9]{32}$'));
     await cubit.close();
   });
 

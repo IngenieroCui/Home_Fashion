@@ -1,9 +1,14 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:math';
 
+import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/errors/app_exception.dart';
+import '../data/pending_submission_store.dart';
 import '../data/workshop_jobs_repository.dart';
 import '../domain/workshop_job.dart';
 
@@ -47,11 +52,18 @@ class WorkshopJobDetailCubit extends Cubit<WorkshopJobDetailState> {
   WorkshopJobDetailCubit({
     required WorkshopJobsRepository repository,
     required this.jobId,
+    PendingSubmissionStore? pendingStore,
   })  : _repository = repository,
+        _pending = pendingStore ?? MemoryPendingSubmissionStore(),
         super(const WorkshopJobDetailState());
 
   final WorkshopJobsRepository _repository;
+  final PendingSubmissionStore _pending;
   final String jobId;
+
+  /// Unconfirmed submission for this job, if any (survives app restarts when
+  /// backed by secure storage).
+  Future<PendingSubmission?> pendingSubmission() => _pending.read(jobId);
   int _loadGeneration = 0;
   int _submitGeneration = 0;
   int _refreshGeneration = 0;
@@ -114,12 +126,32 @@ class WorkshopJobDetailCubit extends Cubit<WorkshopJobDetailState> {
     final cancelToken = CancelToken();
     _submitCancel = cancelToken;
     emit(state.copyWith(isSubmitting: true, clearSubmitError: true));
+    final fingerprint = await _fingerprint(command);
+    final previous = await _pending.read(jobId);
+    final requestId = previous != null && previous.fingerprint == fingerprint
+        ? previous.requestId
+        : command.requestId ?? _newRequestId();
+    await _pending.write(
+      jobId,
+      PendingSubmission(
+        requestId: requestId,
+        fingerprint: fingerprint,
+        type: command.type.apiValue,
+        message: command.message,
+        progressPercent: command.progressPercent,
+        imagePaths: command.imagePaths,
+        createdAt: previous?.requestId == requestId
+            ? previous!.createdAt
+            : DateTime.now(),
+      ),
+    );
     try {
       final report = await _repository.submit(
         jobId,
-        command,
+        command.withRequestId(requestId),
         cancelToken: cancelToken,
       );
+      await _pending.delete(jobId);
       if (isClosed || generation != _submitGeneration) return false;
       final currentJob = state.job;
       if (currentJob == null) return false;
@@ -134,10 +166,43 @@ class WorkshopJobDetailCubit extends Cubit<WorkshopJobDetailState> {
       unawaited(_refreshBestEffort(generation));
       return true;
     } on AppException catch (error) {
+      // Keep the requestId only when the server may have committed the report.
+      if (!_outcomeUnknown(error)) await _pending.delete(jobId);
       if (isClosed || generation != _submitGeneration) return false;
       emit(state.copyWith(isSubmitting: false, submitError: error));
       return false;
     }
+  }
+
+  static bool _outcomeUnknown(AppException error) =>
+      error is NetworkException ||
+      error is InvalidResponseException ||
+      error is SessionChangedException ||
+      (error is ApiException &&
+          (error.statusCode == null || error.statusCode! >= 500));
+
+  static String _newRequestId() {
+    final random = Random.secure();
+    return List.generate(
+        16, (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0')).join();
+  }
+
+  static Future<String> _fingerprint(SubmitProgressCommand command) async {
+    final images = <String>[];
+    for (final path in command.imagePaths) {
+      try {
+        images.add(sha256.convert(await File(path).readAsBytes()).toString());
+      } catch (_) {
+        images.add('path:$path');
+      }
+    }
+    final percent = command.type == ProgressReportType.progress
+        ? command.progressPercent
+        : null;
+    return sha256
+        .convert(utf8.encode(jsonEncode(
+            [command.type.apiValue, command.message.trim(), percent, images])))
+        .toString();
   }
 
   Future<void> _refreshBestEffort(int submitGeneration) async {

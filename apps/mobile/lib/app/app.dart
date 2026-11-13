@@ -30,6 +30,7 @@ class _HomeFashionWorkshopAppState extends State<HomeFashionWorkshopApp> {
         AppRouter(
           sessionCubit: widget.dependencies.sessionCubit,
           workshopJobsRepository: widget.dependencies.workshopJobsRepository,
+          pendingSubmissionStore: widget.dependencies.pendingSubmissionStore,
         );
     widget.dependencies.sessionCubit.restore();
   }

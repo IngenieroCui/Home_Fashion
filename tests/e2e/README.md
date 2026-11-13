@@ -37,6 +37,20 @@ Evidence is written to `.e2e-evidence/automated-business-journeys.md` and its ad
 Configuration follows [Playwright webServer](https://playwright.dev/docs/test-webserver) and [authentication artifact precautions](https://playwright.dev/docs/auth).
 
 
+## Android emulator support
+
+With the isolated services already running (`pnpm exec tsx tests/e2e/support/service.ts api` and `... web`),
+the Android config never starts or reuses services by itself; it revalidates MySQL isolation and health first:
+
+```powershell
+$env:ANDROID_JOBS = '2'; pnpm exec playwright test -c tests/e2e/android.config.ts prepare   # ASSIGNED jobs for workshop@e2e.invalid
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:4301/api                              # from apps/mobile, in the emulator
+pnpm exec playwright test -c tests/e2e/android.config.ts review    # ADMIN approves/rejects app reports; anonymous tracking check
+```
+
+Prepared job IDs go to the ignored `.e2e-local/android/state.json`; screenshots go to `.e2e-evidence/android/`.
+An emulator run does not prove behaviour on a physical device.
+
 ## Release protection (2026-10-10)
 
 The catalog starts with 20 physical stock units. Direct sale, mixed order and recovery

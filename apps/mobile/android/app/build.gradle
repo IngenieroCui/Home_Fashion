@@ -4,6 +4,15 @@ plugins {
   id "dev.flutter.flutter-gradle-plugin"
 }
 
+// Release signing lives outside the repository: android/key.properties
+// (storeFile, storePassword, keyAlias, keyPassword) is git-ignored. Without it the
+// release build stays unsigned and cannot be installed or distributed.
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+  keystorePropertiesFile.withReader("UTF-8") { keystoreProperties.load(it) }
+}
+
 android {
   namespace = "com.homefashion.home_fashion_workshop"
   compileSdk = flutter.compileSdkVersion
@@ -24,6 +33,23 @@ android {
     targetSdk = flutter.targetSdkVersion
     versionCode = flutter.versionCode
     versionName = flutter.versionName
+  }
+  signingConfigs {
+    if (keystorePropertiesFile.exists()) {
+      release {
+        storeFile = file(keystoreProperties["storeFile"])
+        storePassword = keystoreProperties["storePassword"]
+        keyAlias = keystoreProperties["keyAlias"]
+        keyPassword = keystoreProperties["keyPassword"]
+      }
+    }
+  }
+  buildTypes {
+    release {
+      if (keystorePropertiesFile.exists()) {
+        signingConfig = signingConfigs.release
+      }
+    }
   }
 }
 

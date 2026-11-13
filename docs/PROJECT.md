@@ -85,7 +85,7 @@ La plantilla [`.env.wompi.example`](../.env.wompi.example) documenta el interrup
 
 ## Aplicación Android
 
-El [cliente](../apps/mobile/README.md) restaura la sesión, consulta trabajos y permite tomar o elegir hasta cinco fotos para un avance. Se ejecuta con `flutter run --dart-define=API_BASE_URL=...`. Usa `10.0.2.2` para el anfitrión en el emulador. La excepción HTTP se limita a debug. Release exige HTTPS y firma Android administrada fuera del repositorio. Para validar un dispositivo, cubrir autenticación, expiración/refresh, cámara, galería, pérdida de respuesta y lectura posterior de las evidencias con un usuario autorizado.
+El [cliente](../apps/mobile/README.md) restaura la sesión, consulta trabajos y permite tomar o elegir hasta cinco fotos para un avance. Se ejecuta con `flutter run --dart-define=API_BASE_URL=...`. Usa `10.0.2.2` para el anfitrión en el emulador. La excepción HTTP se limita a debug. Release exige HTTPS y firma Android administrada fuera del repositorio mediante `apps/mobile/android/key.properties`, ignorado por Git; sin ese archivo el APK release queda sin firmar. Un envío de avance sin respuesta conserva su `requestId` en almacenamiento seguro y se restaura al reabrir la app, para reintentarlo sin duplicar. Los doce escenarios de taller se ejecutaron en emulador API 37 (ver el [resumen de QA](../thesis-artifacts/evidence/qa-resumen-publico.md)). Para validar un dispositivo físico, cubrir autenticación, expiración/refresh, cámara, galería, pérdida de respuesta y lectura posterior de las evidencias con un usuario autorizado.
 
 ## Despliegue y configuración
 
@@ -115,6 +115,6 @@ Los [diagramas editables](../thesis-artifacts/diagrams/source/) y [PDF de susten
 
 ## Cierre académico y operación comercial
 
-**OE1** caracteriza actores, procesos y requisitos. **OE2** aporta arquitectura y código integrado. **OE3** aporta pruebas de calidad, MySQL y navegador, con Android en dispositivo pendiente. **OE4** requiere una evaluación con participantes y consentimiento, tareas observadas, línea base comparable, mediciones y análisis de resultados. El [protocolo OE4](../thesis-artifacts/evidence/oe4-evaluation-protocol.md) define la recolección. La universidad y los participantes intervienen en el cierre académico.
+**OE1** caracteriza actores, procesos y requisitos. **OE2** aporta arquitectura y código integrado. **OE3** aporta pruebas de calidad, MySQL y navegador, con Android validado en emulador y pendiente en dispositivo físico. **OE4** requiere una evaluación con participantes y consentimiento, tareas observadas, línea base comparable, mediciones y análisis de resultados. El [protocolo OE4](../thesis-artifacts/evidence/oe4-evaluation-protocol.md) define la recolección. La universidad y los participantes intervienen en el cierre académico.
 
 Antes de operar con datos reales quedan la verificación de Vercel y Cloudinary en un entorno aislado, el manejo de fotos históricas, la firma y prueba de Android, los procedimientos aprobados de privacidad y credenciales, los responsables de alertas, la conciliación de existencias y la restauración en una instancia independiente. El webhook externo de Wompi depende de un entorno Sandbox autorizado y permanece experimental.

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/widgets/state_views.dart';
+import '../data/pending_submission_store.dart';
 import '../data/workshop_jobs_repository.dart';
 import '../domain/workshop_job.dart';
 import '../logic/workshop_job_detail_cubit.dart';
@@ -15,11 +16,13 @@ class WorkshopJobDetailPage extends StatelessWidget {
   const WorkshopJobDetailPage({
     required this.jobId,
     required this.repository,
+    this.pendingStore,
     super.key,
   });
 
   final String jobId;
   final WorkshopJobsRepository repository;
+  final PendingSubmissionStore? pendingStore;
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +30,7 @@ class WorkshopJobDetailPage extends StatelessWidget {
       create: (_) => WorkshopJobDetailCubit(
         repository: repository,
         jobId: jobId,
+        pendingStore: pendingStore,
       )..load(),
       child: const _DetailView(),
     );
@@ -128,9 +132,13 @@ class _DetailView extends StatelessWidget {
             title: 'Instrucciones Home Fashion',
             child: Text(job.instructions ?? 'Sin instrucciones adicionales.'),
           ),
-          StatusBadge(
-              label: jobStatusLabel(job.status),
-              color: Theme.of(context).colorScheme.primary),
+          const SizedBox(height: 4),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: StatusBadge(
+                label: jobStatusLabel(job.status),
+                color: Theme.of(context).colorScheme.primary),
+          ),
           const SizedBox(height: 12),
           _ProductionProgress(status: job.status),
           if (job.customization != null)
@@ -145,6 +153,7 @@ class _DetailView extends StatelessWidget {
             child: job.progressReports.isEmpty
                 ? const Text('Todavía no se han enviado reportes.')
                 : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       for (var index = 0;
                           index < job.progressReports.length;

@@ -309,6 +309,14 @@ class SubmitProgressCommand {
   final List<String> imagePaths;
   final String? requestId;
 
+  SubmitProgressCommand withRequestId(String value) => SubmitProgressCommand(
+        type: type,
+        message: message,
+        progressPercent: progressPercent,
+        imagePaths: imagePaths,
+        requestId: value,
+      );
+
   Map<String, dynamic> toJson() => {
         if (requestId != null) 'requestId': requestId,
         'type': type.apiValue,

@@ -6,6 +6,7 @@ import '../core/network/session_events.dart';
 import '../core/storage/token_storage.dart';
 import '../features/auth/data/auth_repository.dart';
 import '../features/auth/logic/session_cubit.dart';
+import '../features/workshop_jobs/data/pending_submission_store.dart';
 import '../features/workshop_jobs/data/workshop_jobs_repository.dart';
 
 class AppDependencies {
@@ -14,7 +15,9 @@ class AppDependencies {
     required this.authRepository,
     required this.sessionEvents,
     required this.workshopJobsRepository,
-  });
+    PendingSubmissionStore? pendingSubmissionStore,
+  }) : pendingSubmissionStore =
+            pendingSubmissionStore ?? MemoryPendingSubmissionStore();
 
   factory AppDependencies.create() {
     final config = AppConfig.fromEnvironment();
@@ -44,9 +47,11 @@ class AppDependencies {
       authRepository: repository,
       sessionEvents: events,
       workshopJobsRepository: RemoteWorkshopJobsRepository(api: apiClient.dio),
+      pendingSubmissionStore: SecurePendingSubmissionStore(),
     );
   }
 
+  final PendingSubmissionStore pendingSubmissionStore;
   final SessionCubit sessionCubit;
   final AuthRepository authRepository;
   final SessionEvents sessionEvents;

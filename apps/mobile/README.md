@@ -16,4 +16,4 @@ La URL se define al compilar o ejecutar, sin almacenar secretos ni usar archivos
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3001/api
 ```
 
-El repositorio solo contiene la plataforma Android. Antes de publicar una build release se debe configurar una firma externa al repositorio.
+El repositorio solo contiene la plataforma Android. Antes de publicar una build release se debe configurar una firma externa al repositorio: crear `android/key.properties` (ignorado por Git) con `storeFile`, `storePassword`, `keyAlias` y `keyPassword`. Sin ese archivo `flutter build apk --release` produce un APK sin firmar.

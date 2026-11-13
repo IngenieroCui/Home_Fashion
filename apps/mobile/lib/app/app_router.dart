@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../core/widgets/state_views.dart';
 import '../features/auth/logic/session_cubit.dart';
 import '../features/auth/presentation/login_page.dart';
+import '../features/workshop_jobs/data/pending_submission_store.dart';
 import '../features/workshop_jobs/data/workshop_jobs_repository.dart';
 import '../features/workshop_jobs/presentation/workshop_job_detail_page.dart';
 import '../features/workshop_jobs/presentation/workshop_jobs_page.dart';
@@ -15,6 +16,7 @@ class AppRouter {
   AppRouter({
     required SessionCubit sessionCubit,
     required WorkshopJobsRepository workshopJobsRepository,
+    PendingSubmissionStore? pendingSubmissionStore,
   }) : _refresh = _RouterRefresh(sessionCubit.stream) {
     router = GoRouter(
       initialLocation: '/splash',
@@ -42,6 +44,7 @@ class AppRouter {
           builder: (context, state) => WorkshopJobDetailPage(
             jobId: state.pathParameters['id']!,
             repository: workshopJobsRepository,
+            pendingStore: pendingSubmissionStore,
           ),
         ),
       ],
