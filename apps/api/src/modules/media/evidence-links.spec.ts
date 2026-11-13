@@ -36,4 +36,17 @@ describe('private evidence presentation', () => {
     expect(cloud.evidenceLink(reference.replace('/authenticated/', '/upload/'))).toBeNull();
     expect(cloud.evidenceLink(reference.replace('/qa/', '/other/'))).toBeNull();
   });
+
+  it('accepts the signed delivery segment Cloudinary returns for authenticated uploads', async () => {
+    const signed = reference.replace('/v123/', '/s--mjgVWtjJ--/v123/');
+    expect(new URL(cloud.evidenceLink(signed, 1000)!).searchParams.get('public_id')).toBe('home-fashion/payments/test');
+    const publicId = 'home-fashion/workshop-progress/QA-1/asset';
+    const fetch = jest.spyOn(globalThis, 'fetch').mockResolvedValueOnce(Response.json({
+      public_id: publicId, secure_url: `https://res.cloudinary.com/qa/image/authenticated/s--mjgVWtjJ--/v123/${publicId}.webp`
+    }));
+    const file = { buffer: Buffer.from('89504e470d0a1a0a00000000', 'hex'), mimetype: 'image/png', originalname: 'QA.png' };
+    try {
+      await expect(cloud.uploadImage(file, 'workshop-progress', 'QA-1')).resolves.toMatchObject({ publicId });
+    } finally { fetch.mockRestore(); }
+  });
 });

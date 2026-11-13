@@ -7,6 +7,11 @@ export function loadEnvironment() {
   let values: Record<string, string>;
   try { values = parse(readFileSync(resolve(root, '.env.e2e'))); }
   catch { throw new Error('BLOQUEADO: falta .env.e2e; ejecuta pnpm test:e2e:provision o configura una instancia descartable.'); }
+  // Live media credentials may come only from explicit HF_E2E_CLOUDINARY_* process variables (never persisted).
+  const live = process.env.HF_E2E_ISOLATED_CLOUDINARY === 'true';
+  for (const key of ['CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET']) {
+    if (live && !values[key] && process.env[`HF_E2E_${key}`]) values[key] = process.env[`HF_E2E_${key}`]!;
+  }
   // Never inherit the application's production credentials or service endpoints.
   for (const key of Object.keys(process.env)) {
     if (/^(DB_|CLOUDINARY_|JWT_|WOMPI_|API_SERVER_URL$|NEXT_PUBLIC_API_URL$|E2E_)/.test(key)) delete process.env[key];

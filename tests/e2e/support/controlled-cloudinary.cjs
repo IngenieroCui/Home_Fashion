@@ -23,6 +23,6 @@ globalThis.fetch = async (input, options) => {
   const publicId = `${folder}/${randomUUID()}`;
   return Response.json({
     public_id: publicId,
-    secure_url: `https://res.cloudinary.com/hf-e2e-controlled/image/authenticated/v1/${publicId}.webp`
+    secure_url: `https://res.cloudinary.com/hf-e2e-controlled/image/authenticated/s--QAsig000--/v1/${publicId}.webp`
   });
 };

@@ -1,4 +1,6 @@
 import { test, expect, screenshot } from '../support/fixture';
+import { createHash } from 'node:crypto';
+import type { APIRequestContext } from '@playwright/test';
 import { catalog } from '../fixtures/catalog';
 import { rows } from '../fixtures/database';
 import { ApiClient, testImage } from '../support/api-client';
@@ -85,6 +87,7 @@ test('01 · Solicitud pública → cotización → venta → taller → entrega 
     expect(ownedDetail.progressReports.find((entry: { id: string }) => String(entry.id) === ids.reportId).evidenceUrls).toHaveLength(1);
     expect(ready.evidenceUrls).toHaveLength(1);
     expect(new URL(ready.evidenceUrls[0]).searchParams.get('expires_at')).toBeTruthy();
+    if (liveMedia) await liveEvidenceAccess(request, ready.evidenceUrls[0], ids.reportId);
     evidence.notes.push(liveMedia
       ? 'Imagen PNG multipart enviada al Cloudinary de prueba.'
       : 'Multipart real con respuesta de Cloudinary controlada localmente.');
@@ -132,3 +135,25 @@ test('01 · Solicitud pública → cotización → venta → taller → entrega 
     });
   } finally { await visitor.close(); }
 });
+
+// Only with the authorized Cloudinary test account: signed link works, unsigned/tampered/expired access is refused.
+async function liveEvidenceAccess(request: APIRequestContext, signedLink: string, reportId: string) {
+  const signed = await request.get(signedLink, { maxRedirects: 5 });
+  expect(signed.status()).toBe(200);
+  expect(signed.headers()['content-type']).toMatch(/^image\//);
+  const [stored] = await rows('SELECT evidence_urls FROM workshop_progress_reports WHERE id=?', [reportId]);
+  const unsigned = String(stored.evidence_urls[0]).replace(/\/s--[A-Za-z0-9_-]+--\//, '/');
+  expect(unsigned).not.toContain('/s--');
+  expect((await request.get(unsigned, { maxRedirects: 0 })).status()).not.toBe(200);
+  const tampered = new URL(signedLink);
+  tampered.searchParams.set('signature', '0'.repeat(64));
+  expect((await request.get(tampered.toString(), { maxRedirects: 0 })).status()).not.toBe(200);
+  const expired = new URL(signedLink);
+  const now = Math.floor(Date.now() / 1000) - 600;
+  const fields: Record<string, string> = { expires_at: String(now + 300), format: expired.searchParams.get('format')!,
+    public_id: expired.searchParams.get('public_id')!, timestamp: String(now), type: 'authenticated' };
+  for (const [name, value] of Object.entries(fields)) expired.searchParams.set(name, value);
+  expired.searchParams.set('signature', createHash('sha256').update(Object.entries(fields)
+    .map(([name, value]) => name + '=' + value).join('&') + process.env.CLOUDINARY_API_SECRET).digest('hex'));
+  expect((await request.get(expired.toString(), { maxRedirects: 0 })).status()).not.toBe(200);
+}

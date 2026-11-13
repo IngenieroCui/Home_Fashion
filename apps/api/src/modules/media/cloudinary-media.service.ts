@@ -84,7 +84,7 @@ export class CloudinaryMediaService {
       const cloudName = this.config.get<string>('CLOUDINARY_CLOUD_NAME');
       const prefix = '/' + cloudName + '/image/authenticated/';
       if (url.origin !== 'https://res.cloudinary.com' || !url.pathname.startsWith(prefix) || url.search || url.hash) return null;
-      const resource = decodeURIComponent(url.pathname.slice(prefix.length)).replace(/^v[0-9]+\//, '');
+      const resource = decodeURIComponent(url.pathname.slice(prefix.length)).replace(/^(?:s--[A-Za-z0-9_-]{8,32}--\/)?(?:v[0-9]+\/)?/, '');
       const match = /^([A-Za-z0-9/_-]+)\.(webp|jpg|jpeg|png|gif)$/.exec(resource);
       if (!match || !(['workshop-progress', 'deliveries', 'payments'] as const).some(kind =>
         match[1].startsWith(this.folder(kind) + '/'))) return null;

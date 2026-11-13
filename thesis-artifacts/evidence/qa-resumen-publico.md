@@ -30,6 +30,14 @@ La aplicación de taller se ejecutó en un **emulador** Pixel 9 Pro XL con Andro
 | Escenarios Android en emulador | 12 | 12 | 0 |
 | **Total** | **528** | **528** | **0** |
 
-Cloudinary siguió controlado porque no hubo una cuenta de pruebas autorizada. Quedan pendientes el teléfono físico, una API HTTPS de pruebas con certificado de confianza pública y la firma release con un almacén de claves externo.
+En ese corte Cloudinary siguió controlado.
+
+## Servicios externos reales (13 de noviembre de 2026, tarde)
+
+Los seis recorridos de negocio se repitieron contra Cloudinary real, con la cuenta autorizada por el propietario y una carpeta exclusiva `home-fashion-e2e/<run>/`: 6 de 6 aprobados. Se comprobó la subida privada (`authenticated`), la descarga con enlace firmado de cinco minutos, el rechazo de accesos sin firma, con firma alterada o caducada, y la denegación a visitantes sin sesión y a otro taller. Esta prueba encontró un defecto: la API rechazaba con 502 la respuesta real de Cloudinary porque su URL incluye un segmento de firma (`s--…--`) que la simulación no reproducía. Se corrigió y se añadió una prueba de regresión. Las credenciales solo se usaron en memoria durante la ejecución.
+
+La app de taller, en el **emulador**, se conectó por HTTPS a la API aislada mediante un túnel temporal con certificado público de Google Trust Services: inicio de sesión, consulta y envío de un avance sin duplicados, sin excepciones de certificado. El túnel se cerró al terminar.
+
+Quedan pendientes el teléfono físico y la firma release con un almacén de claves externo.
 
 Las capturas históricas de [catálogo móvil](public-catalog/public-catalog-390.png) y [ficha de producto](public-catalog/public-product-1440.png) muestran vistas públicas con productos y precios de demostración. La documentación de la evaluación con participantes está en el [protocolo OE4](oe4-evaluation-protocol.md). Los informes detallados, capturas internas y trazas permanecen bajo custodia privada.
