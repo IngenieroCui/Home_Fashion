@@ -8,6 +8,7 @@ import './globals.css';
 import './product-experience.css';
 import './public-sprint.css';
 import './ui.css';
+import './brand.css';
 
 const bodyFont = Manrope({
   subsets: ['latin'],

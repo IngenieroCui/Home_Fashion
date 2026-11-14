@@ -51,41 +51,48 @@ export async function HomePage() {
               Elige con calma. Solicita una cotización sin compromiso.
             </p>
           </div>
-          {featured ? (
-            <Link className="home-featured" href={`/catalogo/${featured.slug}`}>
-              <ProductImage
-                image={featured.images?.find((image) => image.isPrimary) ?? featured.images?.[0]}
-                alt={featured.name}
-                width={1100}
-                widths={[750, 1100, 1500, 1800]}
-                sizes="(max-width: 1023px) 100vw, (max-width: 1919px) 50vw, 880px"
-                loading="eager"
-                fetchPriority="high"
-              />
-              <div>
-                <p className="eyebrow">Encuentra inspiración</p>
-                <h2 className="font-serif text-3xl">{featured.name}</h2>
-                <span className="text-link">Conocer este mueble ↗</span>
+          <div className="home-hero-visual">
+            <span className="home-hero-orb" aria-hidden="true" />
+            <span className="home-hero-badge">
+              <strong>Fabricación bajo pedido</strong>
+              Detalles a tu medida
+            </span>
+            {featured ? (
+              <Link className="home-featured" href={`/catalogo/${featured.slug}`}>
+                <ProductImage
+                  image={featured.images?.find((image) => image.isPrimary) ?? featured.images?.[0]}
+                  alt={featured.name}
+                  width={1100}
+                  widths={[750, 1100, 1500, 1800]}
+                  sizes="(max-width: 1023px) 100vw, (max-width: 1919px) 50vw, 880px"
+                  loading="eager"
+                  fetchPriority="high"
+                />
+                <div>
+                  <p className="eyebrow">Encuentra inspiración</p>
+                  <h2 className="font-serif text-3xl">{featured.name}</h2>
+                  <span className="text-link">Conocer este mueble ↗</span>
+                </div>
+              </Link>
+            ) : (
+              <div className="home-editorial">
+                <span className="editorial-arch" aria-hidden="true" />
+                <span className="editorial-number" aria-hidden="true">
+                  hf.
+                </span>
+                <div>
+                  <p className="editorial-kicker">Cada espacio cuenta una historia</p>
+                  <p className="font-serif">
+                    Hagamos lugar
+                    <br />
+                    para la tuya.
+                  </p>
+                  <span className="editorial-rule" />
+                  <span>Muebles · Detalles · Vida en casa</span>
+                </div>
               </div>
-            </Link>
-          ) : (
-            <div className="home-editorial">
-              <span className="editorial-arch" aria-hidden="true" />
-              <span className="editorial-number" aria-hidden="true">
-                hf.
-              </span>
-              <div>
-                <p className="editorial-kicker">Cada espacio cuenta una historia</p>
-                <p className="font-serif">
-                  Hagamos lugar
-                  <br />
-                  para la tuya.
-                </p>
-                <span className="editorial-rule" />
-                <span>Muebles · Detalles · Vida en casa</span>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </section>
       <div className="home-promise-bar">

@@ -2,6 +2,8 @@ import 'workshop_product_image.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+
+import '../../../app/home_fashion_theme.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../core/widgets/state_views.dart';
@@ -59,6 +61,7 @@ class _DetailView extends StatelessWidget {
   }
 
   Widget _content(BuildContext context, WorkshopJobDetail job) {
+    final tones = HfStatusColors.of(context);
     return RefreshIndicator(
       onRefresh: context.read<WorkshopJobDetailCubit>().load,
       child: ListView(
@@ -68,15 +71,15 @@ class _DetailView extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-                color: const Color(0xFF3D352C),
+                color: tones.heroBackground,
                 borderRadius: BorderRadius.circular(20)),
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               WorkshopProductImage(url: job.imageUrlSnapshot, height: 220),
               const SizedBox(height: 16),
-              const Text('ORDEN DE FABRICACIÓN',
+              Text('ORDEN DE FABRICACIÓN',
                   style: TextStyle(
-                      color: Color(0xFFD9C6AC),
+                      color: tones.heroMuted,
                       fontSize: 11,
                       letterSpacing: 1.2,
                       fontWeight: FontWeight.w700)),
@@ -85,14 +88,14 @@ class _DetailView extends StatelessWidget {
                   style: Theme.of(context)
                       .textTheme
                       .headlineSmall
-                      ?.copyWith(color: const Color(0xFFFFF8EA))),
+                      ?.copyWith(color: tones.heroForeground)),
               const SizedBox(height: 8),
               if (job.variantName != null)
                 Text(job.variantName!,
-                    style: const TextStyle(color: Color(0xFFE7DCCB))),
+                    style: TextStyle(color: tones.heroMuted)),
               Text(
                   '${job.code} · ${job.orderCode} · ${job.quantity} unidad(es)',
-                  style: const TextStyle(color: Color(0xFFE7DCCB))),
+                  style: TextStyle(color: tones.heroMuted)),
             ]),
           ),
           const SizedBox(height: 18),
@@ -137,7 +140,7 @@ class _DetailView extends StatelessWidget {
             alignment: AlignmentDirectional.centerStart,
             child: StatusBadge(
                 label: jobStatusLabel(job.status),
-                color: Theme.of(context).colorScheme.primary),
+                color: jobStatusColor(context, job.status)),
           ),
           const SizedBox(height: 12),
           _ProductionProgress(status: job.status),
@@ -281,8 +284,7 @@ class _ProductionProgress extends StatelessWidget {
               LinearProgressIndicator(
                   value: (stage + 1) / 4,
                   minHeight: 7,
-                  borderRadius: BorderRadius.circular(10),
-                  backgroundColor: const Color(0xFFE6E0D6)),
+                  borderRadius: BorderRadius.circular(10)),
               const SizedBox(height: 8),
               Text(jobStatusLabel(status)),
             ])));

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { MeResponse } from '@/lib/auth/types';
+import { BrandMark } from './ui/brand-mark';
 
 const modules = [
   {
@@ -34,7 +35,12 @@ const modules = [
     href: '/panel/inventario',
     group: 'Catálogo'
   },
-  { title: 'Usuarios', permission: 'USER_MANAGE', href: '/panel/usuarios', group: 'Administración' },
+  {
+    title: 'Usuarios',
+    permission: 'USER_MANAGE',
+    href: '/panel/usuarios',
+    group: 'Administración'
+  },
   { title: 'Clientes', permission: 'CUSTOMER_MANAGE', href: '/panel/clientes', group: 'Clientes' }
 ];
 export function PanelShell({ user, children }: { user: MeResponse; children: React.ReactNode }) {
@@ -43,8 +49,8 @@ export function PanelShell({ user, children }: { user: MeResponse; children: Rea
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
-  const visibleModules = modules.filter(
-    (module) => module.permission === 'USER_MANAGE'
+  const visibleModules = modules.filter((module) =>
+    module.permission === 'USER_MANAGE'
       ? user.role === 'ADMIN' && user.permissions.includes(module.permission)
       : user.role === 'ADMIN' || user.permissions.includes(module.permission)
   );
@@ -105,7 +111,8 @@ export function PanelShell({ user, children }: { user: MeResponse; children: Rea
         Saltar al contenido
       </a>
       <aside className="panel-sidebar">
-        <Link className="font-serif text-2xl font-bold" href="/panel">
+        <Link className="panel-brand" href="/panel">
+          <BrandMark className="brand-mark panel-brand-mark" />
           Home Fashion
         </Link>
         <p className="panel-nav-title">Panel interno</p>
@@ -116,6 +123,10 @@ export function PanelShell({ user, children }: { user: MeResponse; children: Rea
       <div className="panel-content">
         <header className="panel-header">
           <div>
+            <Link className="panel-header-brand" href="/panel" aria-hidden="true" tabIndex={-1}>
+              <BrandMark />
+              Home Fashion
+            </Link>
             <p className="text-sm text-[var(--color-text-muted)]">{user.fullName}</p>
             <span className="role-tag">
               {user.role === 'ADMIN' ? 'Administración' : 'Equipo interno'}
@@ -123,7 +134,7 @@ export function PanelShell({ user, children }: { user: MeResponse; children: Rea
           </div>
           <div className="flex items-center gap-3">
             <Link
-              className="text-sm font-semibold text-[var(--color-primary)] underline underline-offset-4"
+              className="text-sm font-semibold text-[var(--color-primary-text)] underline underline-offset-4"
               href="/catalogo"
             >
               Ver catálogo

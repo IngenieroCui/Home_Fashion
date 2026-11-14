@@ -2,6 +2,8 @@ import 'workshop_product_image.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../../../app/home_fashion_theme.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -263,13 +265,17 @@ class _WorkspaceHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<SessionCubit>().state.user;
+    final tones = HfStatusColors.of(context);
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 10),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFF3D352C),
+        color: tones.heroBackground,
         borderRadius: BorderRadius.circular(20),
+        border: Theme.of(context).brightness == Brightness.dark
+            ? Border.all(color: Theme.of(context).colorScheme.outlineVariant)
+            : null,
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(
@@ -277,21 +283,29 @@ class _WorkspaceHeader extends StatelessWidget {
                 ? 'Tu espacio de trabajo'
                 : 'Hola, ${user.fullName.split(' ').first}',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: const Color(0xFFFFF8EA), fontWeight: FontWeight.w700)),
+                color: tones.heroForeground, fontWeight: FontWeight.w800)),
         const SizedBox(height: 4),
-        const Text('Consulta tus asignaciones y reporta cada avance.',
-            style: TextStyle(color: Color(0xFFE4D9C9))),
+        Text('Consulta tus asignaciones y reporta cada avance.',
+            style: TextStyle(color: tones.heroMuted)),
         if (state.status == WorkshopJobsLoadStatus.success) ...[
           const SizedBox(height: 14),
           Wrap(spacing: 8, runSpacing: 8, children: [
-            _CountPill(label: 'Por iniciar', count: state.summary.assigned),
-            _CountPill(label: 'En proceso', count: state.summary.inProgress),
             _CountPill(
-                label: 'En revisión', count: state.summary.readyForReview),
+                label: 'Por iniciar',
+                count: state.summary.assigned,
+                dot: HfColors.electricBlue),
+            _CountPill(
+                label: 'En proceso',
+                count: state.summary.inProgress,
+                dot: HfColors.coral),
+            _CountPill(
+                label: 'En revisión',
+                count: state.summary.readyForReview,
+                dot: HfColors.amber),
           ]),
           const SizedBox(height: 6),
-          const Text('Resumen de todo tu taller',
-              style: TextStyle(color: Color(0xFFC8BBAA), fontSize: 11)),
+          Text('Resumen de todo tu taller',
+              style: TextStyle(color: tones.heroMuted, fontSize: 11)),
         ],
       ]),
     );
@@ -299,21 +313,33 @@ class _WorkspaceHeader extends StatelessWidget {
 }
 
 class _CountPill extends StatelessWidget {
-  const _CountPill({required this.label, required this.count});
+  const _CountPill(
+      {required this.label, required this.count, required this.dot});
   final String label;
   final int count;
+  final Color dot;
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-            color: const Color(0xFF615649),
-            borderRadius: BorderRadius.circular(20)),
-        child: Text('$count $label',
-            style: const TextStyle(
-                color: Color(0xFFFFF8EA),
+  Widget build(BuildContext context) {
+    final tones = HfStatusColors.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+          color: tones.heroForeground.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(20)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: dot, shape: BoxShape.circle)),
+        const SizedBox(width: 6),
+        Text('$count $label',
+            style: TextStyle(
+                color: tones.heroForeground,
                 fontSize: 12,
-                fontWeight: FontWeight.w600)),
-      );
+                fontWeight: FontWeight.w700)),
+      ]),
+    );
+  }
 }
 
 class _JobCard extends StatelessWidget {
@@ -324,17 +350,16 @@ class _JobCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
+    final tones = HfStatusColors.of(context);
+    final kickerColor = switch (job.status) {
+      WorkshopJobStatus.assigned => tones.info,
+      WorkshopJobStatus.inProgress => tones.accent,
+      _ => Theme.of(context).colorScheme.onSurfaceVariant,
+    };
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 0,
-      color: Theme.of(context).brightness == Brightness.light
-          ? const Color(0xFFFFFDF8)
-          : Theme.of(context).colorScheme.surface,
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-          side: const BorderSide(color: Color(0xFFE4D8C9))),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
         onTap: () async {
           await context.push('/jobs/${job.id}');
           if (context.mounted) context.read<WorkshopJobsCubit>().load();
@@ -350,8 +375,8 @@ class _JobCard extends StatelessWidget {
                       : job.status == WorkshopJobStatus.inProgress
                           ? 'EN FABRICACIÓN'
                           : 'FABRICACIÓN',
-                  style: const TextStyle(
-                      color: Color(0xFF65733D),
+                  style: TextStyle(
+                      color: kickerColor,
                       fontSize: 11,
                       letterSpacing: 1.2,
                       fontWeight: FontWeight.w700)),
@@ -365,7 +390,7 @@ class _JobCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleMedium),
                   StatusBadge(
                     label: jobStatusLabel(job.status),
-                    color: primary,
+                    color: jobStatusColor(context, job.status),
                   ),
                 ],
               ),

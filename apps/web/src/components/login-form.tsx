@@ -101,7 +101,7 @@ export function LoginForm({ unavailable = false }: { unavailable?: boolean }) {
           </Button>
         </form>
         <Link
-          className="mt-6 inline-block text-sm font-semibold text-[var(--color-primary)] underline underline-offset-4"
+          className="mt-6 inline-block text-sm font-semibold text-[var(--color-primary-text)] underline underline-offset-4"
           href="/catalogo"
         >
           Volver al catálogo

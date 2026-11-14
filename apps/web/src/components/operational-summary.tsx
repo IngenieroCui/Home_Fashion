@@ -13,6 +13,7 @@ import { DashboardActivity } from './dashboard-activity';
 const sections = [
   {
     key: 'requestedQuotes',
+    tone: 'primary',
     label: 'Solicitudes',
     title: 'Cotizaciones sin atender',
     href: '/panel/cotizaciones?status=REQUESTED',
@@ -20,6 +21,7 @@ const sections = [
   },
   {
     key: 'openOrders',
+    tone: 'accent',
     label: 'Pedidos abiertos',
     title: 'Pedidos por iniciar',
     href: '/panel/pedidos?status=OPEN',
@@ -27,6 +29,7 @@ const sections = [
   },
   {
     key: 'readyForReview',
+    tone: 'highlight',
     label: 'Revisión',
     title: 'Trabajos listos para revisión',
     href: '/panel/talleres/avances',
@@ -34,6 +37,7 @@ const sections = [
   },
   {
     key: 'scheduledDeliveries',
+    tone: 'success',
     label: 'Entregas',
     title: 'Entregas programadas',
     href: '/panel/entregas?status=SCHEDULED',
@@ -54,6 +58,7 @@ export function OperationalSummary() {
             <DashboardMetricCard
               key={section.key}
               label={section.label}
+              tone={section.tone}
               value={data.attention[section.key]!.count}
               href={section.href}
             />
@@ -89,16 +94,19 @@ export function OperationalSummary() {
             <div className="dashboard-metrics">
               <DashboardMetricCard
                 label="Saldo pendiente"
+                tone="highlight"
                 value={money(data.financial.outstandingBalance)}
                 href="/panel/ventas"
               />
               <DashboardMetricCard
                 label="Ventas parciales"
+                tone="primary"
                 value={data.financial.partiallyPaidSales}
                 href="/panel/ventas"
               />
               <DashboardMetricCard
                 label="Ventas pagadas"
+                tone="success"
                 value={data.financial.paidSales}
                 href="/panel/ventas"
               />
@@ -115,16 +123,19 @@ export function OperationalSummary() {
             <div className="dashboard-metrics">
               <DashboardMetricCard
                 label="Sin stock"
+                tone="accent"
                 value={data.inventory.outOfStockVariants}
                 href="/panel/inventario?alert=OUT_OF_STOCK"
               />
               <DashboardMetricCard
                 label="Stock bajo"
+                tone="highlight"
                 value={data.inventory.lowStockVariants}
                 href="/panel/inventario?alert=LOW_STOCK"
               />
               <DashboardMetricCard
                 label="Unidades reservadas"
+                tone="primary"
                 value={data.inventory.reservedUnits}
                 href="/panel/inventario?alert=RESERVED"
               />
@@ -141,16 +152,19 @@ export function OperationalSummary() {
             <div className="dashboard-metrics">
               <DashboardMetricCard
                 label="Asignados"
+                tone="primary"
                 value={data.production.assigned}
                 href="/panel/talleres/trabajos?status=ASSIGNED"
               />
               <DashboardMetricCard
                 label="En fabricación"
+                tone="accent"
                 value={data.production.inProgress}
                 href="/panel/talleres/trabajos?status=IN_PROGRESS"
               />
               <DashboardMetricCard
                 label="Completados"
+                tone="success"
                 value={data.production.completed}
                 href="/panel/talleres/trabajos?status=COMPLETED"
               />
@@ -163,17 +177,20 @@ export function OperationalSummary() {
             <div className="dashboard-metrics">
               <DashboardMetricCard
                 label="En curso"
+                tone="accent"
                 value={data.orders.inProgress}
                 href="/panel/pedidos?status=IN_PROGRESS"
               />
               <DashboardMetricCard
                 label="Listos"
+                tone="success"
                 value={data.orders.ready}
                 href="/panel/pedidos?status=READY"
               />
               {data.deliveries && (
                 <DashboardMetricCard
                   label="En camino"
+                  tone="primary"
                   value={data.deliveries.outForDelivery}
                   href="/panel/entregas?status=OUT_FOR_DELIVERY"
                 />

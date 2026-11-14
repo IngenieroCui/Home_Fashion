@@ -22,7 +22,7 @@
   padding: var(--space-5);
 }
 .ui-dialog::backdrop {
-  background: #201910cc;
+  background: color-mix(in srgb, var(--color-structure) 80%, transparent);
 }
 .ui-dialog button {
   min-height: 44px;
@@ -38,15 +38,15 @@
   color: var(--color-text-muted);
 }
 .ui-status-success {
-  background: #e3ecd8;
+  background: var(--color-success-soft);
   color: var(--color-success);
 }
 .ui-status-warning {
-  background: #f5ead3;
+  background: var(--color-warning-soft);
   color: var(--color-warning);
 }
 .ui-status-danger {
-  background: #f8e4e1;
+  background: var(--color-danger-soft);
   color: var(--color-danger);
 }
 .ui-toasts {

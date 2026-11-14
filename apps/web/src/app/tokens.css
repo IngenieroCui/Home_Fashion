@@ -1,26 +1,78 @@
+/*
+ * Home Fashion design tokens.
+ * Black & white identity (≈70 % neutrals, 20 % structure) with vibrant accents (≈10 %).
+ * Text pairs below are WCAG AA (≥ 4.5:1). Pure coral/emerald/amber are decorative fills or
+ * carry obsidian text; tinted "-soft" backgrounds pair with their "-text" tone.
+ */
 :root {
-  --color-background: #faf8f4;
-  --color-surface: #fffdf8;
-  --color-surface-muted: #f2eadd;
-  --color-text: #3d291e;
-  --color-text-muted: #67574d;
-  --color-primary: #a64b32;
-  --color-primary-hover: #833c2a;
-  --color-secondary: #52613c;
-  --color-border: #ddcfbc;
-  --color-success: #365c38;
-  --color-warning: #81501f;
-  --color-danger: #a22d2d;
+  /* Brand palette */
+  --hf-obsidian: #111111;
+  --hf-graphite: #2b2b2b;
+  --hf-soft-white: #f8f8f6;
+  --hf-white: #ffffff;
+  --hf-light-gray: #d9d9d6;
+  --hf-electric-blue: #2f6bff;
+  --hf-coral: #ff6b4a;
+  --hf-amber: #f4b63d;
+  --hf-emerald: #11a683;
+
+  /* Semantic surfaces and text */
+  --color-background: var(--hf-soft-white);
+  --color-surface: var(--hf-white);
+  --color-surface-muted: #f0f0ed;
+  --color-surface-strong: #e9e9e5;
+  --color-text: var(--hf-obsidian);
+  --color-text-muted: #5c5c59;
+  --color-text-inverse: var(--hf-white);
+  --color-border: var(--hf-light-gray);
+  --color-border-strong: #b9b9b5;
+
+  /* Actions */
+  /* Action fill: electric blue adjusted to 4.83:1 with white text (brand #2f6bff measures 4.49). */
+  --color-primary: #2c66f7;
+  --color-primary-hover: #2458e6;
+  --color-primary-text: #2458e6;
+  --color-primary-soft: #eaf0ff;
+  --color-focus: var(--hf-electric-blue);
+  --color-secondary: var(--hf-graphite);
+
+  /* Accents and statuses (soft background + AA text tone + vivid dot) */
+  --color-accent: var(--hf-coral);
+  --color-accent-soft: #ffede8;
+  --color-accent-text: #b53a1e;
+  /* Large display text only (≥ 24px): 3.35:1 on soft white. */
+  --color-accent-display: #ee5233;
+  --color-highlight: var(--hf-amber);
+  --color-highlight-soft: #fdf3dc;
+  --color-highlight-text: #7a5200;
+  --color-success: #0b7a60;
+  --color-success-vivid: var(--hf-emerald);
+  --color-success-soft: #e4f6f0;
+  --color-warning: #7a5200;
+  --color-warning-soft: #fdf3dc;
+  --color-danger: #b42318;
+  --color-danger-soft: #fdecea;
+  --color-info: #1f4fd6;
+  --color-info-soft: #eaf0ff;
+
+  /* Structure (navigation, sidebar, footer) */
+  --color-structure: var(--hf-obsidian);
+  --color-structure-raised: #1c1c1c;
+  --color-structure-text: #f2f2f0;
+  --color-structure-muted: #a3a3a0;
+
+  /* Layout */
   --content-max: 100rem;
   --content-wide-max: 110rem;
   --page-gutter: clamp(1rem, 2.5vw, 3.5rem);
-  --radius-sm: 0.4rem;
-  --radius-md: 0.65rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
   --radius-lg: 1rem;
-  --radius-xl: 1.25rem;
-  --shadow-sm: 0 6px 16px #4a32220d;
-  --shadow-md: 0 12px 32px #35291f15;
-  --shadow-lg: 0 22px 55px #35291f1b;
+  --radius-xl: 1.5rem;
+  --radius-pill: 999px;
+  --shadow-sm: 0 1px 2px #1111110a, 0 4px 12px #1111110a;
+  --shadow-md: 0 2px 6px #1111110a, 0 12px 28px #11111112;
+  --shadow-lg: 0 4px 12px #1111110d, 0 24px 56px #1111111a;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -31,11 +83,12 @@
   --space-8: 4rem;
   --font-ui: var(--font-body, 'Segoe UI', Helvetica, sans-serif);
   --font-heading: var(--font-display, 'Palatino Linotype', 'Book Antiqua', Palatino, serif);
+
   /* Compatibility aliases keep existing public/operations selectors on one palette. */
   --ivory: var(--color-background);
   --coffee: var(--color-text);
   --terracotta: var(--color-primary);
-  --olive: var(--color-secondary);
+  --olive: var(--color-text-muted);
   --surface: var(--color-surface);
   --border: var(--color-border);
   --ink-soft: var(--color-text-muted);

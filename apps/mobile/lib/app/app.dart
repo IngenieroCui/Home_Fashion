@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import '../features/auth/logic/session_cubit.dart';
 import 'app_router.dart';
 import 'bootstrap.dart';
+import 'home_fashion_theme.dart';
 
 class HomeFashionWorkshopApp extends StatefulWidget {
   const HomeFashionWorkshopApp({
@@ -52,64 +53,10 @@ class _HomeFashionWorkshopAppState extends State<HomeFashionWorkshopApp> {
         locale: const Locale('es', 'CO'),
         supportedLocales: const [Locale('es', 'CO')],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
-        theme: _theme(Brightness.light),
-        darkTheme: _theme(Brightness.dark),
+        theme: buildHomeFashionTheme(Brightness.light),
+        darkTheme: buildHomeFashionTheme(Brightness.dark),
         themeMode: ThemeMode.system,
         routerConfig: _appRouter.router,
-      ),
-    );
-  }
-
-  ThemeData _theme(Brightness brightness) {
-    const seed = Color(0xFF98462F);
-    final scheme = ColorScheme.fromSeed(
-      seedColor: seed,
-      brightness: brightness,
-    );
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: scheme,
-      scaffoldBackgroundColor: brightness == Brightness.light
-          ? const Color(0xFFFAF8F4)
-          : scheme.surface,
-      visualDensity: VisualDensity.standard,
-      materialTapTargetSize: MaterialTapTargetSize.padded,
-      textTheme: Typography.material2021()
-          .black
-          .apply(bodyColor: scheme.onSurface, displayColor: scheme.onSurface),
-      snackBarTheme:
-          const SnackBarThemeData(behavior: SnackBarBehavior.floating),
-      iconButtonTheme: IconButtonThemeData(
-          style: IconButton.styleFrom(minimumSize: const Size(48, 48))),
-      outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(minimumSize: const Size(48, 48))),
-      appBarTheme: AppBarTheme(
-        backgroundColor: brightness == Brightness.light
-            ? const Color(0xFFFAF8F4)
-            : scheme.surface,
-        foregroundColor: scheme.onSurface,
-        centerTitle: false,
-        elevation: 0,
-        titleTextStyle: TextStyle(
-            color: scheme.onSurface, fontSize: 20, fontWeight: FontWeight.w600),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: scheme.surfaceContainerLowest,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFC8BDAD))),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
       ),
     );
   }

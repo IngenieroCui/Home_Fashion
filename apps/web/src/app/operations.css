@@ -177,13 +177,13 @@
   height: 14px;
   border-radius: 20px;
   overflow: hidden;
-  background: #eadfce;
+  background: var(--color-surface-strong);
   margin: 24px 0;
 }
 .payment-progress span {
   height: 100%;
   display: block;
-  background: #497c53;
+  background: var(--color-success);
   border-radius: 20px;
 }
 .payment-history {
@@ -207,7 +207,7 @@
 }
 .payment-history .payment-entry-voided::before {
   background: var(--color-surface);
-  border-color: #9a8b7f;
+  border-color: var(--color-border-strong);
 }
 .inventory-dialog {
   width: min(560px, calc(100vw - 32px));
@@ -224,19 +224,19 @@
   background: rgb(35 26 20 / 0.6);
 }
 .inventory-out_of_stock {
-  background: #fbe6e1;
-  color: #973e2c;
+  background: var(--color-accent-soft);
+  color: var(--color-danger);
 }
 .inventory-low_stock {
-  background: #fff0c7;
-  color: #805b15;
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
 }
 .inventory-available {
-  background: #e6efdf;
-  color: #38653c;
+  background: var(--color-success-soft);
+  color: var(--color-success);
 }
 .inventory-inactive {
-  background: #ece7e0;
+  background: var(--color-surface-strong);
   color: var(--color-text-muted);
 }
 .supply-options {
@@ -261,7 +261,7 @@
   flex-shrink: 0;
 }
 .supply-options label:has(input:disabled) {
-  color: #9a8b7f;
+  color: var(--color-text-muted);
 }
 .admin-skeleton {
   display: grid;
@@ -273,7 +273,7 @@
 .admin-skeleton span {
   height: 24px;
   border-radius: 8px;
-  background: linear-gradient(90deg, #eadfce, var(--color-surface), #eadfce);
+  background: linear-gradient(90deg, var(--color-surface-strong), var(--color-surface), var(--color-surface-strong));
   background-size: 200% 100%;
   animation: operation-loading 1.5s linear infinite;
 }

@@ -38,7 +38,7 @@ export function ProductCard({ product }: { product: CatalogProduct }) {
           )}
         </div>
         <Link
-          className="text-sm font-semibold text-[var(--color-primary)] underline underline-offset-4"
+          className="text-sm font-semibold text-[var(--color-primary-text)] underline underline-offset-4"
           href={`/catalogo/${product.slug}`}
         >
           Ver producto

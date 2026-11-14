@@ -1,0 +1,295 @@
+/* Home Fashion internal panel: obsidian sidebar, electric-blue active state, light workspace. */
+.panel-shell {
+  background: var(--color-background);
+}
+.panel-sidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  overflow-y: auto;
+  padding: 1.5rem 1rem;
+  background: var(--color-structure);
+  color: var(--color-structure-text);
+}
+.panel-brand {
+  display: flex !important;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0 0.6rem;
+  color: var(--hf-white);
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.panel-brand-mark {
+  width: 2rem;
+  height: 2rem;
+  color: var(--hf-white);
+}
+.panel-nav-title {
+  margin-top: 2rem;
+  padding-left: 0.6rem;
+  color: #8f8f8c;
+  font-size: 0.68rem;
+}
+.panel-nav {
+  gap: 0.15rem;
+}
+.panel-nav-group {
+  display: block;
+  margin: 1.1rem 0 0.35rem;
+  padding: 0 0.6rem !important;
+  background: none !important;
+  color: #8f8f8c;
+  font-size: 0.66rem !important;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.panel-nav a {
+  display: flex;
+  align-items: center;
+  min-height: 2.5rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.75rem;
+  color: #c9c9c6;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: none;
+}
+.panel-nav a:hover {
+  background: #ffffff12;
+  color: var(--hf-white);
+}
+.panel-nav a[aria-current='page'] {
+  border: 0;
+  background: var(--color-primary);
+  color: var(--hf-white);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+.panel-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  min-height: 4.5rem;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  backdrop-filter: blur(10px);
+}
+.role-tag {
+  background: var(--color-primary-soft);
+  color: var(--color-info);
+  font-weight: 700;
+}
+.panel-menu-toggle {
+  border-radius: var(--radius-pill);
+}
+.panel-mobile-nav {
+  border-radius: var(--radius-lg);
+  background: var(--color-structure);
+  padding: 0.75rem;
+  box-shadow: var(--shadow-lg);
+}
+.panel-mobile-nav a {
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  color: #c9c9c6;
+}
+.panel-mobile-nav a[aria-current='page'] {
+  background: var(--color-primary);
+  color: var(--hf-white);
+}
+.panel-mobile-nav span {
+  color: #8f8f8c;
+}
+
+/* Typography: the dashboard reads better in the UI sans; serif stays for the public brand. */
+.panel-main .font-serif,
+.panel-module h3 {
+  font-family: var(--font-ui);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.panel-main h1.font-serif {
+  font-size: clamp(1.6rem, 2.4vw, 2.1rem);
+}
+.panel-main h2.font-serif {
+  font-size: 1.3rem;
+}
+.panel-welcome {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background:
+    radial-gradient(30rem 14rem at 100% 0%, var(--color-primary-soft), transparent 70%),
+    var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Cards, sections and metrics */
+.admin-section,
+.admin-record-card,
+.panel-module,
+.dashboard-attention > *,
+.tracking-access-panel,
+.payment-history,
+.delivery-detail-grid > section,
+.admin-table-wrap,
+.admin-form {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+}
+.panel-module:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
+}
+.dashboard-metric {
+  position: relative;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 1.1rem 1.1rem 1rem;
+}
+.dashboard-metric::before {
+  content: '';
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-md);
+  background:
+    radial-gradient(
+      circle,
+      var(--metric-vivid, var(--color-border-strong)) 0 0.4rem,
+      transparent 0.45rem
+    ),
+    var(--metric-soft, var(--color-surface-muted));
+}
+.dashboard-metric > strong {
+  font-size: clamp(1.6rem, 2.2vw, 2.1rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.dashboard-metric:hover {
+  border-color: var(--metric-vivid, var(--color-primary));
+  box-shadow: var(--shadow-md);
+}
+.dashboard-metric-tone-primary {
+  --metric-soft: var(--color-primary-soft);
+  --metric-vivid: var(--color-primary);
+}
+.dashboard-metric-tone-accent {
+  --metric-soft: var(--color-accent-soft);
+  --metric-vivid: var(--color-accent);
+}
+.dashboard-metric-tone-highlight {
+  --metric-soft: var(--color-highlight-soft);
+  --metric-vivid: var(--color-highlight);
+}
+.dashboard-metric-tone-success {
+  --metric-soft: var(--color-success-soft);
+  --metric-vivid: var(--color-success-vivid);
+}
+.attention-number {
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-text);
+  font-weight: 800;
+}
+.operation-timeline li::before {
+  background: var(--color-primary) !important;
+}
+
+/* Tables */
+.admin-table-wrap {
+  overflow: auto;
+}
+.admin-table th {
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.admin-table th,
+.admin-table td {
+  border-color: var(--color-border);
+}
+.admin-table tbody tr:hover {
+  background: color-mix(in srgb, var(--color-primary-soft) 55%, var(--color-surface));
+}
+.admin-table a:not(.button-link) {
+  color: var(--color-primary-text);
+  font-weight: 700;
+}
+
+/* Status pills inherit the semantic soft tones; add a leading dot. */
+.quote-status,
+.payment-status-pending,
+.payment-status-partially_paid,
+.payment-status-paid,
+.progress-review-pending_review,
+.progress-review-approved,
+.progress-review-rejected,
+.progress-type,
+.inventory-available,
+.inventory-low_stock,
+.inventory-out_of_stock,
+.inventory-inactive,
+.tracking-status {
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+}
+.admin-success {
+  border-radius: var(--radius-md);
+}
+
+@media (max-width: 1023px) {
+  .panel-sidebar {
+    position: static;
+    height: auto;
+  }
+}
+
+/* Dense tables: keep pills, codes and actions on one line; the wrapper scrolls horizontally. */
+.admin-table
+  td
+  :is(
+    .admin-status,
+    .ui-status,
+    .quote-status,
+    .progress-type,
+    [class*='progress-review-'],
+    [class*='payment-status-'],
+    [class*='inventory-']
+  ),
+.admin-table td > a,
+.admin-table td .text-link {
+  white-space: nowrap;
+}
+.admin-table td {
+  vertical-align: middle;
+}
+
+/* Brand in the panel header when the sidebar is hidden (mobile and tablet). */
+.panel-header-brand {
+  display: none;
+}
+@media (max-width: 1023px) {
+  .panel-header-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-bottom: 0.35rem;
+    color: var(--color-text);
+    font-size: 1.05rem;
+    font-weight: 800;
+  }
+  .panel-header-brand .brand-mark {
+    width: 1.6rem;
+    height: 1.6rem;
+  }
+}

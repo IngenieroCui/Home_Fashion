@@ -25,7 +25,7 @@
 .variant-option.is-selected {
   border-color: var(--color-primary);
   box-shadow: 0 0 0 1px var(--color-primary);
-  background: #f9f0e5;
+  background: var(--color-surface-muted);
 }
 .variant-option:focus-within {
   outline: 3px solid var(--color-primary);
@@ -94,7 +94,7 @@
   border-radius: 50%;
 }
 .wizard-progress [aria-current] {
-  color: var(--color-primary);
+  color: var(--color-primary-text);
   font-weight: 700;
 }
 .wizard-progress [aria-current] span {
@@ -120,7 +120,7 @@
 .wizard-form textarea {
   width: 100%;
   padding: 0.85rem;
-  border: 1px solid #bcae9b;
+  border: 1px solid var(--color-border-strong);
   border-radius: 0.5rem;
   background: white;
   color: var(--color-text);
@@ -139,7 +139,7 @@
   gap: 1.25rem;
   border-radius: 0.8rem;
   padding: 1rem;
-  background: #f2eadd;
+  background: var(--color-surface-strong);
   align-items: center;
 }
 .quote-summary > img,
@@ -177,8 +177,8 @@
   place-items: center;
   width: 3.5rem;
   height: 3.5rem;
-  background: #e3ecd8;
-  color: #405027;
+  background: var(--color-success-soft);
+  color: var(--color-success);
   font-size: 2rem;
   border-radius: 50%;
 }
@@ -229,7 +229,7 @@
 }
 .filter-dialog::backdrop,
 .evidence-dialog::backdrop {
-  background: #201910cc;
+  background: color-mix(in srgb, var(--color-structure) 80%, transparent);
 }
 .dialog-close {
   min-width: 44px;
@@ -383,9 +383,9 @@
     align-items: center;
     gap: 1rem;
     padding: 0.8rem 1rem calc(0.8rem + env(safe-area-inset-bottom));
-    background: #fffdf8f5;
+    background: color-mix(in srgb, var(--color-warning-soft) 96%, transparent);
     border-top: 1px solid var(--border);
-    box-shadow: 0 -4px 20px #342b2415;
+    box-shadow: 0 -4px 20px #11111115;
   }
   body:has(.mobile-quote-cta) {
     padding-bottom: 6rem;

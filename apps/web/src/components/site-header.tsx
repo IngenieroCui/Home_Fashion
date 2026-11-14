@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { activePublicHref } from '@/lib/public-navigation';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { BrandMark } from './ui/brand-mark';
 
 const navigation = [
   ['Inicio', '/'],
@@ -62,9 +63,7 @@ export function SiteHeader() {
           aria-label="Home Fashion, inicio"
           onClick={() => setOpen(false)}
         >
-          <span className="brand-monogram" aria-hidden="true">
-            hf.
-          </span>
+          <BrandMark className="brand-mark site-brand-mark" />
           <span>
             Home Fashion<small>Muebles para hacer hogar</small>
           </span>

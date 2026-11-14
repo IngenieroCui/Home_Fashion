@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../app/home_fashion_theme.dart';
+
 import '../domain/workshop_job.dart';
 
 String jobStatusLabel(WorkshopJobStatus status) => switch (status) {
@@ -22,12 +24,23 @@ String reviewStatusLabel(ProgressReviewStatus status) => switch (status) {
       ProgressReviewStatus.rejected => 'RECHAZADO',
     };
 
-Color reviewStatusColor(BuildContext context, ProgressReviewStatus status) {
-  final scheme = Theme.of(context).colorScheme;
+Color jobStatusColor(BuildContext context, WorkshopJobStatus status) {
+  final tones = HfStatusColors.of(context);
   return switch (status) {
-    ProgressReviewStatus.pending => scheme.tertiary,
-    ProgressReviewStatus.approved => Colors.green.shade700,
-    ProgressReviewStatus.rejected => scheme.error,
+    WorkshopJobStatus.assigned => tones.info,
+    WorkshopJobStatus.inProgress => tones.accent,
+    WorkshopJobStatus.readyForReview => tones.warning,
+    WorkshopJobStatus.completed => tones.success,
+    WorkshopJobStatus.cancelled => tones.danger,
+  };
+}
+
+Color reviewStatusColor(BuildContext context, ProgressReviewStatus status) {
+  final tones = HfStatusColors.of(context);
+  return switch (status) {
+    ProgressReviewStatus.pending => tones.warning,
+    ProgressReviewStatus.approved => tones.success,
+    ProgressReviewStatus.rejected => tones.danger,
   };
 }
 

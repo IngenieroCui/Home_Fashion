@@ -77,7 +77,7 @@ export function WorkshopUserSelect({
           <div className="mt-3 grid gap-2">
             {page.data.map((user) => (
               <button
-                className={`rounded border p-3 text-left ${value?.id === user.id ? 'border-[var(--color-primary)] bg-[#f5e8df]' : 'border-[var(--color-border)] bg-white'}`}
+                className={`rounded border p-3 text-left ${value?.id === user.id ? 'border-[var(--color-primary)] bg-[var(--color-primary-soft)]' : 'border-[var(--color-border)] bg-white'}`}
                 key={user.id}
                 onClick={() => onChange(user)}
                 type="button"

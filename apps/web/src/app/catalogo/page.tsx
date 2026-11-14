@@ -66,7 +66,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
         Diseños para vivirlos. Explora los muebles, conoce sus detalles y cotiza las opciones que
         van contigo.
       </p>
-      <p className="mt-3 max-w-3xl text-sm leading-6 text-[#806d5b]">
+      <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--color-text-muted)]">
         Esta colección contiene productos de demostración con imágenes y valores de referencia.
         Confirmaremos cada propuesta antes de registrar una venta.
       </p>

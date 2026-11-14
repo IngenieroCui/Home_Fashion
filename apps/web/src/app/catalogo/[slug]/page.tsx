@@ -48,7 +48,7 @@ export default async function ProductPage({
     return (
       <main className="page-shell py-16">
         <Link
-          className="text-sm font-semibold text-[var(--color-primary)] underline"
+          className="text-sm font-semibold text-[var(--color-primary-text)] underline"
           href="/catalogo"
         >
           ← Volver al catálogo
@@ -72,7 +72,7 @@ export default async function ProductPage({
   return (
     <main className="page-shell py-10">
       <Link
-        className="text-sm font-semibold text-[var(--color-primary)] underline underline-offset-4"
+        className="text-sm font-semibold text-[var(--color-primary-text)] underline underline-offset-4"
         href="/catalogo"
       >
         ← Volver al catálogo
