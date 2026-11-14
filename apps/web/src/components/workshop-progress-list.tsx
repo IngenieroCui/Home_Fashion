@@ -108,67 +108,94 @@ export function WorkshopProgressList() {
       {page &&
         (page.data.length ? (
           <>
-          <div className="admin-mobile-records">{page.data.map((report) => <AdminRecordCard key={report.id} title={report.workshopJob.code} subtitle={report.product.name} badge={<ReviewStatusBadge status={report.reviewStatus} />} actions={<Link className="button-link button-link-secondary" href={`/panel/talleres/avances/${report.id}`}>Revisar</Link>}><p>{workshopProgressTypeLabel[report.type]}{report.progressPercent !== null ? ` · ${report.progressPercent}%` : ''}</p><p>Taller: {report.workshop?.fullName ?? '—'}</p><p>{formatDateTime(report.submittedAt)}</p></AdminRecordCard>)}</div>
-          <div className="admin-table-wrap sprint-desktop-table">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Tipo</th>
-                  <th>Mensaje</th>
-                  <th>%</th>
-                  <th>Revisión</th>
-                  <th>Taller</th>
-                  <th>Trabajo</th>
-                  <th>Pedido</th>
-                  <th>Cliente</th>
-                  <th>Producto</th>
-                  <th>Cantidad</th>
-                  <th>Enviado</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {page.data.map((report) => (
-                  <tr
-                    className={
-                      report.reviewStatus === 'PENDING_REVIEW' ? 'progress-pending-row' : ''
-                    }
-                    key={report.id}
-                  >
-                    <td>
-                      <WorkshopProgressTypeBadge type={report.type} />
-                    </td>
-                    <td>{report.message}</td>
-                    <td>
-                      {report.progressPercent ?? '—'}
-                      {report.progressPercent === null ? '' : '%'}
-                    </td>
-                    <td>
-                      <ReviewStatusBadge status={report.reviewStatus} />
-                      {report.reviewStatus === 'PENDING_REVIEW' && (
-                        <small className="item-note">Requiere una decisión</small>
-                      )}
-                    </td>
-                    <td>{report.workshop?.fullName ?? '—'}</td>
-                    <td>{report.workshopJob.code}</td>
-                    <td>{report.order.code}</td>
-                    <td>{report.customer?.fullName ?? '—'}</td>
-                    <td>
-                      {report.product.name}
-                      {report.product.variant ? ` · ${report.product.variant}` : ''}
-                    </td>
-                    <td>{report.quantity}</td>
-                    <td>{formatDateTime(report.submittedAt)}</td>
-                    <td>
-                      <Link className="text-link" href={`/panel/talleres/avances/${report.id}`}>
-                        Ver detalle
-                      </Link>
-                    </td>
+            <div className="admin-mobile-records">
+              {page.data.map((report) => (
+                <AdminRecordCard
+                  key={report.id}
+                  title={report.workshopJob.code}
+                  subtitle={report.product.name}
+                  badge={<ReviewStatusBadge status={report.reviewStatus} />}
+                  actions={
+                    <Link
+                      className="button-link button-link-secondary"
+                      href={`/panel/talleres/avances/${report.id}`}
+                    >
+                      Revisar
+                    </Link>
+                  }
+                >
+                  <p>
+                    {workshopProgressTypeLabel[report.type]}
+                    {report.progressPercent !== null ? ` · ${report.progressPercent}%` : ''}
+                  </p>
+                  <p>Taller: {report.workshop?.fullName ?? '—'}</p>
+                  <p>{formatDateTime(report.submittedAt)}</p>
+                </AdminRecordCard>
+              ))}
+            </div>
+            <div className="admin-table-wrap sprint-desktop-table">
+              <table className="admin-table progress-review-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Reporte</th>
+                    <th scope="col">Revisión</th>
+                    <th scope="col">Trabajo y pedido</th>
+                    <th scope="col">Cliente y producto</th>
+                    <th scope="col">Taller y envío</th>
+                    <th scope="col">
+                      <span className="sr-only">Acción</span>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {page.data.map((report) => (
+                    <tr
+                      className={
+                        report.reviewStatus === 'PENDING_REVIEW' ? 'progress-pending-row' : ''
+                      }
+                      key={report.id}
+                    >
+                      <td>
+                        <span className="progress-review-report">
+                          <WorkshopProgressTypeBadge type={report.type} />
+                          {report.progressPercent !== null && (
+                            <strong>{report.progressPercent}%</strong>
+                          )}
+                        </span>
+                        <small className="item-note">{report.message}</small>
+                      </td>
+                      <td>
+                        <ReviewStatusBadge status={report.reviewStatus} />
+                        {report.reviewStatus === 'PENDING_REVIEW' && (
+                          <small className="item-note">Requiere una decisión</small>
+                        )}
+                      </td>
+                      <td>
+                        <strong>{report.workshopJob.code}</strong>
+                        <small className="item-note">{report.order.code}</small>
+                      </td>
+                      <td>
+                        {report.customer?.fullName ?? '—'}
+                        <small className="item-note">
+                          {report.product.name}
+                          {report.product.variant ? ` · ${report.product.variant}` : ''} · Cantidad{' '}
+                          {report.quantity}
+                        </small>
+                      </td>
+                      <td>
+                        {report.workshop?.fullName ?? '—'}
+                        <small className="item-note">{formatDateTime(report.submittedAt)}</small>
+                      </td>
+                      <td>
+                        <Link className="text-link" href={`/panel/talleres/avances/${report.id}`}>
+                          Ver detalle
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </>
         ) : (
           <p className="notice">No hay avances que coincidan con los filtros.</p>

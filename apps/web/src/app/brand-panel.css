@@ -1,17 +1,252 @@
-/* Home Fashion internal panel: obsidian sidebar, electric-blue active state, light workspace. */
+/*
+ * Home Fashion internal panel — single source for the panel layout.
+ * One breakpoint (1024px): fixed sidebar with its own scroll on desktop; header button + modal
+ * drawer (native <dialog>: focus containment, Escape, inert page) on tablet and mobile.
+ */
 .panel-shell {
+  --panel-sidebar-width: 16rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 100dvh;
   background: var(--color-background);
 }
 .panel-sidebar {
+  display: none;
+}
+.panel-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.panel-header {
   position: sticky;
   top: 0;
-  align-self: start;
-  height: 100vh;
-  overflow-y: auto;
-  padding: 1.5rem 1rem;
+  z-index: 30;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  min-height: 4rem;
+  padding: 0.75rem clamp(1rem, 2.5vw, 2rem);
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  backdrop-filter: blur(10px);
+}
+.panel-menu-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.75rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 700;
+  padding: 0.45rem 1rem 0.45rem 0.8rem;
+}
+.panel-menu-toggle:hover {
+  border-color: var(--color-text);
+}
+.panel-menu-icon,
+.panel-menu-icon::before,
+.panel-menu-icon::after {
+  display: block;
+  width: 1rem;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+}
+.panel-menu-icon {
+  position: relative;
+}
+.panel-menu-icon::before,
+.panel-menu-icon::after {
+  content: '';
+  position: absolute;
+  left: 0;
+}
+.panel-menu-icon::before {
+  top: -5px;
+}
+.panel-menu-icon::after {
+  top: 5px;
+}
+.panel-header-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--color-text);
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.panel-header-brand .brand-mark {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+.panel-user {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.6rem;
+  min-width: 0;
+  margin-left: auto;
+}
+.panel-user-name {
+  max-width: 16rem;
+  overflow-wrap: anywhere;
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.panel-user .role-tag {
+  margin-top: 0;
+}
+.panel-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.panel-catalog-link {
+  color: var(--color-primary-text);
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.25rem;
+}
+.panel-main {
+  width: 100%;
+  max-width: var(--content-wide-max);
+  min-width: 0;
+  margin-inline: auto;
+  padding: clamp(1rem, 2.5vw, 2.5rem) clamp(1rem, 2.5vw, 2.5rem) 3rem;
+}
+
+/* Drawer (tablet and mobile) */
+.panel-drawer {
+  width: min(20rem, 88vw);
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0 auto 0 0;
+  border: 0;
+  border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
   background: var(--color-structure);
   color: var(--color-structure-text);
+  padding: 1rem 0.85rem 1.5rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
+.panel-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.panel-drawer-close {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: #ffffff14;
+  color: var(--hf-white);
+  font-size: 1.5rem;
+  line-height: 1;
+}
+.panel-drawer-close:hover {
+  background: #ffffff26;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .panel-drawer[open] {
+    animation: panel-drawer-in 0.18s ease-out;
+  }
+}
+@keyframes panel-drawer-in {
+  from {
+    transform: translateX(-1.5rem);
+    opacity: 0;
+  }
+}
+
+/* Account details live in the drawer on small screens so the header stays one row. */
+.panel-drawer-account {
+  display: grid;
+  justify-items: start;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  border-top: 1px solid #ffffff1f;
+  padding: 1rem 0.6rem 0;
+}
+.panel-drawer-account p {
+  overflow-wrap: anywhere;
+  color: var(--hf-white);
+  font-weight: 700;
+}
+.panel-drawer-account a {
+  color: #c9c9c6;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.25rem;
+}
+@media (max-width: 767px) {
+  .panel-user,
+  .panel-catalog-link {
+    display: none;
+  }
+  .panel-header-actions {
+    margin-left: auto;
+  }
+}
+@media (max-width: 379px) {
+  .panel-header-brand span {
+    display: none;
+  }
+}
+
+/* Desktop: fixed sidebar with independent scroll */
+@media (min-width: 1024px) {
+  .panel-shell {
+    grid-template-columns: var(--panel-sidebar-width) minmax(0, 1fr);
+  }
+  /* The column spans the whole page; only its content sticks and scrolls on its own. */
+  .panel-sidebar {
+    display: block;
+    background: var(--color-structure);
+    color: var(--color-structure-text);
+  }
+  .panel-sidebar-inner {
+    position: sticky;
+    top: 0;
+    max-height: 100dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 1.5rem 1rem 2rem;
+    scrollbar-color: #ffffff33 transparent;
+    scrollbar-width: thin;
+  }
+  .panel-menu-toggle,
+  .panel-header-brand,
+  .panel-drawer {
+    display: none;
+  }
+  .panel-header {
+    padding-inline: clamp(1.5rem, 2.5vw, 2.5rem);
+  }
+}
+@media (min-width: 1440px) {
+  .panel-shell {
+    --panel-sidebar-width: 17.5rem;
+  }
+}
+@media (min-width: 1920px) {
+  .panel-shell {
+    --panel-sidebar-width: 19rem;
+  }
+}
+
 .panel-brand {
   display: flex !important;
   align-items: center;
@@ -30,8 +265,8 @@
 .panel-nav-title {
   margin-top: 2rem;
   padding-left: 0.6rem;
-  color: #8f8f8c;
-  font-size: 0.68rem;
+  color: #a3a3a0;
+  font-size: 0.72rem;
 }
 .panel-nav {
   gap: 0.15rem;
@@ -41,8 +276,8 @@
   margin: 1.1rem 0 0.35rem;
   padding: 0 0.6rem !important;
   background: none !important;
-  color: #8f8f8c;
-  font-size: 0.66rem !important;
+  color: #a3a3a0;
+  font-size: 0.72rem !important;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -69,42 +304,11 @@
   color: var(--hf-white);
   box-shadow: 0 6px 16px color-mix(in srgb, var(--color-primary) 35%, transparent);
 }
-.panel-header {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  min-height: 4.5rem;
-  border-bottom: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
-  backdrop-filter: blur(10px);
-}
+
 .role-tag {
   background: var(--color-primary-soft);
   color: var(--color-info);
   font-weight: 700;
-}
-.panel-menu-toggle {
-  border-radius: var(--radius-pill);
-}
-.panel-mobile-nav {
-  border-radius: var(--radius-lg);
-  background: var(--color-structure);
-  padding: 0.75rem;
-  box-shadow: var(--shadow-lg);
-}
-.panel-mobile-nav a {
-  min-height: 2.75rem;
-  display: flex;
-  align-items: center;
-  border-radius: var(--radius-sm);
-  color: #c9c9c6;
-}
-.panel-mobile-nav a[aria-current='page'] {
-  background: var(--color-primary);
-  color: var(--hf-white);
-}
-.panel-mobile-nav span {
-  color: #8f8f8c;
 }
 
 /* Typography: the dashboard reads better in the UI sans; serif stays for the public brand. */
@@ -114,12 +318,7 @@
   font-weight: 800;
   letter-spacing: -0.02em;
 }
-.panel-main h1.font-serif {
-  font-size: clamp(1.6rem, 2.4vw, 2.1rem);
-}
-.panel-main h2.font-serif {
-  font-size: 1.3rem;
-}
+
 .panel-welcome {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
@@ -135,7 +334,6 @@
 .panel-module,
 .dashboard-attention > *,
 .tracking-access-panel,
-.payment-history,
 .delivery-detail-grid > section,
 .admin-table-wrap,
 .admin-form {
@@ -247,13 +445,6 @@
   border-radius: var(--radius-md);
 }
 
-@media (max-width: 1023px) {
-  .panel-sidebar {
-    position: static;
-    height: auto;
-  }
-}
-
 /* Dense tables: keep pills, codes and actions on one line; the wrapper scrolls horizontally. */
 .admin-table
   td
@@ -274,22 +465,279 @@
   vertical-align: middle;
 }
 
-/* Brand in the panel header when the sidebar is hidden (mobile and tablet). */
-.panel-header-brand {
-  display: none;
+/* Lists switch between table and cards by the space the content really has (sidebar aware). */
+.panel-main {
+  container: panel-main / inline-size;
 }
-@media (max-width: 1023px) {
-  .panel-header-brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    margin-bottom: 0.35rem;
-    color: var(--color-text);
-    font-size: 1.05rem;
-    font-weight: 800;
+@container panel-main (max-width: 47.99rem) {
+  .admin-desktop,
+  .sprint-desktop-table {
+    display: none;
   }
-  .panel-header-brand .brand-mark {
-    width: 1.6rem;
-    height: 1.6rem;
+  .admin-mobile-cards,
+  .admin-mobile-records {
+    display: grid;
+    gap: 0.85rem;
   }
+}
+
+/* Headings and pagination shared by the internal modules */
+.admin-heading {
+  gap: 1rem 1.5rem;
+}
+.admin-heading > div {
+  min-width: 0;
+  flex: 1 1 20rem;
+}
+.admin-heading h1 {
+  overflow-wrap: anywhere;
+}
+.admin-heading-description {
+  max-width: 46rem;
+  line-height: 1.6;
+}
+.admin-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.admin-pagination > span {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.ui-button-danger-outline {
+  border-color: #f5b5ae;
+  background: var(--color-surface);
+  color: var(--color-danger);
+  box-shadow: none;
+}
+.ui-button-danger-outline:hover {
+  border-color: var(--color-danger);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+/* Users */
+.managed-users-filters {
+  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)) auto;
+}
+.managed-users-filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.managed-users-table .admin-table {
+  width: 100%;
+}
+.managed-users-table td:nth-child(1) {
+  min-width: 13rem;
+}
+.managed-users-table td:nth-child(2) {
+  min-width: 14rem;
+  max-width: 22rem;
+}
+.managed-users-table td:nth-child(3),
+.managed-users-table td:nth-child(4) {
+  white-space: nowrap;
+}
+.managed-users-table td:last-child {
+  width: 1%;
+}
+.managed-users-table .managed-users-actions {
+  flex-wrap: nowrap;
+}
+.managed-users-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  overflow-wrap: anywhere;
+}
+.managed-users-email {
+  overflow-wrap: anywhere;
+  color: var(--color-text-muted);
+}
+.managed-users-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.managed-users-actions .button-link {
+  min-height: 2.25rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.managed-users-self-note {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+.managed-users-dialog {
+  width: min(32rem, calc(100vw - 2rem));
+  padding: 0;
+}
+.managed-users-form {
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+.managed-users-dialog-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.managed-users-dialog-head h2 {
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+.managed-users-dialog-subtitle {
+  margin-top: 0.25rem;
+  overflow-wrap: anywhere;
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+.managed-users-checks {
+  display: grid;
+  gap: 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+}
+.managed-users-checks legend {
+  padding: 0 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.managed-users-form .confirmation-actions {
+  margin-top: 0.5rem;
+}
+@container panel-main (max-width: 60rem) {
+  .managed-users-filters {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  }
+}
+@media (max-width: 479px) {
+  .managed-users-form .confirmation-actions .button-link {
+    flex: 1 1 100%;
+  }
+}
+
+/* Long identifiers (SKU, codes, emails) wrap inside their own card instead of widening it. */
+.payment-entry,
+.admin-record-card,
+.record-card-body,
+.record-values,
+.delivery-detail-grid > section,
+.order-detail-subtitle,
+.item-note {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.payment-history {
+  min-width: 0;
+}
+
+/* Progress review: six grouped columns instead of eleven cramped ones. */
+.progress-review-table td {
+  vertical-align: top;
+}
+.progress-review-table td:nth-child(1) {
+  min-width: 13rem;
+  max-width: 22rem;
+}
+.progress-review-table td:nth-child(4) {
+  min-width: 12rem;
+}
+.progress-review-table td:last-child {
+  width: 1%;
+  white-space: nowrap;
+}
+.progress-review-report {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+.admin-table .item-note {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+@container panel-main (max-width: 62rem) {
+  .sprint-desktop-table:has(.progress-review-table) {
+    display: none;
+  }
+  .admin-mobile-records:has(+ .sprint-desktop-table .progress-review-table) {
+    display: grid;
+    gap: 0.85rem;
+  }
+}
+
+/* Product thumbnails inside tables and records */
+.admin-table .commerce-item-visual {
+  min-width: 13rem;
+}
+.commerce-item-visual > div {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.commerce-item-visual small {
+  color: var(--color-text-muted);
+}
+.commerce-item-photo .placeholder-mark {
+  font-size: 1.6rem;
+}
+
+/* Internal forms: actions keep their natural size, long fields take a full row. */
+.admin-form > button,
+.admin-form > .button-link,
+.admin-form > .admin-actions {
+  align-self: end;
+  justify-self: start;
+}
+.admin-form > button,
+.admin-form > .button-link {
+  min-height: 2.75rem;
+  height: auto;
+}
+.admin-form label:has(> textarea) {
+  grid-column: 1 / -1;
+}
+.admin-form label:has(> input[type='checkbox']),
+.admin-form label:has(> input[type='radio']) {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  align-self: end;
+  min-height: 2.75rem;
+  font-weight: 600;
+}
+.admin-form textarea {
+  min-height: 5.5rem;
+}
+
+/* Amounts, codes and quantities never break mid-value inside tables. */
+.admin-table td[data-label='Lista'],
+.admin-table td[data-label='Venta'],
+.admin-table td[data-label='Descuento'],
+.admin-table td[data-label='Subtotal'],
+.admin-table td[data-label='Costo'],
+.admin-table td[data-label='Utilidad'],
+.admin-table td[data-label='Margen'],
+.admin-table td[data-label='Cantidad'],
+.progress-review-table td:nth-child(3) strong,
+.progress-review-table td:nth-child(3) .item-note {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.progress-review-table td:nth-child(5) {
+  min-width: 8rem;
 }

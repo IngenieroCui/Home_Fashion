@@ -182,7 +182,7 @@ h3 {
 .site-brand small {
   margin-top: 0.15rem;
   color: var(--color-text-muted);
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -287,8 +287,8 @@ h3 {
 .home-hero-orb {
   position: absolute;
   z-index: -1;
-  top: -2.5rem;
-  right: -2.5rem;
+  top: -2rem;
+  right: -1rem;
   width: clamp(9rem, 22vw, 17rem);
   aspect-ratio: 1;
   border-radius: 50%;
@@ -625,8 +625,8 @@ input[type='radio'] {
 
 @media (max-width: 767px) {
   .home-hero-orb {
-    top: -1.5rem;
-    right: -1rem;
+    top: -1.25rem;
+    right: 0;
   }
   .home-hero-badge {
     top: 0.75rem;
@@ -657,3 +657,116 @@ input[type='radio'] {
     box-shadow: 0 -8px 24px #11111114;
   }
 }
+
+/* ---------- Product imagery ---------- */
+/* Galleries show the whole piece (no cropping); cards keep a uniform frame centred on the furniture. */
+.product-gallery,
+.product-gallery-stage {
+  min-width: 0;
+}
+.product-gallery-stage .detail-image {
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  background: var(--color-surface-muted);
+}
+.product-gallery-controls > * {
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  box-shadow: var(--shadow-sm);
+}
+.product-gallery-thumbs {
+  max-width: 100%;
+  scrollbar-width: thin;
+}
+.product-gallery-thumbs button {
+  flex: 0 0 4.75rem;
+  border-radius: var(--radius-sm);
+}
+.product-gallery-thumbs .product-image {
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+.product-gallery-thumbs button[aria-pressed='true'] {
+  border-color: var(--color-primary);
+}
+.product-card .product-image,
+.category-visual .product-image,
+.home-featured .product-image {
+  object-fit: cover;
+  object-position: center 60%;
+}
+.variant-option small {
+  font-size: 0.75rem;
+}
+
+/* Variants stack on narrow phones so SKUs and prices stay readable. */
+@media (max-width: 479px) {
+  .variant-choices > div,
+  .variant-choices {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.variant-option {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+/* Category tiles show the furniture, not a thin strip of it. */
+.category-visual .product-image,
+.category-visual .image-placeholder,
+.home-category-grid .category-visual .product-image {
+  aspect-ratio: 3 / 2;
+  height: auto;
+}
+
+/* Login on small phones: one card, full-width fields. */
+@media (max-width: 767px) {
+  .login-page {
+    gap: 1rem;
+    padding: 1.25rem 1rem 2.5rem;
+  }
+  .login-editorial {
+    min-height: 0;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+  }
+  .login-editorial h2 {
+    font-size: clamp(1.9rem, 8vw, 2.4rem);
+  }
+  .login-editorial p {
+    margin-top: 0.5rem;
+  }
+  .login-card {
+    width: 100%;
+    padding: 1.5rem 1.25rem;
+    border-radius: var(--radius-lg);
+  }
+}
+
+/* Catalog filters (desktop): one row of fields, one row of toggles and actions. */
+.filter-panel input[type='number'] {
+  width: 100%;
+  min-height: 2.75rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  padding: 0.65rem 0.75rem;
+}
+.filter-panel .check-label {
+  min-height: 2.75rem;
+  align-items: center;
+}
+@media (min-width: 1024px) {
+  /* 12-column grid: [search 4 | category 4 | sort 4] then [from 2 | to 2 | toggles 2+2 | actions 4]. */
+  .catalog-desktop-filters .filter-panel > div:nth-child(-n + 3) {
+    grid-column: span 4;
+  }
+  .catalog-desktop-filters .filter-panel > .filter-price-range,
+  .catalog-desktop-filters .filter-panel > .check-label {
+    grid-column: span 2;
+  }
+  .catalog-desktop-filters .filter-panel > .admin-actions {
+    grid-column: span 4;
+    justify-content: flex-end;
+  }
+}
+

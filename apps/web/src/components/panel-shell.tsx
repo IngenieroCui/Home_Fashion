@@ -2,7 +2,8 @@
 import { clientFetch } from '@/lib/client-fetch';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Dialog } from './ui/dialog';
 import type { MeResponse } from '@/lib/auth/types';
 import { BrandMark } from './ui/brand-mark';
 
@@ -49,6 +50,15 @@ export function PanelShell({ user, children }: { user: MeResponse; children: Rea
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  // Close the drawer when the route changes or the layout reaches the desktop sidebar.
+  useEffect(() => setMenuOpen(false), [pathname]);
+  useEffect(() => {
+    const desktop = window.matchMedia('(min-width: 1024px)');
+    const sync = () => desktop.matches && setMenuOpen(false);
+    desktop.addEventListener('change', sync);
+    return () => desktop.removeEventListener('change', sync);
+  }, []);
   const visibleModules = modules.filter((module) =>
     module.permission === 'USER_MANAGE'
       ? user.role === 'ADMIN' && user.permissions.includes(module.permission)
@@ -72,7 +82,11 @@ export function PanelShell({ user, children }: { user: MeResponse; children: Rea
   }
   const navigation = (
     <>
-      <Link href="/panel" aria-current={pathname === '/panel' ? 'page' : undefined}>
+      <Link
+        href="/panel"
+        onClick={() => setMenuOpen(false)}
+        aria-current={pathname === '/panel' ? 'page' : undefined}
+      >
         Inicio del panel
       </Link>
       {visibleModules.map((module, index) => (
@@ -111,32 +125,43 @@ export function PanelShell({ user, children }: { user: MeResponse; children: Rea
         Saltar al contenido
       </a>
       <aside className="panel-sidebar">
-        <Link className="panel-brand" href="/panel">
-          <BrandMark className="brand-mark panel-brand-mark" />
-          Home Fashion
-        </Link>
-        <p className="panel-nav-title">Panel interno</p>
-        <nav aria-label="Módulos del panel" className="panel-nav">
-          {navigation}
-        </nav>
+        <div className="panel-sidebar-inner">
+          <Link className="panel-brand" href="/panel">
+            <BrandMark className="brand-mark panel-brand-mark" />
+            Home Fashion
+          </Link>
+          <p className="panel-nav-title">Panel interno</p>
+          <nav aria-label="Módulos del panel" className="panel-nav">
+            {navigation}
+          </nav>
+        </div>
       </aside>
       <div className="panel-content">
         <header className="panel-header">
-          <div>
-            <Link className="panel-header-brand" href="/panel" aria-hidden="true" tabIndex={-1}>
-              <BrandMark />
-              Home Fashion
-            </Link>
-            <p className="text-sm text-[var(--color-text-muted)]">{user.fullName}</p>
+          <button
+            ref={menuButton}
+            aria-controls="panel-drawer"
+            aria-expanded={menuOpen}
+            aria-haspopup="dialog"
+            className="panel-menu-toggle"
+            onClick={() => setMenuOpen(true)}
+            type="button"
+          >
+            <span aria-hidden="true" className="panel-menu-icon" />
+            Módulos
+          </button>
+          <Link className="panel-header-brand" href="/panel">
+            <BrandMark />
+            <span>Home Fashion</span>
+          </Link>
+          <div className="panel-user">
+            <p className="panel-user-name">{user.fullName}</p>
             <span className="role-tag">
               {user.role === 'ADMIN' ? 'Administración' : 'Equipo interno'}
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <Link
-              className="text-sm font-semibold text-[var(--color-primary-text)] underline underline-offset-4"
-              href="/catalogo"
-            >
+          <div className="panel-header-actions">
+            <Link className="panel-catalog-link" href="/catalogo">
               Ver catálogo
             </Link>
             <button
@@ -149,20 +174,40 @@ export function PanelShell({ user, children }: { user: MeResponse; children: Rea
             </button>
           </div>
         </header>
-        <button
-          aria-controls="panel-mobile-menu"
-          aria-expanded={menuOpen}
-          className="panel-menu-toggle button-link button-link-secondary"
-          onClick={() => setMenuOpen(!menuOpen)}
-          type="button"
+        <Dialog
+          aria-label="Menú de módulos del panel"
+          className="panel-drawer"
+          id="panel-drawer"
+          onDismiss={() => setMenuOpen(false)}
+          open={menuOpen}
         >
-          {menuOpen ? 'Cerrar menú ×' : 'Menú de módulos ☰'}
-        </button>
-        {menuOpen && (
-          <nav aria-label="Módulos del panel" className="panel-mobile-nav" id="panel-mobile-menu">
+          <div className="panel-drawer-head">
+            <span className="panel-brand">
+              <BrandMark className="brand-mark panel-brand-mark" />
+              Home Fashion
+            </span>
+            <button
+              aria-label="Cerrar menú de módulos"
+              className="panel-drawer-close"
+              onClick={() => setMenuOpen(false)}
+              type="button"
+            >
+              ×
+            </button>
+          </div>
+          <nav aria-label="Menú de módulos" className="panel-nav">
             {navigation}
           </nav>
-        )}
+          <div className="panel-drawer-account">
+            <p>{user.fullName}</p>
+            <span className="role-tag">
+              {user.role === 'ADMIN' ? 'Administración' : 'Equipo interno'}
+            </span>
+            <Link href="/catalogo" onClick={() => setMenuOpen(false)}>
+              Ver catálogo público
+            </Link>
+          </div>
+        </Dialog>
         <main className="panel-main" id="panel-main" tabIndex={-1}>
           {logoutError && (
             <p role="alert" className="form-error mb-6">

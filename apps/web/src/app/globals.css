@@ -24,7 +24,12 @@ select {
   font-family: var(--font-heading);
 }
 .hero {
-  background: linear-gradient(120deg, var(--color-warning-soft), var(--color-surface-muted) 60%, var(--color-success-soft));
+  background: linear-gradient(
+    120deg,
+    var(--color-warning-soft),
+    var(--color-surface-muted) 60%,
+    var(--color-success-soft)
+  );
 }
 .hero-panel {
   min-height: 17rem;
@@ -225,7 +230,12 @@ select:focus-visible {
   min-height: calc(100vh - 10rem);
   place-items: center;
   padding: 3rem 1rem;
-  background: linear-gradient(135deg, var(--color-surface-strong), var(--color-surface-muted) 55%, var(--color-success-soft));
+  background: linear-gradient(
+    135deg,
+    var(--color-surface-strong),
+    var(--color-surface-muted) 55%,
+    var(--color-success-soft)
+  );
 }
 .login-card {
   width: min(100%, 31rem);
@@ -275,17 +285,7 @@ select:focus-visible {
   color: var(--color-danger);
   font-size: 0.875rem;
 }
-.panel-shell {
-  display: grid;
-  min-height: 100vh;
-  background: var(--color-surface-muted);
-}
-.panel-sidebar {
-  display: none;
-  background: var(--color-text);
-  color: var(--color-structure-text);
-  padding: 2rem;
-}
+
 .panel-nav-title {
   margin: 3rem 0 0.75rem;
   color: var(--color-structure-muted);
@@ -308,18 +308,7 @@ select:focus-visible {
 .panel-nav span {
   background: #ffffff12;
 }
-.panel-content {
-  min-width: 0;
-}
-.panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
-  padding: 1rem;
-}
+
 .role-tag {
   display: inline-block;
   margin-top: 0.25rem;
@@ -330,11 +319,7 @@ select:focus-visible {
   font-size: 0.75rem;
   font-weight: 700;
 }
-.panel-main {
-  width: min(100% - 2rem, 72rem);
-  margin: 0 auto;
-  padding: 2rem 0 1rem;
-}
+
 .panel-welcome {
   border: 1px solid var(--color-border);
   border-radius: 1rem;
@@ -369,35 +354,7 @@ select:focus-visible {
   font-size: 0.8rem;
   font-weight: 700;
 }
-.panel-mobile-nav {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin: 1rem;
-  border-top: 1px solid var(--color-border);
-  padding-top: 1rem;
-}
-.panel-mobile-nav span {
-  background: var(--color-surface-strong);
-  color: var(--color-text);
-  text-align: center;
-}
-@media (min-width: 768px) {
-  .panel-shell {
-    grid-template-columns: 15rem 1fr;
-  }
-  .panel-sidebar {
-    display: block;
-  }
-  .panel-mobile-nav {
-    display: none;
-  }
-  .panel-header {
-    padding: 1.25rem 2rem;
-  }
-  .panel-main {
-    width: min(100% - 4rem, 72rem);
-    padding-top: 3rem;
-  }
-}
+
 .panel-nav a,
 .panel-mobile-nav a {
   border-radius: 0.4rem;
@@ -407,11 +364,7 @@ select:focus-visible {
 .panel-nav a {
   background: #ffffff12;
 }
-.panel-mobile-nav a {
-  background: var(--color-surface-strong);
-  color: var(--color-text);
-  text-align: center;
-}
+
 .admin-stack {
   display: grid;
   gap: 1.5rem;
@@ -874,7 +827,12 @@ select:focus-visible {
 .public-tracking-page {
   min-height: calc(100vh - 10rem);
   padding: 2rem 0 4rem;
-  background: linear-gradient(135deg, var(--color-surface-strong), var(--color-surface-muted) 50%, var(--color-success-soft));
+  background: linear-gradient(
+    135deg,
+    var(--color-surface-strong),
+    var(--color-surface-muted) 50%,
+    var(--color-success-soft)
+  );
 }
 .public-tracking-shell {
   display: grid;
@@ -1169,7 +1127,9 @@ td {
   font-size: 0.85rem;
 }
 .hero {
-  background: radial-gradient(ellipse at 90% 0%, var(--color-surface-strong), transparent 65%), var(--color-surface-muted);
+  background:
+    radial-gradient(ellipse at 90% 0%, var(--color-surface-strong), transparent 65%),
+    var(--color-surface-muted);
 }
 .home-hero-grid {
   display: grid;
@@ -1419,17 +1379,7 @@ td {
   margin-top: 0.8rem;
   font-size: 2.3rem;
 }
-.panel-shell {
-  background: var(--color-surface-muted);
-}
-.panel-sidebar {
-  padding: 2rem 1.1rem;
-  background: var(--color-structure-raised);
-}
-.panel-sidebar > a {
-  display: block;
-  padding: 0 0.75rem;
-}
+
 .panel-nav-title {
   padding-left: 0.75rem;
 }
@@ -1448,15 +1398,7 @@ td {
   border-color: #ffffff1d;
   box-shadow: inset 3px 0 #111111;
 }
-.panel-header {
-  min-height: 5.5rem;
-  background: var(--surface);
-  border-color: var(--border);
-  flex-wrap: wrap;
-}
-.panel-main {
-  padding-bottom: 3rem;
-}
+
 .panel-welcome {
   position: relative;
   background: linear-gradient(115deg, var(--color-surface-strong), var(--color-background));
@@ -1580,16 +1522,6 @@ td {
   .home-steps {
     grid-template-columns: repeat(3, 1fr);
   }
-  .panel-sidebar {
-    position: sticky;
-    top: 0;
-    align-self: start;
-    height: 100dvh;
-    overflow-y: auto;
-  }
-  .panel-shell {
-    grid-template-columns: 15.5rem minmax(0, 1fr);
-  }
 }
 @media (min-width: 1024px) {
   .home-hero-grid {
@@ -1601,30 +1533,6 @@ td {
   }
 }
 @media (max-width: 767px) {
-  .panel-mobile-nav {
-    display: flex;
-    overflow-x: auto;
-    margin: 0;
-    border: 0;
-    border-bottom: 1px solid var(--border);
-    padding: 0.75rem 1rem;
-    background: var(--surface);
-    scrollbar-width: thin;
-  }
-  .panel-mobile-nav a {
-    flex-shrink: 0;
-    white-space: nowrap;
-    border: 1px solid var(--border);
-    background: transparent;
-  }
-  .panel-mobile-nav a[aria-current='page'] {
-    background: var(--coffee);
-    color: var(--color-structure-text);
-    border-color: var(--coffee);
-  }
-  .panel-main {
-    padding-top: 1.5rem;
-  }
   .admin-category-grid {
     grid-template-columns: 1fr;
   }
@@ -1691,10 +1599,6 @@ td {
   .public-item-details dd {
     margin-bottom: 0.7rem;
   }
-  .panel-header > div:last-child {
-    width: 100%;
-    justify-content: space-between;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -1728,13 +1632,7 @@ td {
   width: min(calc(100% - 2 * var(--page-gutter)), var(--content-wide-max));
   margin-inline: auto;
 }
-.panel-main {
-  width: 100%;
-  max-width: var(--content-wide-max);
-  min-width: 0;
-  margin-inline: auto;
-  padding: clamp(1rem, 2.5vw, 3rem);
-}
+
 .site-mobile-menu[hidden] {
   display: none;
 }

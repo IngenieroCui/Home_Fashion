@@ -1,11 +1,12 @@
 import {
   BadRequestException, Body, ConflictException, Controller, ForbiddenException, Get, NotFoundException,
-  Param, Patch, Post, UseGuards
+  Param, Patch, Post, Query, UseGuards
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
-import { IsBoolean, IsEmail, IsEnum, IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsBoolean, IsEmail, IsEnum, IsInt, IsOptional, IsString, Length, Max, MaxLength, Min } from 'class-validator';
 import { hash } from 'bcryptjs';
-import { UniqueConstraintError, type Transaction } from 'sequelize';
+import { Op, UniqueConstraintError, type Transaction, type WhereOptions } from 'sequelize';
 import { AuthService } from './auth.service';
 import { RoleCode } from './auth.types';
 import { RefreshSession } from './entities/refresh-session.model';
@@ -22,6 +23,14 @@ class CreateManagedUserDto {
   @IsEmail() @MaxLength(254) email!: string;
   @IsEnum(RoleCode) role!: RoleCode;
   @IsString() @Length(14, 72) password!: string;
+}
+const toNumber = (value: unknown) => typeof value === 'string' ? Number(value) : value;
+export class ListManagedUsersQueryDto {
+  @Transform(({ value }) => toNumber(value)) @IsOptional() @IsInt() @Min(1) page = 1;
+  @Transform(({ value }) => toNumber(value)) @IsOptional() @IsInt() @Min(1) @Max(100) limit = 25;
+  @IsOptional() @IsString() @MaxLength(254) q?: string;
+  @IsOptional() @IsEnum(RoleCode) role?: RoleCode;
+  @Transform(({ value }) => value === 'true' ? true : value === 'false' ? false : value) @IsOptional() @IsBoolean() active?: boolean;
 }
 class UpdateManagedUserDto {
   @IsOptional() @IsEnum(RoleCode) role?: RoleCode;
@@ -57,13 +66,28 @@ export class AdminUsersController {
   }
 
   @Get()
-  async list(@CurrentUser() actor: { id: string }) {
+  async list(@CurrentUser() actor: { id: string }, @Query() query: ListManagedUsersQueryDto = new ListManagedUsersQueryDto()) {
     await this.requireAdmin(actor.id);
-    const data = await this.users.findAll({
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 25;
+    const where: WhereOptions = {};
+    const term = query.q?.trim();
+    if (term) {
+      // Escape LIKE wildcards so a search for "50%" or "a_b" is literal.
+      const like = `%${term.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
+      Object.assign(where, { [Op.or]: [{ fullName: { [Op.like]: like } }, { email: { [Op.like]: like } }] });
+    }
+    if (typeof query.active === 'boolean') Object.assign(where, { isActive: query.active });
+    const result = await this.users.findAndCountAll({
+      where,
       attributes: ['id', 'fullName', 'email', 'isActive'],
-      include: [{ model: Role, attributes: ['code'] }], order: [['id', 'DESC']], limit: 200
+      include: [{ model: Role, attributes: ['code'], ...(query.role ? { where: { code: query.role }, required: true } : {}) }],
+      order: [['id', 'DESC']], limit, offset: (page - 1) * limit, distinct: true
     });
-    return { data: data.map(user => present(user)) };
+    return {
+      data: result.rows.map(user => present(user)),
+      pagination: { page, limit, total: result.count, totalPages: Math.ceil(result.count / limit) }
+    };
   }
 
   @Post()

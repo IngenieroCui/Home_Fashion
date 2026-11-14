@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { redirect } from 'next/navigation';
 import { getAuthenticatedUser, sessionRefreshRedirect, sessionTokens } from '@/lib/auth/server';
 import { ManagedUsers } from '@/components/managed-users';
@@ -7,5 +8,9 @@ export default async function UsersPage() {
   const user = await getAuthenticatedUser(accessToken);
   if (!user && refreshToken) redirect(await sessionRefreshRedirect());
   if (user?.role !== 'ADMIN' || !user.permissions.includes('USER_MANAGE')) redirect('/panel');
-  return <ManagedUsers actorId={user.id} />;
+  return (
+    <Suspense fallback={null}>
+      <ManagedUsers actorId={user.id} />
+    </Suspense>
+  );
 }
